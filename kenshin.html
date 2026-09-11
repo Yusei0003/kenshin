@@ -181,7 +181,29 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
   #printArea{display:block !important}
 }
 
-/* ---------- 受検票の様式 ---------- */
+/* ---------- 重ね刷り（対がん協会の用紙）---------- */
+.ovl{
+  position:relative;
+  overflow:hidden;
+  page-break-after:always;
+  break-after:page;
+  color:#000;
+}
+.ovl:last-child{page-break-after:auto;break-after:auto}
+.ovf{
+  position:absolute;
+  line-height:1;
+  white-space:nowrap;
+}
+.ovgrid{
+  position:absolute;left:0;top:0;
+  background-image:
+    repeating-linear-gradient(to right,rgba(0,0,0,.35) 0 0.2mm,transparent 0.2mm 10mm),
+    repeating-linear-gradient(to bottom,rgba(0,0,0,.35) 0 0.2mm,transparent 0.2mm 10mm);
+}
+.ovtick{position:absolute;font-size:6pt;color:#666}
+
+/* ---------- 受検票の様式（A4 自前様式）---------- */
 @page{size:A4 portrait;margin:8mm}
 
 .sheet{
@@ -309,7 +331,8 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
   <button class="tab" data-page="p2">３. 対象者の判定ルール</button>
   <button class="tab" data-page="p3">４. 日程・会場</button>
   <button class="tab" data-page="p4">５. 対象者の確認</button>
-  <button class="tab" data-page="p5">６. 印刷・出力</button>
+  <button class="tab" data-page="p8">６. 様式レイアウト</button>
+  <button class="tab" data-page="p5">７. 印刷・出力</button>
   <button class="tab" data-page="p6">使い方・注意</button>
 </nav>
 
@@ -493,6 +516,66 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
   </div>
 </section>
 
+<!-- ================= 8. 様式レイアウト ================= -->
+<section class="page" id="p8">
+  <div class="panel">
+    <h2>様式レイアウト（用紙への重ね刷り位置）</h2>
+    <p class="hint">
+      岩手県対がん協会から送られてくる<strong>B4の用紙に重ねて印刷</strong>するための位置を、検診ごとに設定します。<br>
+      初期値は現行の印刷物から実測した座標です。用紙や印刷機との相性でずれる場合は、ここで調整してください。
+    </p>
+    <div class="row">
+      <label>団体名として印字する文字 <input type="text" id="orgName" style="width:200px"></label>
+      <span class="hint">すべての検診の「団体名」欄に共通で使われます。</span>
+    </div>
+    <div class="row" id="lyKenshinTabs" style="margin-top:10px"></div>
+    <div class="note">
+      <strong>生活習慣病健診は受検票を印刷しません。</strong>
+      対象者の把握とCSV出力には引き続き使えます。
+    </div>
+  </div>
+
+  <div class="panel">
+    <div id="lyBody"></div>
+  </div>
+
+  <div class="panel">
+    <h2>位置合わせの手順</h2>
+    <ol class="hint" style="margin:0;padding-left:22px">
+      <li><strong>方眼を重ねて1枚テスト印刷</strong>します（下のボタン）。実際の用紙に印刷し、ずれを定規で測ります。</li>
+      <li>測ったずれを<strong>「全体のずれ補正」</strong>に入力します（右にずらしたいなら横をプラス、下なら縦をプラス）。</li>
+      <li>個別の項目だけ合わない場合は、用紙の絵の上で<strong>その項目をドラッグ</strong>します。</li>
+      <li>合ったら<strong>「この設定を保存」</strong>を押します。次回以降も同じ位置で印刷されます。</li>
+    </ol>
+    <div class="note" style="margin-top:12px">
+      <strong>印刷ダイアログの設定を必ず確認してください。</strong>
+      「倍率：100％（実際のサイズ）」「用紙に合わせる：オフ」「余白：なし」にしないと位置がずれます。
+    </div>
+    <div class="row">
+      <button class="btn primary" id="btnTestPrint">位置合わせ用に1枚テスト印刷</button>
+      <label><input type="checkbox" id="testGrid" checked> 10mmの方眼と目盛を重ねる</label>
+      <button class="btn" id="btnSaveLayout">この設定を保存</button>
+      <button class="btn" id="btnResetLayout">この検診を初期値に戻す</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="btnExportLayout">レイアウトをファイルに書き出す</button>
+      <button class="btn" id="btnImportLayout">ファイルから読み込む…</button>
+      <input type="file" id="importLayoutFile" accept=".json" style="display:none">
+      <span class="hint">担当者が替わるときや、別の端末で使うときの引き継ぎに使えます。</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>位置合わせ用の画像について</h2>
+    <p class="hint">
+      対がん協会の用紙をスキャナで読み取って画像（PNG／JPEG）にし、「位置合わせ用の画像を読み込む」から取り込むと、
+      用紙の絵の上に薄く重ねて表示され、目分量で合わせられます。<br>
+      スキャンは<strong>原寸（等倍）</strong>で、用紙の四隅が切れないように読み取ってください。
+      この画像は画面表示にのみ使い、<strong>印刷されません。保存もされません</strong>（タブを閉じると消えます）。
+    </p>
+  </div>
+</section>
+
 <!-- ================= 5. 印刷・出力 ================= -->
 <section class="page" id="p5">
   <div class="panel">
@@ -501,6 +584,12 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <label>印刷する検診
         <select id="printKenshin"></select>
       </label>
+      <label>様式
+        <select id="printMode">
+          <option value="overlay">B4 の用紙に重ね刷り（対がん協会の様式）</option>
+          <option value="a4">A4 の自前様式（用紙なしで1枚完結）</option>
+        </select>
+      </label>
       <label>並び順
         <select id="printOrder">
           <option value="dept">所属コード順 → カナ順（配布の仕分けに便利）</option>
@@ -508,11 +597,18 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
           <option value="date">受診日 → 受付時間順（当日の受付順）</option>
         </select>
       </label>
-      <label><input type="checkbox" id="printKagami" checked> 所属の変わり目に配布鑑（かがみ）を挟む</label>
+    </div>
+    <div class="row" id="rowKagami">
+      <label><input type="checkbox" id="printKagami" checked> 所属の変わり目に配布鑑（かがみ）を挟む（A4 自前様式のみ）</label>
     </div>
     <div class="row">
       <button class="btn primary" id="btnPrintTickets">受検票を印刷</button>
-      <span class="hint">A4縦・1ページに2枚付けで出力します。印刷ダイアログでは「余白：既定」「背景のグラフィック：オン」を推奨。</span>
+      <span id="printHint" class="hint"></span>
+    </div>
+    <div class="note" id="overlayNote">
+      <strong>重ね刷りの注意</strong>　印刷ダイアログで
+      <strong>「倍率：100％（実際のサイズ）」「用紙に合わせる：オフ」「余白：なし」</strong>
+      に設定してください。1人あたり B4 1枚です。まず数枚を白紙に印刷し、用紙と重ねて位置を確認することをおすすめします。
     </div>
   </div>
 
@@ -546,6 +642,7 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <li><strong>名簿の読込</strong>　職員名簿（Excel／CSV）を読み込み、列の対応付けを確認します。</li>
       <li><strong>受診状況の取込</strong>　検診ごとに受診状況ファイルを読み込み、職員番号の列と入力の列を指定して取り込みます。会場名もここで指定します。</li>
       <li><strong>対象者の確認</strong>　<strong>要確認の件数が0であること</strong>を必ず確認します。0でない場合は入力欄の表記をご確認ください。</li>
+      <li><strong>様式レイアウト</strong>　初回のみ、協会の用紙に1枚テスト印刷して位置を確認します。合っていればそのままで構いません。</li>
       <li><strong>印刷・出力</strong>　受検票を印刷します。PDFとして保存する場合は印刷先に「PDFとして保存」を選びます。</li>
     </ol>
     <p class="hint">この場合、対象者と受診日時は受診状況ファイルで決まるため、「対象者の判定ルール」と「日程・会場」の設定は使いません。</p>
@@ -592,18 +689,37 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
   </div>
 
   <div class="panel">
-    <h2>様式を変更したいとき</h2>
-    <p>受検票の様式は、このファイル内の以下の箇所を編集すると変えられます。</p>
-    <ul>
-      <li>枠線・文字サイズ・1ページの枚数 … 先頭の <code>&lt;style&gt;</code> 内 <code>.ticket</code> の定義</li>
-      <li>印字する項目・並び … <code>buildTicketHTML()</code> 関数</li>
-      <li>注意事項の文面 … 「２. 判定ルール」画面の検診ごとの「受検票に印刷する注意事項」欄</li>
-    </ul>
+    <h2>受検票の印刷について</h2>
+    <p>印刷のしかたは2通りあります。</p>
+    <table class="grid">
+      <thead><tr><th>様式</th><th>用紙</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>B4 の用紙に重ね刷り</strong></td>
+          <td>協会から届く B4 の用紙</td>
+          <td>受検票と電算処理用紙の記入欄に、氏名・所属・生年月日などを重ねて印刷します。1人あたり1枚。位置は「様式レイアウト」画面で調整できます。</td>
+        </tr>
+        <tr>
+          <td>A4 の自前様式</td>
+          <td>普通紙 A4</td>
+          <td>用紙がないときの予備。枠ごと印刷するので1枚で完結します。1ページに2名分。</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <strong>生活習慣病健診は受検票を印刷しません。</strong>
+      対象者の把握、所属別の集計、CSV出力には引き続き使えます。
+      印刷が必要になった場合は、A4 の自前様式が利用できます（「印刷する検診」の一覧に戻すには設定の変更が必要です）。
+    </div>
+    <p>A4 自前様式の枠線・文字サイズは、このファイル内の <code>&lt;style&gt;</code> 内 <code>.ticket</code> と
+    <code>buildTicketHTML()</code> を編集すると変えられます。
+    注意事項の文面は「３. 対象者の判定ルール」画面で変更できます（ファイルの編集は不要です）。</p>
   </div>
 </section>
 
 </main>
 
+<style id="pageStyle"></style>
 <div id="printArea"></div>
 <div id="toast"></div>
 
@@ -615,11 +731,20 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
    ========================================================================= */
 
 var KENSHIN = [
-  { id:"seikatsu", name:"生活習慣病健診" },
+  { id:"seikatsu", name:"生活習慣病健診", noTicket:true },   // 受検票の印刷は不要
   { id:"i",        name:"胃がん検診" },
   { id:"nyu",      name:"乳がん検診" },
   { id:"shikyu",   name:"子宮頸がん検診" }
 ];
+
+/* 受検票を印刷する検診だけを返す */
+function ticketKenshin(){
+  return KENSHIN.filter(function(k){ return !k.noTicket; });
+}
+function hasTicket(kid){
+  for(var i = 0; i < KENSHIN.length; i++) if(KENSHIN[i].id === kid) return !KENSHIN[i].noTicket;
+  return false;
+}
 
 var FIELDS = [
   { key:"empNo",   label:"職員番号",   required:true,  aliases:["職員番号","番号","職員No","職員ID","社員番号","ID","個人番号"] },
@@ -630,7 +755,9 @@ var FIELDS = [
   { key:"deptCode",label:"所属コード", required:false, aliases:["所属コード","所属CD","部署コード","組織コード","課コード"] },
   { key:"deptName",label:"所属名",     required:true,  aliases:["所属名","所属","部署名","部署","課名","所属課","組織名"] },
   { key:"empType", label:"雇用区分",   required:false, aliases:["雇用区分","区分名","身分","職員区分","勤務形態","区分"] },
-  { key:"active",  label:"在職",       required:false, aliases:["在職","在籍","在職区分","在職フラグ"] }
+  { key:"active",  label:"在職",       required:false, aliases:["在職","在籍","在職区分","在職フラグ"] },
+  { key:"insNo",   label:"組合員証記号番号", required:false, aliases:["社保","組合員証","記号番号","組合員証記号番号","保険証番号"] },
+  { key:"section", label:"係名",       required:false, aliases:["係名","係","担当名"] }
 ];
 
 /* 受検票の印刷が不要になる「入力」欄の文言（部分一致・空白と全半角は無視） */
@@ -698,7 +825,11 @@ var state = {
   inactive:   [],        // 在職でないため除外した職員
   nyuryoku:   {},        // kenshinId -> 受診状況（入力）ファイルの取込結果
   pending:    null,      // 読込中のブック（シート・ヘッダ行の選択待ち）
-  skipPhrases: defaultSkipPhrases()
+  skipPhrases: defaultSkipPhrases(),
+
+  orgName:    "陸前高田市",
+  layouts:    null,      // 検診ごとの様式レイアウト（初期化時に設定）
+  printMode:  "overlay"  // overlay = 対がん協会の用紙へ重ね刷り／a4 = A4自前様式
 };
 
 KENSHIN.forEach(function(k){ state.excluded[k.id] = new Set(); });
@@ -1243,6 +1374,7 @@ Array.prototype.forEach.call(document.querySelectorAll("nav .tab"), function(b){
     $(b.dataset.page).classList.add("active");
     if(b.dataset.page === "p4") renderTargets();
     if(b.dataset.page === "p7") KENSHIN.forEach(function(k){ renderNyuCard(k.id); });
+    if(b.dataset.page === "p8") renderLayoutTab();
   });
 });
 
@@ -1479,6 +1611,9 @@ function buildEmployees(){
       empNo: empNo,
       name: name,
       kana: toZenkakuKana(cell(row, "kana")),
+      kanaRaw: cell(row, "kana"),            // 名簿のままの表記（半角カナを含む）
+      insNo: cell(row, "insNo"),
+      section: cell(row, "section"),
       birth: birth,
       sex: sex,
       deptCode: cell(row, "deptCode"),
@@ -1618,7 +1753,9 @@ function saveSettings(){
     schedules: state.schedules,
     skipPhrases: state.skipPhrases,
     printUnknown: !!state.printUnknown,
-    onlyActive: !!state.onlyActive
+    onlyActive: !!state.onlyActive,
+    orgName: state.orgName,
+    layouts: state.layouts
   }));
 }
 
@@ -2358,6 +2495,612 @@ $("targetTable").addEventListener("change", function(e){
 });
 
 /* =========================================================================
+   様式レイアウト（対がん協会の用紙への重ね刷り）
+   用紙上の位置を mm 単位で保持し、印刷時に絶対配置で重ねます。
+   初期値は現行の印刷物（PDF）から実測した座標です。
+   ========================================================================= */
+
+var PAPER = {
+  b4l: { w:364, h:257, name:"B4 横" },
+  b4p: { w:257, h:364, name:"B4 縦" },
+  a4l: { w:297, h:210, name:"A4 横" },
+  a4p: { w:210, h:297, name:"A4 縦" },
+  a3l: { w:420, h:297, name:"A3 横" }
+};
+
+/* 差し込める項目 */
+var PLACEHOLDERS = [
+  "団体名","所属名","所属コード","係名","職員番号",
+  "氏名","カナ","カナ半角","組合員証記号番号","性別",
+  "元号","和暦年","生月","生日","西暦年","生年月日","年齢",
+  "受診日","受診月","受診日日","受付時間","会場","年度","和暦年度"
+];
+
+var SHOWIF_OPTIONS = [
+  ["", "（条件なし・常に印刷）"],
+  ["性別=男", "性別が男のときだけ"],
+  ["性別=女", "性別が女のときだけ"],
+  ["元号=昭和", "元号が昭和のときだけ"],
+  ["元号=平成", "元号が平成のときだけ"],
+  ["元号=令和", "元号が令和のときだけ"]
+];
+
+/* --- 和暦 --- */
+var GENGO_LIST = [
+  { name:"令和", start:new Date(2019, 4, 1),  base:2018 },
+  { name:"平成", start:new Date(1989, 0, 8),  base:1988 },
+  { name:"昭和", start:new Date(1926, 11, 25), base:1925 },
+  { name:"大正", start:new Date(1912, 6, 30), base:1911 },
+  { name:"明治", start:new Date(1868, 0, 25), base:1867 }
+];
+
+function toWareki(d){
+  if(!d) return { gengo:"", year:"", month:"", day:"" };
+  for(var i = 0; i < GENGO_LIST.length; i++){
+    var g = GENGO_LIST[i];
+    if(d.getTime() >= g.start.getTime()){
+      return { gengo:g.name, year:(d.getFullYear() - g.base), month:(d.getMonth() + 1), day:d.getDate() };
+    }
+  }
+  return { gengo:"", year:d.getFullYear(), month:d.getMonth() + 1, day:d.getDate() };
+}
+
+function warekiYear(y){
+  var d = new Date(y, 6, 1);                     // 年度の途中（7月）で元号を判定
+  var w = toWareki(d);
+  return w.gengo + w.year;
+}
+
+/* 年齢の基準日 */
+function ageFor(emp, basis, assign){
+  if(!emp.birth) return null;
+  var fy = state.fiscalYear;
+  var d;
+  if(basis === "exam" && assign && assign.date){
+    var p = assign.date.split("-");
+    d = new Date(+p[0], +p[1] - 1, +p[2]);
+  }else if(basis === "fyEnd"){
+    d = new Date(fy + 1, 2, 31);
+  }else if(basis === "base"){
+    d = state.baseDate;
+  }else{
+    d = new Date(fy, 3, 1);                      // 年度初日（4月1日）現在
+  }
+  return ageAt(emp.birth, d);
+}
+
+var AGE_BASIS = [
+  ["fyStart", "年度初日（4月1日）現在"],
+  ["fyEnd",   "年度末（3月31日）現在"],
+  ["exam",    "受診日現在"],
+  ["base",    "「名簿の読込」で指定した基準日現在"]
+];
+
+/* --- 初期レイアウト（現行の印刷物から実測） --- */
+/* ○囲み。x,y は円の中心。フォントに依存しないよう図形として描きます。 */
+function E(label, cx, cy, w, h, showIf){
+  return { label:label, shape:"ellipse", value:"", x:cx, y:cy, w:w, h:h, lw:0.35,
+           size:11, align:"center", bold:false, ls:0, showIf:showIf };
+}
+
+function F(label, value, x, y, size, align, opt){
+  var f = { label:label, value:value, x:x, y:y, size:size, align:align || "left",
+            bold:false, ls:0, showIf:"" };
+  if(opt) for(var k in opt) f[k] = opt[k];
+  return f;
+}
+
+function defaultLayouts(){
+  return {
+
+    /* ---- 胃がん検診（受検票＋電算処理用紙） ---- */
+    i: {
+      paper:"b4l", offsetX:0, offsetY:0, ageBasis:"fyStart",
+      font:'"MS ゴシック","MS Gothic","Yu Gothic",sans-serif',
+      source:"胃がん検診の現行印刷物から実測（○の位置は協会の用紙から実測）",
+      fields:[
+        F("団体名（受検票）",      "{団体名}",            48.3, 21.3, 14, "left", {ls:1.15}),
+        F("所属名（受検票）",      "{所属名}",            50.3, 34.4, 12),
+        F("フリガナ（受検票）",    "{カナ半角}",          50.3, 42.4, 11),
+        F("氏名（受検票）",        "{氏名}",              50.3, 49.4, 11),
+        E("性別○ 男（受検票）",   114.8, 51.0, 4.8, 4.8, "性別=男"),
+        E("性別○ 女（受検票）",   121.9, 51.0, 4.8, 4.8, "性別=女"),
+        E("元号○ 昭和（受検票）", 147.7, 48.6, 6.4, 4.4, "元号=昭和"),
+        E("元号○ 平成（受検票）", 155.6, 48.6, 6.4, 4.4, "元号=平成"),
+        F("生年（受検票）",        "{和暦年}",           146.5, 51.4,  9, "center"),
+        F("生月（受検票）",        "{生月}",             156.5, 51.4,  9, "center"),
+        F("生日（受検票）",        "{生日}",             166.5, 51.4,  9, "center"),
+        F("年齢（受検票）",        "{年齢}",             179.5, 51.4,  9, "center"),
+        F("組合員証記号番号（受検票）", "{組合員証記号番号}", 97.5, 59.4, 12),
+
+        F("団体名（電算）",        "{団体名}",           236.3, 20.3, 12, "left", {ls:1.0}),
+        F("所属名（電算）",        "{所属名}",           240.3, 34.4, 12),
+        F("フリガナ（電算）",      "{カナ半角}",         240.3, 42.4, 11),
+        F("氏名（電算）",          "{氏名}",             240.3, 50.4, 11),
+        E("性別○ 男（電算）",     296.3, 51.1, 4.8, 4.8, "性別=男"),
+        E("性別○ 女（電算）",     303.4, 51.1, 4.8, 4.8, "性別=女"),
+        E("元号○ 昭和（電算）",   330.5, 48.7, 6.4, 4.4, "元号=昭和"),
+        E("元号○ 平成（電算）",   338.7, 48.7, 6.4, 4.4, "元号=平成"),
+        F("生年（電算）",          "{和暦年}",           319.5, 56.4,  9, "center"),
+        F("生月（電算）",          "{生月}",             329.5, 56.4,  9, "center"),
+        F("生日（電算）",          "{生日}",             339.5, 56.4,  9, "center"),
+        F("年齢（電算）",          "{年齢}",             337.5, 63.4,  9, "center"),
+        F("組合員証記号番号（電算）", "{組合員証記号番号}", 282.4, 60.4, 10)
+      ]
+    },
+
+    /* ---- 乳がん検診 ---- */
+    nyu: {
+      paper:"b4l", offsetX:0, offsetY:0, ageBasis:"fyStart",
+      font:'"MS ゴシック","MS Gothic","Yu Gothic",sans-serif',
+      source:"乳がん検診の現行印刷物から実測",
+      fields:[
+        F("団体名（受検票）",      "{団体名}",            50.2, 21.7, 14),
+        F("所属名（受検票）",      "{所属名}",            50.3, 34.7, 12),
+        F("フリガナ（受検票）",    "{カナ半角}",          50.3, 43.7, 11),
+        F("氏名（受検票）",        "{氏名}",              49.3, 50.7, 11),
+        F("元号＋生年（受検票）",  "{元号}{和暦年}",     131.6, 50.7, 11),
+        F("生月（受検票）",        "{生月}",             156.2, 50.7, 11, "center"),
+        F("生日（受検票）",        "{生日}",             166.9, 50.7, 11, "center"),
+        F("年齢（受検票）",        "{年齢}",             179.9, 50.7, 11, "center"),
+        F("組合員証記号番号（受検票）", "{組合員証記号番号}", 97.3, 60.7, 11),
+
+        F("団体名（電算）",        "{団体名}",           236.2, 21.7, 14),
+        F("所属名（電算）",        "{所属名}",           236.3, 32.7, 12),
+        F("フリガナ（電算）",      "{カナ半角}",         236.3, 43.7, 11),
+        F("氏名（電算）",          "{氏名}",             237.3, 50.7, 11),
+        F("元号（電算）",          "{元号}",             310.6, 48.7, 11),
+        F("生年（電算）",          "{和暦年}",           318.6, 54.7, 11, "center"),
+        F("生月（電算）",          "{生月}",             331.4, 54.7, 11, "center"),
+        F("生日（電算）",          "{生日}",             339.4, 54.7, 11, "center"),
+        F("年齢（電算）",          "{年齢}",             337.3, 61.7, 11, "center"),
+        F("組合員証記号番号（電算）", "{組合員証記号番号}", 282.3, 61.7, 11)
+      ]
+    },
+
+    /* ---- 子宮頸がん検診 ---- */
+    shikyu: {
+      paper:"b4l", offsetX:0, offsetY:0, ageBasis:"fyStart",
+      font:'"MS ゴシック","MS Gothic","Yu Gothic",sans-serif',
+      source:"子宮頸がん検診の現行印刷物から実測",
+      fields:[
+        F("団体名（受検票）",      "{団体名}",            50.2, 21.7, 14),
+        F("所属名（受検票）",      "{所属名}",            50.3, 34.7, 12),
+        F("フリガナ（受検票）",    "{カナ半角}",          50.3, 42.7, 11),
+        F("氏名（受検票）",        "{氏名}",              50.3, 49.7, 11),
+        F("元号＋生年（受検票）",  "{元号}{和暦年}",     131.6, 50.7, 11),
+        F("生月（受検票）",        "{生月}",             156.2, 50.7, 11, "center"),
+        F("生日（受検票）",        "{生日}",             167.9, 50.7, 11, "center"),
+        F("年齢（受検票）",        "{年齢}",             179.9, 50.7, 11, "center"),
+        F("組合員証記号番号（受検票）", "{組合員証記号番号}", 97.3, 59.7, 11),
+
+        F("団体名（電算）",        "{団体名}",           236.2, 21.7, 14),
+        F("所属名（電算）",        "{所属名}",           236.3, 31.7, 12),
+        F("フリガナ（電算）",      "{カナ半角}",         237.3, 42.7, 11),
+        F("氏名（電算）",          "{氏名}",             236.3, 49.7, 11),
+        F("元号（電算）",          "{元号}",             313.6, 48.7, 11),
+        F("生年（電算）",          "{和暦年}",           318.6, 54.7, 11, "center"),
+        F("生月（電算）",          "{生月}",             331.4, 54.7, 11, "center"),
+        F("生日（電算）",          "{生日}",             339.4, 54.7, 11, "center"),
+        F("年齢（電算）",          "{年齢}",             337.3, 61.7, 11, "center"),
+        F("組合員証記号番号（電算）", "{組合員証記号番号}", 281.3, 60.7, 11)
+      ]
+    }
+  };
+}
+
+/* --- 差し込み --- */
+function personCtx(t, kid){
+  var e = t.emp, a = t.assign, L = state.layouts[kid] || {};
+  var w = toWareki(e.birth);
+  var age = ageFor(e, L.ageBasis, a);
+  var ed = "", em = "", edd = "";
+  if(a && a.date){
+    var p = a.date.split("-");
+    ed = fmtDateWithDow(a.date); em = String(+p[1]); edd = String(+p[2]);
+  }
+  return {
+    "団体名": state.orgName,
+    "所属名": e.deptName, "所属コード": e.deptCode, "係名": e.section || "", "職員番号": e.empNo,
+    "氏名": e.name, "カナ": e.kana, "カナ半角": e.kanaRaw || e.kana,
+    "組合員証記号番号": e.insNo || "",
+    "性別": sexLabel(e.sex),
+    "元号": w.gengo, "和暦年": w.year, "生月": w.month, "生日": w.day,
+    "西暦年": e.birth ? e.birth.getFullYear() : "",
+    "生年月日": fmtDate(e.birth),
+    "年齢": age == null ? "" : age,
+    "受診日": ed, "受診月": em, "受診日日": edd,
+    "受付時間": a ? (a.time || "") : "", "会場": a ? (a.place || "") : "",
+    "年度": state.fiscalYear, "和暦年度": warekiYear(state.fiscalYear)
+  };
+}
+
+/* y は「印字される文字の上端」を表します。
+   ブラウザの絶対配置はそれより少し上に描くため、その差を補正します。 */
+function inkTopAdjust(sizePt){ return (+sizePt || 0) * 0.12 * 25.4 / 72; }
+
+function fieldText(tpl, ctx){
+  return String(tpl == null ? "" : tpl).replace(/\{([^}]*)\}/g, function(m, k){
+    return ctx[k] == null ? "" : String(ctx[k]);
+  });
+}
+
+function showField(f, ctx){
+  if(!f.showIf) return true;
+  var p = String(f.showIf).split("=");
+  return String(ctx[p[0]] == null ? "" : ctx[p[0]]) === p[1];
+}
+
+/* 印刷用の1ページ分のHTML */
+function buildOverlayHTML(t, kid, opt){
+  return buildOverlayFromCtx(personCtx(t, kid), kid, opt);
+}
+
+function buildOverlayFromCtx(ctx, kid, opt){
+  opt = opt || {};
+  var L = state.layouts[kid];
+  var pg = PAPER[L.paper] || PAPER.b4l;
+  var h = '<div class="ovl" style="width:' + pg.w + "mm;height:" + pg.h + 'mm;font-family:' + L.font + '">';
+
+  if(opt.grid) h += buildGridHTML(pg);
+
+  L.fields.forEach(function(f){
+    if(!showField(f, ctx)) return;
+    var x = (+f.x || 0) + (+L.offsetX || 0);
+
+    if(f.shape === "ellipse"){
+      var y0 = (+f.y || 0) + (+L.offsetY || 0);
+      h += '<div class="ovf" style="left:' + x + "mm;top:" + y0 + "mm;width:" + (+f.w || 4) + "mm;height:" + (+f.h || 4)
+         + "mm;border:" + (+f.lw || 0.35) + "mm solid #000;border-radius:50%;box-sizing:border-box;"
+         + 'transform:translate(-50%,-50%)"></div>';
+      return;
+    }
+
+    var txt = fieldText(f.value, ctx);
+    if(txt === "") return;
+    var y = (+f.y || 0) + (+L.offsetY || 0) + inkTopAdjust(f.size);
+    var st = "left:" + x + "mm;top:" + y + "mm;font-size:" + f.size + "pt;";
+    if(f.bold) st += "font-weight:bold;";
+    if(+f.ls) st += "letter-spacing:" + f.ls + "mm;";
+    if(f.align === "center") st += "transform:translateX(-50%);";
+    else if(f.align === "right") st += "transform:translateX(-100%);";
+    h += '<div class="ovf" style="' + st + '">' + esc(txt) + "</div>";
+  });
+  return h + "</div>";
+}
+
+/* 位置合わせ用の 10mm グリッド */
+function buildGridHTML(pg){
+  var h = '<div class="ovgrid" style="width:' + pg.w + "mm;height:" + pg.h + 'mm"></div>';
+  for(var x = 0; x <= pg.w; x += 50) h += '<div class="ovtick" style="left:' + x + 'mm;top:1mm">' + x + "</div>";
+  for(var y = 0; y <= pg.h; y += 50) h += '<div class="ovtick" style="left:1mm;top:' + y + 'mm">' + y + "</div>";
+  return h;
+}
+
+/* =========================================================================
+   レイアウト編集画面
+   ========================================================================= */
+
+var ly = { kid:"i", sel:-1, scale:2.0, bg:{}, bgOpacity:0.45, grid:false, drag:null };
+
+function renderLayoutTab(){
+  var box = $("lyKenshinTabs");
+  box.innerHTML = ticketKenshin().map(function(k){
+    return '<button class="btn' + (ly.kid === k.id ? " primary" : "") + '" data-lyk="' + k.id + '">' + esc(k.name) + "</button>";
+  }).join(" ");
+  renderLayoutEditor();
+}
+
+function renderLayoutEditor(){
+  var L = state.layouts[ly.kid];
+  if(!L){ $("lyBody").innerHTML = '<p class="hint">この検診のレイアウトは未設定です。</p>'; return; }
+  var pg = PAPER[L.paper] || PAPER.b4l;
+
+  var h = '<div class="row">'
+    + '<label>用紙 <select id="lyPaper">'
+    + Object.keys(PAPER).map(function(k){
+        return '<option value="' + k + '"' + (L.paper === k ? " selected" : "") + ">" + esc(PAPER[k].name)
+             + "（" + PAPER[k].w + "×" + PAPER[k].h + "mm）</option>"; }).join("")
+    + "</select></label>"
+    + '<label>年齢の基準 <select id="lyAge">'
+    + AGE_BASIS.map(function(a){ return '<option value="' + a[0] + '"' + (L.ageBasis === a[0] ? " selected" : "") + ">" + esc(a[1]) + "</option>"; }).join("")
+    + "</select></label>"
+    + '<label>全体のずれ補正　横 <input type="number" step="0.5" id="lyOffX" value="' + (L.offsetX || 0) + '" style="width:70px"> mm</label>'
+    + '<label>縦 <input type="number" step="0.5" id="lyOffY" value="' + (L.offsetY || 0) + '" style="width:70px"> mm</label>'
+    + "</div>"
+
+    + '<div class="row">'
+    + '<label>表示倍率 <select id="lyScale">'
+    + [1.5, 2, 2.5, 3].map(function(v){ return '<option value="' + v + '"' + (ly.scale === v ? " selected" : "") + ">" + v + "倍</option>"; }).join("")
+    + "</select></label>"
+    + '<button class="btn" id="lyBgPick">位置合わせ用の画像を読み込む…</button>'
+    + '<input type="file" id="lyBgFile" accept="image/*" style="display:none">'
+    + (ly.bg[ly.kid] ? '<button class="btn" id="lyBgClear">画像を外す</button>'
+        + '<label>濃さ <input type="range" id="lyBgOp" min="0" max="100" value="' + Math.round(ly.bgOpacity * 100) + '" style="width:110px"></label>' : "")
+    + '<label><input type="checkbox" id="lyGrid"' + (ly.grid ? " checked" : "") + "> 10mmの方眼を表示</label>"
+    + '<button class="btn" id="lyAddText">＋ 文字の項目を追加</button>'
+    + '<button class="btn" id="lyAddEll">＋ ○囲みを追加</button>'
+    + "</div>"
+
+    + '<div class="hint" style="margin:6px 0">'
+    + '項目を<strong>ドラッグ</strong>して動かせます。クリックで選択し、<strong>矢印キー</strong>で0.5mm、<strong>Shift＋矢印</strong>で0.1mm動きます。'
+    + '　用紙サイズ：' + pg.w + " × " + pg.h + "mm　"
+    + (L.source ? "（" + esc(L.source) + "）" : "")
+    + "</div>"
+
+    + '<div id="lyCanvasWrap" style="overflow:auto;border:1px solid var(--line);background:#e9edf1;padding:10px">'
+    + '<div id="lyCanvas"></div></div>'
+
+    + '<div class="row" style="margin-top:12px;align-items:flex-start">'
+    + '<div id="lyProps" style="min-width:420px"></div>'
+    + '<div id="lyList" style="flex:1;min-width:280px"></div>'
+    + "</div>";
+
+  $("lyBody").innerHTML = h;
+  drawCanvas();
+  renderProps();
+  renderFieldList();
+  bindEditor();
+}
+
+function drawCanvas(){
+  var L = state.layouts[ly.kid];
+  var pg = PAPER[L.paper] || PAPER.b4l;
+  var sc = ly.scale;
+  var c = $("lyCanvas");
+  var bg = ly.bg[ly.kid];
+
+  var st = "position:relative;width:" + (pg.w * sc) + "px;height:" + (pg.h * sc) + "px;"
+         + "background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);font-family:" + L.font + ";";
+  var h = "";
+
+  if(bg){
+    h += '<img src="' + bg + '" style="position:absolute;left:0;top:0;width:100%;height:100%;'
+       + "opacity:" + ly.bgOpacity + ';pointer-events:none">';
+  }
+  if(ly.grid){
+    var g = 10 * sc;
+    h += '<div style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;'
+       + "background-image:repeating-linear-gradient(to right,rgba(26,95,168,.22) 0 1px,transparent 1px " + g + "px),"
+       + "repeating-linear-gradient(to bottom,rgba(26,95,168,.22) 0 1px,transparent 1px " + g + "px)\"></div>";
+  }
+
+  var ctx = sampleCtx();
+  L.fields.forEach(function(f, i){
+    var xc = ((+f.x || 0) + (+L.offsetX || 0)) * sc;
+
+    if(f.shape === "ellipse"){
+      var yc = ((+f.y || 0) + (+L.offsetY || 0)) * sc;
+      var on = showField(f, ctx);
+      var es = "position:absolute;left:" + xc + "px;top:" + yc + "px;"
+             + "width:" + ((+f.w || 4) * sc) + "px;height:" + ((+f.h || 4) * sc) + "px;"
+             + "border:" + Math.max(1, (+f.lw || 0.35) * sc) + "px solid "
+             + (i === ly.sel ? "#a8410f" : (on ? "#000" : "rgba(0,0,0,.25)")) + ";"
+             + "border-radius:50%;box-sizing:border-box;transform:translate(-50%,-50%);cursor:move;";
+      if(i === ly.sel) es += "z-index:5;box-shadow:0 0 0 2px rgba(168,65,15,.25);";
+      h += '<div class="lyF" data-i="' + i + '" style="' + es + '"></div>';
+      return;
+    }
+
+    var txt = fieldText(f.value, ctx) || f.label;
+    var x = xc;
+    var y = ((+f.y || 0) + (+L.offsetY || 0) + inkTopAdjust(f.size)) * sc;
+    var px = (+f.size) * (25.4 / 72) * sc;
+    var s = "position:absolute;left:" + x + "px;top:" + y + "px;font-size:" + px + "px;line-height:1;"
+          + "white-space:nowrap;cursor:move;padding:1px 2px;border:1px dashed rgba(26,95,168,.55);"
+          + "background:rgba(255,255,255,.55);";
+    if(f.bold) s += "font-weight:bold;";
+    if(+f.ls) s += "letter-spacing:" + (f.ls * sc) + "px;";
+    if(f.align === "center") s += "transform:translateX(-50%);";
+    else if(f.align === "right") s += "transform:translateX(-100%);";
+    if(i === ly.sel) s += "border:1.5px solid #a8410f;background:rgba(253,241,232,.9);z-index:5;";
+    h += '<div class="lyF" data-i="' + i + '" style="' + s + '">' + esc(txt) + "</div>";
+  });
+
+  c.setAttribute("style", st);
+  c.innerHTML = h;
+}
+
+/* 編集画面に表示するサンプルの値 */
+function sampleCtx(){
+  var L = state.layouts[ly.kid] || {};
+  var t = firstTarget(ly.kid);
+  if(t) return personCtx(t, ly.kid);
+  var birth = new Date(1984, 0, 16);
+  var w = toWareki(birth);
+  var age = ageAt(birth, new Date(state.fiscalYear, 3, 1));
+  return {
+    "団体名": state.orgName, "所属名": "総務部総務課", "所属コード":"1100", "係名":"職員係", "職員番号":"1007",
+    "氏名": "見本　太郎", "カナ":"ミホン タロウ", "カナ半角":"ﾐﾎﾝ ﾀﾛｳ",
+    "組合員証記号番号":"B111-000", "性別":"女",
+    "元号": w.gengo, "和暦年": w.year, "生月": w.month, "生日": w.day,
+    "西暦年": birth.getFullYear(), "生年月日": fmtDate(birth), "年齢": age,
+    "受診日":"", "受診月":"", "受診日日":"", "受付時間":"", "会場":"",
+    "年度": state.fiscalYear, "和暦年度": warekiYear(state.fiscalYear)
+  };
+}
+
+function firstTarget(kid){
+  var list = activeTargets(kid);
+  return list.length ? list[0] : null;
+}
+
+function renderProps(){
+  var L = state.layouts[ly.kid];
+  var box = $("lyProps");
+  if(ly.sel < 0 || !L.fields[ly.sel]){
+    box.innerHTML = '<div class="panel" style="margin:0;background:#fafbfc">'
+      + '<strong>項目を選択してください</strong><div class="hint">用紙の上の項目をクリックすると、ここで細かく調整できます。</div></div>';
+    return;
+  }
+  var f = L.fields[ly.sel];
+  var isE = f.shape === "ellipse";
+  box.innerHTML = '<div class="panel" style="margin:0;background:#fafbfc">'
+    + '<div style="font-weight:bold;color:var(--accent);margin-bottom:8px">' + esc(f.label)
+    + (isE ? '　<span class="badge">○囲み</span>' : "") + "</div>"
+    + '<div class="row"><label>名前 <input type="text" class="lp" data-p="label" value="' + esc(f.label) + '" style="width:230px"></label></div>'
+    + (isE ? "" :
+        '<div class="row"><label>印字内容 <input type="text" class="lp" data-p="value" value="' + esc(f.value) + '" style="width:300px"></label></div>'
+      + '<div class="row"><span class="hint">差し込み項目を挿入：</span><select id="lpIns"><option value="">選択…</option>'
+      + PLACEHOLDERS.map(function(p){ return '<option value="{' + p + '}">' + esc(p) + "</option>"; }).join("")
+      + "</select></div>")
+    + '<div class="row">'
+      + "<label>" + (isE ? "中心の横" : "横") + ' <input type="number" step="0.1" class="lp" data-p="x" value="' + f.x + '" style="width:80px"> mm</label>'
+      + "<label>" + (isE ? "中心の縦" : "縦") + ' <input type="number" step="0.1" class="lp" data-p="y" value="' + f.y + '" style="width:80px"> mm</label>'
+      + (isE ? "" : '<label>文字 <input type="number" step="0.5" class="lp" data-p="size" value="' + f.size + '" style="width:66px"> pt</label>')
+    + "</div>"
+    + (isE
+      ? '<div class="row">'
+        + '<label>幅 <input type="number" step="0.1" class="lp" data-p="w" value="' + (f.w || 4) + '" style="width:76px"> mm</label>'
+        + '<label>高さ <input type="number" step="0.1" class="lp" data-p="h" value="' + (f.h || 4) + '" style="width:76px"> mm</label>'
+        + '<label>線の太さ <input type="number" step="0.05" class="lp" data-p="lw" value="' + (f.lw || 0.35) + '" style="width:76px"> mm</label>'
+        + "</div>"
+      : '<div class="row">'
+        + '<label>基準 <select class="lp" data-p="align">'
+          + '<option value="left"'   + (f.align === "left"   ? " selected" : "") + ">左端</option>"
+          + '<option value="center"' + (f.align === "center" ? " selected" : "") + ">中央</option>"
+          + '<option value="right"'  + (f.align === "right"  ? " selected" : "") + ">右端</option>"
+        + "</select></label>"
+        + '<label>字間 <input type="number" step="0.05" class="lp" data-p="ls" value="' + (f.ls || 0) + '" style="width:70px"> mm</label>'
+        + '<label><input type="checkbox" class="lp" data-p="bold"' + (f.bold ? " checked" : "") + "> 太字</label>"
+        + "</div>")
+    + '<div class="row"><label>印字する条件 <select class="lp" data-p="showIf">'
+    + SHOWIF_OPTIONS.map(function(o){ return '<option value="' + o[0] + '"' + (f.showIf === o[0] ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("")
+    + "</select></label></div>"
+    + '<div class="row"><button class="btn" id="lpDup">この項目を複製</button>'
+    + '<button class="btn" id="lpDel">この項目を削除</button></div>'
+    + "</div>";
+}
+
+function renderFieldList(){
+  var L = state.layouts[ly.kid];
+  var h = '<table class="grid"><thead><tr><th>項目</th><th>印字内容</th><th>横mm</th><th>縦mm</th><th>pt</th></tr></thead><tbody>';
+  L.fields.forEach(function(f, i){
+    h += '<tr data-li="' + i + '" style="cursor:pointer' + (i === ly.sel ? ";background:#fdf1e8" : "") + '">'
+      + "<td>" + esc(f.label) + "</td><td>" + (f.shape === "ellipse" ? "（○囲み）" : esc(f.value)) + "</td>"
+      + '<td class="num">' + f.x + '</td><td class="num">' + f.y + '</td><td class="num">' + f.size + "</td></tr>";
+  });
+  h += "</tbody></table>";
+  $("lyList").innerHTML = h;
+}
+
+function bindEditor(){
+  $("lyPaper").addEventListener("change", function(){ state.layouts[ly.kid].paper = this.value; renderLayoutEditor(); });
+  $("lyAge").addEventListener("change", function(){ state.layouts[ly.kid].ageBasis = this.value; drawCanvas(); });
+  $("lyScale").addEventListener("change", function(){ ly.scale = parseFloat(this.value); drawCanvas(); });
+  $("lyOffX").addEventListener("input", function(){ state.layouts[ly.kid].offsetX = parseFloat(this.value) || 0; drawCanvas(); });
+  $("lyOffY").addEventListener("input", function(){ state.layouts[ly.kid].offsetY = parseFloat(this.value) || 0; drawCanvas(); });
+  $("lyGrid").addEventListener("change", function(){ ly.grid = this.checked; drawCanvas(); });
+
+  $("lyAddText").addEventListener("click", function(){
+    var L = state.layouts[ly.kid];
+    L.fields.push(F("新しい項目", "{氏名}", 30, 100, 11, "left"));
+    ly.sel = L.fields.length - 1;
+    renderLayoutEditor();
+    toast("項目を追加しました。用紙の上でドラッグして位置を合わせてください。");
+  });
+  $("lyAddEll").addEventListener("click", function(){
+    var L = state.layouts[ly.kid];
+    L.fields.push(E("新しい○囲み", 30, 100, 5, 5, ""));
+    ly.sel = L.fields.length - 1;
+    renderLayoutEditor();
+    toast("○囲みを追加しました。用紙の上でドラッグして位置を合わせてください。");
+  });
+
+  $("lyBgPick").addEventListener("click", function(){ $("lyBgFile").click(); });
+  $("lyBgFile").addEventListener("change", function(e){
+    var f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if(!f) return;
+    var fr = new FileReader();
+    fr.onload = function(){ ly.bg[ly.kid] = fr.result; renderLayoutEditor();
+      toast("背景画像を読み込みました（画面表示のみで、印刷はされません）"); };
+    fr.readAsDataURL(f);
+  });
+  if($("lyBgClear")) $("lyBgClear").addEventListener("click", function(){ delete ly.bg[ly.kid]; renderLayoutEditor(); });
+  if($("lyBgOp")) $("lyBgOp").addEventListener("input", function(){ ly.bgOpacity = this.value / 100; drawCanvas(); });
+
+  if($("lpIns")) $("lpIns").addEventListener("change", function(){
+    if(!this.value || ly.sel < 0) return;
+    var f = state.layouts[ly.kid].fields[ly.sel];
+    f.value = (f.value || "") + this.value;
+    this.value = "";
+    renderProps(); renderFieldList(); drawCanvas();
+  });
+  if($("lpDup")) $("lpDup").addEventListener("click", function(){
+    var L = state.layouts[ly.kid];
+    var c = JSON.parse(JSON.stringify(L.fields[ly.sel]));
+    c.label += "（複製）"; c.y = (+c.y) + 6;
+    L.fields.splice(ly.sel + 1, 0, c);
+    ly.sel++;
+    renderLayoutEditor();
+  });
+  if($("lpDel")) $("lpDel").addEventListener("click", function(){
+    var L = state.layouts[ly.kid];
+    if(!confirm("「" + L.fields[ly.sel].label + "」を削除します。よろしいですか？")) return;
+    L.fields.splice(ly.sel, 1);
+    ly.sel = -1;
+    renderLayoutEditor();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("#lyProps .lp"), function(inp){
+    inp.addEventListener("input", function(){
+      var f = state.layouts[ly.kid].fields[ly.sel], p = this.dataset.p;
+      if(this.type === "checkbox") f[p] = this.checked;
+      else if(p === "x" || p === "y" || p === "size" || p === "ls" || p === "w" || p === "h" || p === "lw") f[p] = parseFloat(this.value) || 0;
+      else f[p] = this.value;
+      drawCanvas(); renderFieldList();
+    });
+    inp.addEventListener("change", function(){ drawCanvas(); renderFieldList(); });
+  });
+
+  $("lyList").addEventListener("click", function(e){
+    var tr = e.target.closest ? e.target.closest("tr[data-li]") : null;
+    if(!tr) return;
+    ly.sel = parseInt(tr.dataset.li, 10);
+    drawCanvas(); renderProps(); renderFieldList();
+  });
+
+  var canvas = $("lyCanvas");
+  canvas.addEventListener("mousedown", function(e){
+    var el = e.target.classList && e.target.classList.contains("lyF") ? e.target : null;
+    if(!el) return;
+    e.preventDefault();
+    ly.sel = parseInt(el.dataset.i, 10);
+    var L = state.layouts[ly.kid], f = L.fields[ly.sel];
+    ly.drag = { startX:e.clientX, startY:e.clientY, x0:+f.x, y0:+f.y };
+    drawCanvas(); renderProps(); renderFieldList();
+  });
+  document.addEventListener("mousemove", function(e){
+    if(!ly.drag) return;
+    var f = state.layouts[ly.kid].fields[ly.sel];
+    f.x = Math.round((ly.drag.x0 + (e.clientX - ly.drag.startX) / ly.scale) * 10) / 10;
+    f.y = Math.round((ly.drag.y0 + (e.clientY - ly.drag.startY) / ly.scale) * 10) / 10;
+    drawCanvas();
+  });
+  document.addEventListener("mouseup", function(){
+    if(!ly.drag) return;
+    ly.drag = null;
+    renderProps(); renderFieldList();
+  });
+}
+
+/* 矢印キーでの微調整 */
+document.addEventListener("keydown", function(e){
+  if(!$("p8") || !$("p8").classList.contains("active")) return;
+  if(ly.sel < 0) return;
+  var tag = (e.target.tagName || "").toLowerCase();
+  if(tag === "input" || tag === "select" || tag === "textarea") return;
+  var step = e.shiftKey ? 0.1 : 0.5, f = state.layouts[ly.kid].fields[ly.sel], moved = true;
+  if(e.key === "ArrowLeft")       f.x = Math.round((+f.x - step) * 10) / 10;
+  else if(e.key === "ArrowRight") f.x = Math.round((+f.x + step) * 10) / 10;
+  else if(e.key === "ArrowUp")    f.y = Math.round((+f.y - step) * 10) / 10;
+  else if(e.key === "ArrowDown")  f.y = Math.round((+f.y + step) * 10) / 10;
+  else moved = false;
+  if(moved){ e.preventDefault(); drawCanvas(); renderProps(); renderFieldList(); }
+});
+
+/* =========================================================================
    9. 印刷
    ========================================================================= */
 
@@ -2448,19 +3191,33 @@ function groupByDept(list){
   return groups;
 }
 
-function doPrint(html){
+function doPrint(html, paper){
   if(!html){ toast("印刷する対象がありません", true); return; }
+  $("pageStyle").textContent = paper
+    ? "@page{size:" + paper.w + "mm " + paper.h + "mm;margin:0}"
+    : "@page{size:A4 portrait;margin:8mm}";
   $("printArea").innerHTML = html;
   window.print();
 }
 
 $("btnPrintTickets").addEventListener("click", function(){
   var kid = $("printKenshin").value;
+  if(!kid){ toast("印刷する検診を選んでください", true); return; }
   var order = $("printOrder").value;
-  var withKagami = $("printKagami").checked;
   var list = sortForPrint(activeTargets(kid), order);
-  if(!list.length){ toast("対象者がいません", true); return; }
+  if(!list.length){ toast("印刷対象の方がいません", true); return; }
 
+  /* 対がん協会の用紙への重ね刷り */
+  if($("printMode").value === "overlay"){
+    var L = state.layouts[kid];
+    if(!L){ toast("この検診の様式レイアウトが設定されていません", true); return; }
+    var oh = list.map(function(t){ return buildOverlayHTML(t, kid); }).join("");
+    doPrint(oh, PAPER[L.paper] || PAPER.b4l);
+    toast(kenshinName(kid) + "：" + list.length + "名分（B4 " + list.length + "枚）を印刷します");
+    return;
+  }
+
+  var withKagami = $("printKagami").checked;
   var html = "";
   var groups = (withKagami && order === "dept") ? groupByDept(list) : [{ name:"", items:list }];
 
@@ -2483,10 +3240,90 @@ $("btnPrintKagami").addEventListener("click", function(){
   if(!list.length){ toast("対象者がいません", true); return; }
   var html = "";
   groupByDept(list).forEach(function(g){ html += buildKagamiHTML(g.name, g.items, kid); });
-  doPrint(html);
+  doPrint(html, null);
 });
 
 window.addEventListener("afterprint", function(){ $("printArea").innerHTML = ""; });
+
+/* =========================================================================
+   様式レイアウトの操作
+   ========================================================================= */
+
+function bindLayoutTab(){
+  $("orgName").value = state.orgName;
+  $("orgName").addEventListener("input", function(){
+    state.orgName = this.value;
+    if($("lyCanvas")) drawCanvas();
+  });
+
+  $("lyKenshinTabs").addEventListener("click", function(e){
+    var k = e.target.dataset ? e.target.dataset.lyk : null;
+    if(!k) return;
+    ly.kid = k; ly.sel = -1;
+    renderLayoutTab();
+  });
+
+  $("btnTestPrint").addEventListener("click", function(){
+    var L = state.layouts[ly.kid];
+    if(!L){ toast("この検診のレイアウトがありません", true); return; }
+    var opt = { grid: $("testGrid").checked };
+    var t = firstTarget(ly.kid);
+    var html = t ? buildOverlayHTML(t, ly.kid, opt) : buildOverlayFromCtx(sampleCtx(), ly.kid, opt);
+    doPrint(html, PAPER[L.paper] || PAPER.b4l);
+  });
+
+  $("btnSaveLayout").addEventListener("click", function(){
+    try{ saveSettings(); toast("様式レイアウトを保存しました"); }
+    catch(err){ toast("保存できませんでした: " + err.message, true); }
+  });
+
+  $("btnResetLayout").addEventListener("click", function(){
+    if(!confirm(kenshinName(ly.kid) + "のレイアウトを初期値（現行の印刷物から実測した座標）に戻します。よろしいですか？")) return;
+    state.layouts[ly.kid] = defaultLayouts()[ly.kid];
+    ly.sel = -1;
+    renderLayoutEditor();
+    toast("初期値に戻しました");
+  });
+
+  $("btnExportLayout").addEventListener("click", function(){
+    var data = JSON.stringify({ orgName: state.orgName, layouts: state.layouts }, null, 2);
+    var blob = new Blob([data], { type:"application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "様式レイアウト.json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    toast("様式レイアウト.json を書き出しました");
+  });
+
+  $("btnImportLayout").addEventListener("click", function(){ $("importLayoutFile").click(); });
+  $("importLayoutFile").addEventListener("change", function(e){
+    var f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if(!f) return;
+    var fr = new FileReader();
+    fr.onload = function(){
+      try{
+        var d = JSON.parse(fr.result);
+        if(!d || !d.layouts) throw new Error("レイアウトの情報が見つかりません");
+        var n = 0;
+        ticketKenshin().forEach(function(k){
+          if(d.layouts[k.id] && Array.isArray(d.layouts[k.id].fields)){
+            state.layouts[k.id] = d.layouts[k.id]; n++;
+          }
+        });
+        if(d.orgName) state.orgName = d.orgName;
+        ly.sel = -1;
+        renderLayoutTab();
+        $("orgName").value = state.orgName;
+        toast(n + "件の検診のレイアウトを読み込みました");
+      }catch(err){
+        toast("読み込めませんでした: " + err.message, true);
+      }
+    };
+    fr.readAsText(f);
+  });
+}
 
 /* =========================================================================
    10. CSV出力
@@ -2612,6 +3449,7 @@ $("btnSample").addEventListener("click", function(){
    ========================================================================= */
 
 (function init(){
+  state.layouts = defaultLayouts();
   var now = new Date();
   var fy = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
   $("fiscalYear").value = fy;
@@ -2634,6 +3472,12 @@ $("btnSample").addEventListener("click", function(){
     if(saved && Array.isArray(saved.skipPhrases) && saved.skipPhrases.length) state.skipPhrases = saved.skipPhrases;
     if(saved && typeof saved.printUnknown === "boolean") state.printUnknown = saved.printUnknown;
     if(saved && typeof saved.onlyActive === "boolean") state.onlyActive = saved.onlyActive;
+    if(saved && saved.orgName) state.orgName = saved.orgName;
+    if(saved && saved.layouts){
+      ticketKenshin().forEach(function(k){
+        if(saved.layouts[k.id] && Array.isArray(saved.layouts[k.id].fields)) state.layouts[k.id] = saved.layouts[k.id];
+      });
+    }
   }catch(err){ /* 保存値が読めなくても既定値で動作します */ }
 
   $("fiscalYear").addEventListener("change", function(){
@@ -2649,14 +3493,33 @@ $("btnSample").addEventListener("click", function(){
 
   KENSHIN.forEach(function(k){
     $("filterKenshin").appendChild(el("option", {value:k.id}, esc(k.name)));
+  });
+  ticketKenshin().forEach(function(k){
     $("printKenshin").appendChild(el("option", {value:k.id}, esc(k.name)));
   });
+  ly.kid = ticketKenshin()[0].id;
+
+  function syncPrintMode(){
+    var ov = $("printMode").value === "overlay";
+    $("rowKagami").style.display = ov ? "none" : "";
+    $("overlayNote").style.display = ov ? "" : "none";
+    var L = state.layouts[$("printKenshin").value];
+    var pg = L ? (PAPER[L.paper] || PAPER.b4l) : PAPER.b4l;
+    $("printHint").textContent = ov
+      ? "1人あたり " + pg.name + "（" + pg.w + "×" + pg.h + "mm）1枚を、協会の用紙に重ねて印刷します。"
+      : "A4縦・1ページに2枚付けで出力します。印刷ダイアログでは「背景のグラフィック：オン」を推奨。";
+    state.printMode = $("printMode").value;
+  }
+  $("printMode").addEventListener("change", syncPrintMode);
+  $("printKenshin").addEventListener("change", syncPrintMode);
+  syncPrintMode();
 
   renderRuleCards();
   renderPrevYearLoaders();
   renderScheduleCards();
   renderNyuCards();
   bindNyuCards();
+  bindLayoutTab();
   renderSkipPhrases();
   bindSkipPhrases();
   $("onlyActive").checked = !!state.onlyActive;
