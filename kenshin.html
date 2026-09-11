@@ -327,12 +327,9 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
 
 <nav>
   <button class="tab active" data-page="p1">１. 名簿の読込</button>
-  <button class="tab" data-page="p7">２. 受診状況の取込</button>
-  <button class="tab" data-page="p2">３. 対象者の判定ルール</button>
-  <button class="tab" data-page="p3">４. 日程・会場</button>
-  <button class="tab" data-page="p4">５. 対象者の確認</button>
-  <button class="tab" data-page="p8">６. 様式レイアウト</button>
-  <button class="tab" data-page="p5">７. 印刷・出力</button>
+  <button class="tab" data-page="p7">２. 予約状況の取込</button>
+  <button class="tab" data-page="p8">３. 様式レイアウト</button>
+  <button class="tab" data-page="p5">４. 印刷・出力</button>
   <button class="tab" data-page="p6">使い方・注意</button>
 </nav>
 
@@ -370,16 +367,28 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
 
     <div class="info">
       <strong>想定する列（順不同・名称は下で対応付けできます）</strong><br>
-      職員番号（番号） ／ 氏名 ／ カナ（フリガナ） ／ 生年月日 ／ 性別 ／ 所属コード（所属CD） ／ 所属名 ／ 雇用区分（区分名・身分） ／ 在職<br>
+      職員番号（番号） ／ 氏名 ／ カナ（フリガナ） ／ 生年月日 ／ 性別 ／ 所属コード（所属CD） ／ 所属名 ／
+      雇用区分（区分名・身分） ／ 在職 ／ 組合員証記号番号（社保） ／ 係名<br>
       生年月日は <code>1985/4/1</code>／<code>19850401</code>／<code>昭和60年4月1日</code>／<code>S60.4.1</code> のほか、
       <strong>Excelの日付セル（和暦表示を含む）</strong>もそのまま読み取れます。<br>
-      性別は <code>男</code>/<code>女</code> のほか <code>1</code>/<code>2</code>、カナは半角（<code>ﾜﾀﾞ ﾕｳｾｲ</code>）でも全角に直して取り込みます。
+      性別は <strong><code>1</code> が男性、<code>0</code> が女性</strong>です（<code>男</code>/<code>女</code>、<code>2</code>（女性）も判別します）。
+      カナは半角（<code>ﾜﾀﾞ ﾕｳｾｲ</code>）でも全角に直して取り込みます。
+    </div>
+
+    <div class="panel" style="margin:14px 0 0;background:#fafbfc">
+      <div class="row" style="margin:0">
+        <div id="saveInfo" style="flex:1"></div>
+        <button class="btn" id="btnClearData">保存データを消去</button>
+      </div>
     </div>
 
     <div class="note">
-      <strong>個人情報の取扱い</strong>　読み込んだ名簿はブラウザのメモリ上でのみ処理し、端末には保存しません
-      （設定値のみ保存します）。作業後はタブを閉じてください。健診結果は要配慮個人情報にあたるため、
-      出力したCSV・PDFの保存場所は庁の情報セキュリティポリシーに従ってください。
+      <strong>この端末にデータを保存します</strong>　読み込んだ職員名簿と予約状況は、
+      このパソコンのブラウザ内に保存され、<strong>次に開いたときそのまま復元されます</strong>。
+      ファイルを読み直す必要はありません。<br>
+      検診の情報は要配慮個人情報にあたります。<strong>共用のパソコンでは使わないでください。</strong>
+      年度の作業が終わったら「保存データを消去」を押し、出力したCSV・PDFの保存場所とあわせて
+      庁の情報セキュリティポリシーに従って管理してください。
     </div>
   </div>
 
@@ -402,97 +411,25 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
   </div>
 </section>
 
-<!-- ================= 7. 受診状況の取込 ================= -->
+<!-- ================= 7. 予約状況の取込 ================= -->
 <section class="page" id="p7">
   <div class="panel">
-    <h2>受診状況（入力）ファイルの取込</h2>
+    <h2>予約状況ファイルの取込</h2>
     <p class="hint">
       職員番号と「入力」欄をもつファイル（Excel／CSV）を検診ごとに読み込みます。<br>
       入力欄に <strong>受診日時</strong>（例：<code>8/22　10：30〜10：50</code>）が入っている人は、その日時で受検票を印刷します。<br>
       入力欄が下の「印刷が不要になる入力値」に該当する人は、<strong>受検票を印刷しません</strong>。
     </p>
     <div class="info">
-      受診状況ファイルを読み込んだ検診は、<strong>そのファイルに載っている人が対象</strong>になります
-      （「対象者の判定ルール」と「日程・会場」の設定は使いません）。<br>
-      読み込んでいない検診は、従来どおり年齢・性別による判定と日程の自動割当で処理します。
+      <strong>受検票を印刷する人は、このファイルだけで決まります。</strong>
+      ファイルに載っていて、入力欄に受診日時が入っている人だけを印刷します。<br>
+      年齢や性別による絞り込みは行いません。読み込んでいない検診は対象者0名になります。
     </div>
     <div id="nyuCards"></div>
   </div>
 
-  <div class="panel">
-    <h2>受検票の印刷が不要になる入力値</h2>
-    <p class="hint">
-      1行に1つずつ記載してください。<strong>部分一致</strong>で判定し、全角・半角と空白の違いは無視します。
-    </p>
-    <textarea id="skipPhrases" rows="7" style="width:100%;max-width:520px;font:inherit;padding:8px;border:1px solid #9aa4b0;border-radius:3px"></textarea>
-    <div class="row" style="margin-top:10px">
-      <button class="btn" id="btnSaveSkip">この内容を保存して判定し直す</button>
-      <button class="btn" id="btnResetSkip">初期値に戻す</button>
-    </div>
-    <div class="note">
-      どの文言にも当てはまらず、受診日時としても読み取れない入力値は
-      <strong>「要確認」</strong>として一覧に表示し、既定では印刷しません。
-      黙って対象から外れることはないので、印刷前に「対象者の確認」画面で必ずご確認ください。
-    </div>
-    <div class="row">
-      <label><input type="checkbox" id="printUnknown"> 要確認の人も印刷する（入力欄の内容をそのまま受付時間欄に印字）</label>
-    </div>
-  </div>
-</section>
-
-<!-- ================= 2. 判定ルール ================= -->
-<section class="page" id="p2">
-  <div class="panel">
-    <h2>検診ごとの対象者判定ルール</h2>
-    <div class="note">
-      <strong>初期値は暫定です。必ず貴市の実施要領で確認して設定してください。</strong><br>
-      職員検診の対象者基準は、労働安全衛生法に基づく定期健康診断と、共済組合・互助会の事業として行う
-      がん検診とで根拠が異なる場合があります。どの根拠で実施している事業かを確認のうえ、
-      年齢・性別・実施間隔を設定してください。
-    </div>
-    <div id="ruleCards"></div>
-    <div class="row">
-      <button class="btn" id="btnSaveRules">この設定を保存（次回も使う）</button>
-      <button class="btn" id="btnResetRules">初期値に戻す</button>
-      <span class="hint">保存されるのは判定ルールと日程の設定のみです。名簿は保存されません。</span>
-    </div>
-  </div>
-
-  <div class="panel">
-    <h2>前年度受診者名簿（隔年実施の場合のみ）</h2>
-    <p class="hint">
-      「前年度に受診した人を今年度は対象外にする」運用の場合は、前年度の受診者CSV（職員番号の列を含むもの）を
-      検診ごとに読み込んでください。読み込まない場合は年齢による隔年判定のみで判定します。
-    </p>
-    <div id="prevYearLoaders"></div>
-  </div>
-</section>
-
-<!-- ================= 3. 日程・会場 ================= -->
-<section class="page" id="p3">
-  <div class="panel">
-    <h2>実施日程・会場の登録</h2>
-    <p class="hint">
-      検診ごとに実施日を登録すると、対象者を所属コード順・カナ順に並べて自動で割り当てます。
-      受付時間は「開始時刻」から「1枠あたりの人数」ごとに「間隔（分）」ずつ繰り下げて算出します。
-      日程を登録しない検診は、受検票の受診日・会場欄が空欄（手書き記入用）になります。
-    </p>
-    <div class="info">
-      「受診状況の取込」で受診状況ファイルを読み込んだ検診は、<strong>受診日時がファイルの入力欄で決まる</strong>ため、
-      ここでの登録と自動割当の対象外になります。会場は「受診状況の取込」画面で指定してください。
-    </div>
-    <div id="scheduleCards"></div>
-    <div class="row">
-      <button class="btn primary" id="btnAssign">対象者を日程に割り当てる</button>
-      <span id="assignMsg" class="hint"></span>
-    </div>
-  </div>
-</section>
-
-<!-- ================= 4. 対象者の確認 ================= -->
-<section class="page" id="p4">
-  <div class="panel">
-    <h2>対象者一覧</h2>
+<div class="panel">
+    <h2>対象者一覧（受検票が印刷される人の確認）</h2>
     <div class="row">
       <label>検診
         <select id="filterKenshin"><option value="">（すべて）</option></select>
@@ -513,6 +450,26 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
     </div>
     <div class="stat" id="targetStat"></div>
     <div class="scroll"><table class="grid" id="targetTable"></table></div>
+  </div>
+
+  <div class="panel">
+    <h2>受検票の印刷が不要になる入力値</h2>
+    <p class="hint">
+      1行に1つずつ記載してください。<strong>部分一致</strong>で判定し、全角・半角と空白の違いは無視します。
+    </p>
+    <textarea id="skipPhrases" rows="7" style="width:100%;max-width:520px;font:inherit;padding:8px;border:1px solid #9aa4b0;border-radius:3px"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="btnSaveSkip">この内容を保存して判定し直す</button>
+      <button class="btn" id="btnResetSkip">初期値に戻す</button>
+    </div>
+    <div class="note">
+      どの文言にも当てはまらず、受診日時としても読み取れない入力値は
+      <strong>「要確認」</strong>として一覧に表示し、既定では印刷しません。
+      黙って対象から外れることはないので、印刷前に「対象者の確認」画面で必ずご確認ください。
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="printUnknown"> 要確認の人も印刷する（入力欄の内容をそのまま受付時間欄に印字）</label>
+    </div>
   </div>
 </section>
 
@@ -605,6 +562,15 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <button class="btn primary" id="btnPrintTickets">受検票を印刷</button>
       <span id="printHint" class="hint"></span>
     </div>
+    <div class="panel" id="a4Notes" style="margin:12px 0 0;background:#fafbfc;display:none">
+      <div style="font-weight:bold;margin-bottom:6px">A4 自前様式に印刷する注意事項</div>
+      <textarea id="ticketNotes" rows="4" style="width:100%;font:inherit;padding:8px;border:1px solid #9aa4b0;border-radius:3px"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="btnSaveNotes">保存</button>
+        <span class="hint">1行に1つずつ書くと、番号付きの箇条書きで印刷されます。B4の重ね刷りでは使いません。</span>
+      </div>
+    </div>
+
     <div class="note" id="overlayNote">
       <strong>重ね刷りの注意</strong>　印刷ダイアログで
       <strong>「倍率：100％（実際のサイズ）」「用紙に合わせる：オフ」「余白：なし」</strong>
@@ -635,28 +601,42 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
 <section class="page" id="p6">
   <div class="panel">
     <h2>使い方</h2>
-    <p class="hint">進め方は、受診状況（入力）ファイルを使うかどうかで2通りあります。検診ごとに混在していても構いません。</p>
-
-    <h3>A. 受診状況ファイルを使う場合（職員から受診日時を集めている検診）</h3>
+    <p class="hint">用意するのは<strong>職員名簿</strong>と<strong>予約状況ファイル</strong>の2つだけです。</p>
     <ol>
       <li><strong>名簿の読込</strong>　職員名簿（Excel／CSV）を読み込み、列の対応付けを確認します。</li>
-      <li><strong>受診状況の取込</strong>　検診ごとに受診状況ファイルを読み込み、職員番号の列と入力の列を指定して取り込みます。会場名もここで指定します。</li>
-      <li><strong>対象者の確認</strong>　<strong>要確認の件数が0であること</strong>を必ず確認します。0でない場合は入力欄の表記をご確認ください。</li>
+      <li><strong>予約状況の取込</strong>　検診ごとに予約状況ファイルを読み込み、職員番号の列と入力の列を指定して取り込みます。会場名もここで指定します。<br>
+          同じ画面の下に対象者一覧が出ます。<strong>要確認の件数が0であること</strong>を必ず確認してください。</li>
       <li><strong>様式レイアウト</strong>　初回のみ、協会の用紙に1枚テスト印刷して位置を確認します。合っていればそのままで構いません。</li>
-      <li><strong>印刷・出力</strong>　受検票を印刷します。PDFとして保存する場合は印刷先に「PDFとして保存」を選びます。</li>
-    </ol>
-    <p class="hint">この場合、対象者と受診日時は受診状況ファイルで決まるため、「対象者の判定ルール」と「日程・会場」の設定は使いません。</p>
-
-    <h3>B. 受診状況ファイルがない場合（名簿から対象者を抽出する検診）</h3>
-    <ol>
-      <li><strong>名簿の読込</strong>　職員名簿（Excel／CSV）を読み込みます。</li>
-      <li><strong>対象者の判定ルール</strong>　対象年齢・性別・実施間隔を、貴市の実施要領どおりに設定します。</li>
-      <li><strong>日程・会場</strong>　実施日・会場・定員を登録し、「割り当てる」を押します。</li>
-      <li><strong>対象者の確認</strong>　人数と内訳を確認し、辞退者・休職者などを個別に除外します。</li>
       <li><strong>印刷・出力</strong>　受検票を印刷します。</li>
     </ol>
+    <div class="info">
+      <strong>誰の受検票を印刷するかは、予約状況ファイルだけで決まります。</strong><br>
+      予約状況ファイルに載っていて、入力欄に受診日時が入っている人だけを印刷します。
+      年齢や性別による絞り込みは行いません。
+    </div>
   </div>
 
+  <div class="panel">
+    <h2>この端末に保存されるもの</h2>
+    <p>
+      読み込んだ<strong>職員名簿と予約状況は、このパソコンのブラウザ内に保存されます。</strong>
+      次に開いたときは自動で復元されるので、ファイルを読み直す必要はありません。
+    </p>
+    <table class="grid">
+      <thead><tr><th>保存されるもの</th><th>消し方</th></tr></thead>
+      <tbody>
+        <tr><td>職員名簿・予約状況・個別の除外</td><td>「１. 名簿の読込」画面の「保存データを消去」</td></tr>
+        <tr><td>様式レイアウト・団体名</td><td>「３. 様式レイアウト」画面の「この検診を初期値に戻す」</td></tr>
+        <tr><td>印刷が不要になる入力値・注意事項</td><td>それぞれの画面の「初期値に戻す」</td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      検診の情報は要配慮個人情報にあたります。<strong>共用のパソコンでは使わないでください。</strong>
+      年度の作業が終わったら「保存データを消去」を押してください。<br>
+      保存先はこのパソコンのブラウザ内だけで、外部へ送信されることはありません。
+      ただし、ブラウザの閲覧データを消去すると保存内容も消えます。
+      元のExcelファイルは別に保管しておいてください。
+    </div>
   <div class="panel">
     <h2>運用上の注意</h2>
     <div class="note">
@@ -681,7 +661,7 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       例規集（条例規則／現行フォルダ）でご確認ください。本システムでは判断できません。
     </div>
     <div class="note">
-      <strong>受診状況ファイルの取扱い</strong><br>
+      <strong>予約状況ファイルの取扱い</strong><br>
       「受診しない」「他の受診機関で受診予定」といった入力欄の内容は、その職員の受診行動に関する情報です。
       名簿と同様、端末には保存せずメモリ上でのみ処理していますが、
       元のExcelファイルや出力したCSVの保存場所・アクセス権には十分ご注意ください。
@@ -713,7 +693,7 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
     </div>
     <p>A4 自前様式の枠線・文字サイズは、このファイル内の <code>&lt;style&gt;</code> 内 <code>.ticket</code> と
     <code>buildTicketHTML()</code> を編集すると変えられます。
-    注意事項の文面は「３. 対象者の判定ルール」画面で変更できます（ファイルの編集は不要です）。</p>
+    注意事項の文面は「４. 印刷・出力」画面で A4 自前様式を選ぶと編集できます（ファイルの編集は不要です）。</p>
   </div>
 </section>
 
@@ -787,24 +767,14 @@ function normText(v){
   return s.replace(/[\s\u3000]+/g, "").replace(/[･・]/g, "");
 }
 
-/* 判定ルールの初期値。実施要領に合わせて画面上で変更してください。 */
+/* A4 自前様式に印字する注意事項の初期値（B4 の重ね刷りでは使いません）。 */
 function defaultRules(){
   return {
-    seikatsu:{ enabled:true, minAge:"",   maxAge:"", sex:"all", freq:"every", excludeEmpType:"",
-      notes:"前日の午後9時以降は飲食を控えてください（水・お茶は可）。\n常用薬がある方は事前に担当へ申し出てください。\n当日はこの受検票と健康保険証をお持ちください。" },
-    i:{ enabled:true, minAge:"40", maxAge:"", sex:"all", freq:"every", excludeEmpType:"",
-      notes:"前日の午後9時以降は飲食・喫煙をしないでください。\n当日朝は服薬を控えてください（要事前相談）。\n妊娠中または妊娠の可能性がある方は受診できません。" },
-    nyu:{ enabled:true, minAge:"40", maxAge:"", sex:"F", freq:"even", excludeEmpType:"",
-      notes:"当日は上下が分かれた服装でお越しください。\n制汗剤・パウダー等は使用しないでください。\n豊胸手術・ペースメーカー等の既往がある方は事前に申し出てください。" },
-    shikyu:{ enabled:true, minAge:"20", maxAge:"", sex:"F", freq:"even", excludeEmpType:"",
-      notes:"月経中は受診できません。日程の変更が必要な場合は担当へご連絡ください。\n当日は脱ぎやすい服装でお越しください。" }
+    seikatsu:{ notes:"前日の午後9時以降は飲食を控えてください（水・お茶は可）。\n常用薬がある方は事前に担当へ申し出てください。\n当日はこの受検票と健康保険証をお持ちください。" },
+    i:{ notes:"前日の午後9時以降は飲食・喫煙をしないでください。\n当日朝は服薬を控えてください（要事前相談）。\n妊娠中または妊娠の可能性がある方は受診できません。" },
+    nyu:{ notes:"当日は上下が分かれた服装でお越しください。\n制汗剤・パウダー等は使用しないでください。\n豊胸手術・ペースメーカー等の既往がある方は事前に申し出てください。" },
+    shikyu:{ notes:"月経中は受診できません。日程の変更が必要な場合は担当へご連絡ください。\n当日は脱ぎやすい服装でお越しください。" }
   };
-}
-
-function defaultSchedules(){
-  var s = {};
-  KENSHIN.forEach(function(k){ s[k.id] = []; });
-  return s;
 }
 
 var state = {
@@ -815,16 +785,16 @@ var state = {
   mapping:    {},        // key -> 列index
   employees:  [],        // 取込済み職員
   loadErrors: [],
-  rules:      defaultRules(),
-  schedules:  defaultSchedules(),
-  prevYear:   {},        // kenshinId -> Set(職員番号)
+  rules:      defaultRules(),   // A4 自前様式に印字する注意事項のみ使用
   targets:    {},        // kenshinId -> [ {emp, assign, print, skipReason, ...} ]
   excluded:   {},        // kenshinId -> Set(職員番号)  手動で除外した人
 
   onlyActive: true,      // 「在職」列がある場合、在職者のみを対象にする
   inactive:   [],        // 在職でないため除外した職員
-  nyuryoku:   {},        // kenshinId -> 受診状況（入力）ファイルの取込結果
+  nyuryoku:   {},        // kenshinId -> 予約状況ファイルの取込結果
   pending:    null,      // 読込中のブック（シート・ヘッダ行の選択待ち）
+  rosterLabel: "",       // 読み込んだ名簿のファイル名
+  savedAt:    "",        // この端末に保存した日時
   skipPhrases: defaultSkipPhrases(),
 
   orgName:    "陸前高田市",
@@ -1351,8 +1321,8 @@ function ageAt(birth, base){
 
 function normSex(v){
   var s = String(v == null ? "" : v).trim();
-  if(/^(男|男性|M|m|1|male)$/.test(s)) return "M";
-  if(/^(女|女性|F|f|2|female)$/.test(s)) return "F";
+  if(/^(男|男性|M|m|1|male)$/.test(s)) return "M";        // 名簿の性別コードは 1 = 男性
+  if(/^(女|女性|F|f|0|2|female)$/.test(s)) return "F";    // 名簿の性別コードは 0 = 女性
   return "";
 }
 function sexLabel(s){ return s === "M" ? "男" : s === "F" ? "女" : "―"; }
@@ -1623,9 +1593,11 @@ function buildEmployees(){
     });
   });
 
+  if(state.pending) state.rosterLabel = state.pending.label || "";
   computeTargets();
   renderLoaded();
   renderDeptFilter();
+  saveData();
   toast("取込完了：" + state.employees.length + "名"
     + (state.loadErrors.length ? "（" + state.loadErrors.length + "件のエラーを除外）" : ""));
 }
@@ -1692,146 +1664,7 @@ $("baseDate").addEventListener("change", function(){
 });
 
 /* =========================================================================
-   5. 判定ルール
-   ========================================================================= */
-
-function renderRuleCards(){
-  var box = $("ruleCards");
-  box.innerHTML = "";
-  KENSHIN.forEach(function(k){
-    var r = state.rules[k.id];
-    var c = el("div", {class:"kenshin-card"});
-    c.innerHTML =
-      '<div class="title">' + esc(k.name) + "</div>" +
-      '<div class="row">' +
-        '<label><input type="checkbox" class="r-enabled" data-k="' + k.id + '"' + (r.enabled ? " checked" : "") + "> 今年度実施する</label>" +
-        '<label>対象年齢 <input type="number" class="r-min" data-k="' + k.id + '" value="' + esc(r.minAge) + '" style="width:64px" placeholder="下限"> 歳以上</label>' +
-        '<label><input type="number" class="r-max" data-k="' + k.id + '" value="' + esc(r.maxAge) + '" style="width:64px" placeholder="上限"> 歳以下</label>' +
-        '<label>性別 <select class="r-sex" data-k="' + k.id + '">' +
-          '<option value="all"' + (r.sex==="all"?" selected":"") + ">男女とも</option>" +
-          '<option value="F"'   + (r.sex==="F"  ?" selected":"") + ">女性のみ</option>" +
-          '<option value="M"'   + (r.sex==="M"  ?" selected":"") + ">男性のみ</option>" +
-        "</select></label>" +
-        '<label>実施間隔 <select class="r-freq" data-k="' + k.id + '">' +
-          '<option value="every"' + (r.freq==="every"?" selected":"") + ">毎年度</option>" +
-          '<option value="even"'  + (r.freq==="even" ?" selected":"") + ">隔年（基準日年齢が偶数の人）</option>" +
-          '<option value="odd"'   + (r.freq==="odd"  ?" selected":"") + ">隔年（基準日年齢が奇数の人）</option>" +
-        "</select></label>" +
-      "</div>" +
-      '<div class="row">' +
-        '<label>対象外とする雇用区分 <input type="text" class="r-exc" data-k="' + k.id + '" value="' + esc(r.excludeEmpType) + '" style="width:280px" placeholder="例）臨時,会計年度任用（カンマ区切り・部分一致）"></label>' +
-      "</div>" +
-      '<div class="row" style="align-items:flex-start">' +
-        '<label style="flex:1">受検票に印刷する注意事項<br>' +
-          '<textarea class="r-notes" data-k="' + k.id + '" rows="4" style="width:100%;font:inherit;padding:6px;border:1px solid #9aa4b0;border-radius:3px">' + esc(r.notes) + "</textarea>" +
-        "</label>" +
-      "</div>";
-    box.appendChild(c);
-  });
-
-  box.addEventListener("input", onRuleChange);
-  box.addEventListener("change", onRuleChange);
-}
-
-function onRuleChange(e){
-  var t = e.target, k = t.dataset.k;
-  if(!k) return;
-  var r = state.rules[k];
-  if(t.classList.contains("r-enabled")) r.enabled = t.checked;
-  else if(t.classList.contains("r-min"))   r.minAge = t.value;
-  else if(t.classList.contains("r-max"))   r.maxAge = t.value;
-  else if(t.classList.contains("r-sex"))   r.sex = t.value;
-  else if(t.classList.contains("r-freq"))  r.freq = t.value;
-  else if(t.classList.contains("r-exc"))   r.excludeEmpType = t.value;
-  else if(t.classList.contains("r-notes")) r.notes = t.value;
-  computeTargets();
-}
-
-function saveSettings(){
-  localStorage.setItem(LS_KEY, JSON.stringify({
-    rules: state.rules,
-    schedules: state.schedules,
-    skipPhrases: state.skipPhrases,
-    printUnknown: !!state.printUnknown,
-    onlyActive: !!state.onlyActive,
-    orgName: state.orgName,
-    layouts: state.layouts
-  }));
-}
-
-$("btnSaveRules").addEventListener("click", function(){
-  try{
-    saveSettings();
-    toast("設定を保存しました（名簿と受診状況ファイルは保存していません）");
-  }catch(err){
-    toast("保存できませんでした: " + err.message, true);
-  }
-});
-
-$("btnResetRules").addEventListener("click", function(){
-  if(!confirm("判定ルールを初期値に戻します。よろしいですか？")) return;
-  state.rules = defaultRules();
-  renderRuleCards();
-  computeTargets();
-  toast("初期値に戻しました");
-});
-
-/* --- 前年度受診者名簿 --- */
-function renderPrevYearLoaders(){
-  var box = $("prevYearLoaders");
-  box.innerHTML = "";
-  KENSHIN.forEach(function(k){
-    var row = el("div", {class:"row"});
-    row.innerHTML = '<span style="width:130px">' + esc(k.name) + "</span>" +
-      '<button class="btn" data-pick="' + k.id + '">前年度受診者CSVを選択…</button>' +
-      '<input type="file" id="prev_' + k.id + '" accept=".csv,.txt" style="display:none">' +
-      '<span class="hint" id="prevMsg_' + k.id + '">未読込</span>' +
-      '<button class="btn" data-clear="' + k.id + '">クリア</button>';
-    box.appendChild(row);
-  });
-
-  box.addEventListener("click", function(e){
-    var pick = e.target.dataset.pick, clr = e.target.dataset.clear;
-    if(pick) $("prev_" + pick).click();
-    if(clr){
-      delete state.prevYear[clr];
-      $("prevMsg_" + clr).textContent = "未読込";
-      computeTargets();
-    }
-  });
-
-  KENSHIN.forEach(function(k){
-    $("prev_" + k.id).addEventListener("change", function(e){
-      var f = e.target.files && e.target.files[0];
-      e.target.value = "";
-      if(!f) return;
-      var fr = new FileReader();
-      fr.onload = function(){
-        var rows = parseCSV(decodeBytes(fr.result));
-        if(!rows.length){ toast("データがありません", true); return; }
-        var header = rows[0].map(function(h){ return String(h).trim().replace(/^\uFEFF/,""); });
-        var col = -1;
-        for(var i=0;i<header.length;i++){
-          if(FIELDS[0].aliases.indexOf(header[i].replace(/[\s　]/g,"")) >= 0){ col = i; break; }
-        }
-        if(col < 0) col = 0;   // 見つからなければ1列目を職員番号とみなす
-        var set = new Set();
-        rows.slice(1).forEach(function(r){
-          var v = String(r[col] == null ? "" : r[col]).trim();
-          if(v) set.add(v);
-        });
-        state.prevYear[k.id] = set;
-        $("prevMsg_" + k.id).textContent = set.size + "名を読込（「" + header[col] + "」列を職員番号として使用）";
-        computeTargets();
-        toast(k.name + "：前年度受診者 " + set.size + "名を読み込みました");
-      };
-      fr.readAsArrayBuffer(f);
-    });
-  });
-}
-
-/* =========================================================================
-   受診状況（入力）ファイルの取込
+   予約状況ファイルの取込
    ========================================================================= */
 
 var nyuPending = {};   // kenshinId -> 読込中のブック（列の指定待ち）
@@ -1914,7 +1747,7 @@ function renderNyuCard(kid){
   var h = '<div class="title">' + esc(kenshinName(kid)) + "</div>";
 
   h += '<div class="row">'
-     + '<button class="btn" data-nypick="' + kid + '">受診状況ファイルを選択…</button>'
+     + '<button class="btn" data-nypick="' + kid + '">予約状況ファイルを選択…</button>'
      + '<input type="file" id="nyfile_' + kid + '" accept=".xlsx,.xlsm,.csv,.txt" style="display:none">'
      + '<label>会場（受検票に印字） <input type="text" data-nyplace="' + kid + '" value="'
      + esc(ny ? ny.place : "") + '" placeholder="例）市役所 3階 大会議室" style="width:240px"></label>';
@@ -2006,9 +1839,10 @@ function bindNyuCards(){
     if(clr){
       delete state.nyuryoku[clr];
       computeTargets();
+      saveData();
       renderNyuCard(clr);
       renderTargets();
-      toast(kenshinName(clr) + "：受診状況の取込を解除しました");
+      toast(kenshinName(clr) + "：予約状況の取込を解除しました");
     }
     if(imp){ importNyuryoku(imp); }
     if(cancel){ delete nyuPending[cancel]; renderNyuCard(cancel); }
@@ -2038,6 +1872,7 @@ function bindNyuCards(){
       if(state.nyuryoku[kid]){
         state.nyuryoku[kid].place = t.value;
         computeTargets();
+        saveData();
         renderTargets();
       }else{
         nyuPending[kid] = nyuPending[kid] || {};
@@ -2145,6 +1980,7 @@ function importNyuryoku(kid){
   delete nyuPending[kid];
 
   computeTargets();
+  saveData();
   renderNyuCard(kid);
   renderTargets();
 
@@ -2204,27 +2040,169 @@ function reparseAllNyuryoku(){
 }
 
 /* =========================================================================
-   6. 対象者の判定
+   設定とデータの保存（この端末のブラウザ内に保存します）
+   LGWAN接続系の専用端末での利用を前提に、名簿と予約状況も保存します。
    ========================================================================= */
 
-function judge(emp, kid){
-  var r = state.rules[kid];
-  if(!r.enabled) return { ok:false, reason:"今年度は実施しない設定" };
-  if(emp.age == null) return { ok:false, reason:"年齢を算出できません" };
-  if(r.minAge !== "" && emp.age < parseInt(r.minAge,10)) return { ok:false, reason:"年齢下限（" + r.minAge + "歳）未満" };
-  if(r.maxAge !== "" && emp.age > parseInt(r.maxAge,10)) return { ok:false, reason:"年齢上限（" + r.maxAge + "歳）超過" };
-  if(r.sex !== "all" && emp.sex !== r.sex) return { ok:false, reason:"性別による対象外" };
-  if(r.freq === "even" && emp.age % 2 !== 0) return { ok:false, reason:"隔年実施（偶数年齢）の対象外" };
-  if(r.freq === "odd"  && emp.age % 2 !== 1) return { ok:false, reason:"隔年実施（奇数年齢）の対象外" };
+var LS_DATA = "kenshin.data.v1";
 
-  var exc = String(r.excludeEmpType || "").split(/[,、]/).map(function(s){ return s.trim(); }).filter(Boolean);
-  for(var i=0;i<exc.length;i++){
-    if(emp.empType && emp.empType.indexOf(exc[i]) >= 0) return { ok:false, reason:"雇用区分（" + emp.empType + "）による対象外" };
-  }
-  var pv = state.prevYear[kid];
-  if(pv && pv.has(emp.empNo)) return { ok:false, reason:"前年度受診済" };
-  return { ok:true, reason:"" };
+function saveSettings(){
+  localStorage.setItem(LS_KEY, JSON.stringify({
+    rules: state.rules,
+    skipPhrases: state.skipPhrases,
+    printUnknown: !!state.printUnknown,
+    onlyActive: !!state.onlyActive,
+    orgName: state.orgName,
+    layouts: state.layouts
+  }));
 }
+
+/* --- 名簿・予約状況の保存 --- */
+function saveData(){
+  if(!state.employees.length && !Object.keys(state.nyuryoku).length){
+    localStorage.removeItem(LS_DATA);
+    renderSaveInfo();
+    return;
+  }
+  var d = {
+    savedAt: new Date().toISOString(),
+    fiscalYear: state.fiscalYear,
+    baseDate: state.baseDate ? isoOf(state.baseDate) : "",
+    rosterLabel: state.rosterLabel || "",
+    employees: state.employees.map(function(e){
+      return { empNo:e.empNo, name:e.name, kana:e.kana, kanaRaw:e.kanaRaw, insNo:e.insNo,
+               section:e.section, birth:e.birth ? isoOf(e.birth) : "", sex:e.sex,
+               deptCode:e.deptCode, deptName:e.deptName, empType:e.empType };
+    }),
+    loadErrors: state.loadErrors,
+    inactive: state.inactive,
+    nyuryoku: {},
+    excluded: {}
+  };
+  KENSHIN.forEach(function(k){
+    var ny = state.nyuryoku[k.id];
+    if(ny){
+      var m = {};
+      Object.keys(ny.map).forEach(function(no){
+        var r = ny.map[no];
+        m[no] = { kind:r.kind, raw:r.raw, reason:r.reason || "", timeText:r.timeText || "",
+                  place:r.place || "", date:r.date ? isoOf(r.date) : "" };
+      });
+      d.nyuryoku[k.id] = { label:ny.label, place:ny.place, counts:ny.counts,
+                           dup:ny.dup, notInRoster:ny.notInRoster, map:m };
+    }
+    d.excluded[k.id] = [];
+    state.excluded[k.id].forEach(function(no){ d.excluded[k.id].push(no); });
+  });
+
+  try{
+    localStorage.setItem(LS_DATA, JSON.stringify(d));
+    state.savedAt = d.savedAt;
+  }catch(err){
+    toast("この端末に保存できませんでした（保存できる容量を超えている可能性があります）: " + err.message, true);
+    return;
+  }
+  renderSaveInfo();
+}
+
+function parseIso(v){
+  if(!v) return null;
+  var p = String(v).split("-");
+  if(p.length !== 3) return null;
+  return mkDate(+p[0], +p[1], +p[2]);
+}
+
+function loadData(){
+  var raw;
+  try{ raw = localStorage.getItem(LS_DATA); }catch(err){ return false; }
+  if(!raw) return false;
+  var d;
+  try{ d = JSON.parse(raw); }catch(err){ return false; }
+  if(!d || !Array.isArray(d.employees)) return false;
+
+  state.fiscalYear = d.fiscalYear || state.fiscalYear;
+  if(d.baseDate) state.baseDate = parseIso(d.baseDate) || state.baseDate;
+  state.rosterLabel = d.rosterLabel || "";
+  state.savedAt = d.savedAt || "";
+
+  state.employees = d.employees.map(function(e){
+    var b = parseIso(e.birth);
+    return { empNo:e.empNo, name:e.name, kana:e.kana, kanaRaw:e.kanaRaw, insNo:e.insNo,
+             section:e.section, birth:b, sex:e.sex, deptCode:e.deptCode, deptName:e.deptName,
+             empType:e.empType, age: ageAt(b, state.baseDate) };
+  });
+  state.loadErrors = Array.isArray(d.loadErrors) ? d.loadErrors : [];
+  state.inactive   = Array.isArray(d.inactive)   ? d.inactive   : [];
+
+  state.nyuryoku = {};
+  KENSHIN.forEach(function(k){
+    state.excluded[k.id] = new Set();
+    if(d.excluded && Array.isArray(d.excluded[k.id])){
+      d.excluded[k.id].forEach(function(no){ state.excluded[k.id].add(no); });
+    }
+    var ny = d.nyuryoku && d.nyuryoku[k.id];
+    if(!ny) return;
+    var map = {}, loose = {};
+    Object.keys(ny.map || {}).forEach(function(no){
+      var r = ny.map[no];
+      var rec = { kind:r.kind, raw:r.raw, reason:r.reason, timeText:r.timeText,
+                  place:r.place, date: r.date ? parseIso(r.date) : null };
+      map[no] = rec;
+      loose[empKeyLoose(no)] = rec;
+    });
+    state.nyuryoku[k.id] = { label:ny.label || "", place:ny.place || "", counts:ny.counts || {},
+                             dup:ny.dup || [], notInRoster:ny.notInRoster || [], map:map, loose:loose };
+  });
+  return true;
+}
+
+function clearData(){
+  try{ localStorage.removeItem(LS_DATA); }catch(err){ /* 消せなくても画面上は初期化します */ }
+  state.employees = [];
+  state.loadErrors = [];
+  state.inactive = [];
+  state.nyuryoku = {};
+  state.pending = null;
+  state.rawRows = [];
+  state.rawHeader = [];
+  state.rosterLabel = "";
+  state.savedAt = "";
+  KENSHIN.forEach(function(k){ state.excluded[k.id] = new Set(); });
+  computeTargets();
+  $("mapPanel").style.display = "none";
+  $("loadedPanel").style.display = "none";
+  renderNyuCards();
+  renderTargets();
+  renderSaveInfo();
+}
+
+/* 保存状況の表示 */
+function renderSaveInfo(){
+  var box = $("saveInfo");
+  if(!box) return;
+  var n = state.employees.length;
+  var ks = KENSHIN.filter(function(k){ return state.nyuryoku[k.id]; }).map(function(k){ return k.name; });
+  if(!n && !ks.length){
+    box.innerHTML = '<span class="hint">この端末に保存されているデータはありません。</span>';
+    return;
+  }
+  var when = "";
+  if(state.savedAt){
+    var dt = new Date(state.savedAt);
+    var p = function(x){ return (x < 10 ? "0" : "") + x; };
+    when = dt.getFullYear() + "年" + (dt.getMonth() + 1) + "月" + dt.getDate() + "日 "
+         + p(dt.getHours()) + ":" + p(dt.getMinutes());
+  }
+  box.innerHTML = '<span class="badge">この端末に保存済み</span>　'
+    + "職員名簿 " + n + "名"
+    + (state.rosterLabel ? "（" + esc(state.rosterLabel) + "）" : "")
+    + (ks.length ? "　／　予約状況：" + esc(ks.join("・")) : "")
+    + (when ? '　<span class="hint">最終保存 ' + when + "</span>" : "");
+}
+
+/* =========================================================================
+   6. 対象者の判定
+   ========================================================================= */
 
 function computeTargets(){
   state.targets = {};
@@ -2233,7 +2211,7 @@ function computeTargets(){
     var list = [];
 
     if(ny){
-      /* 受診状況ファイルがある検診は、そのファイルに載っている人が対象 */
+      /* 予約状況ファイルがある検診は、そのファイルに載っている人が対象 */
       state.employees.forEach(function(e){
         var rec = nyuLookup(ny, e.empNo);
         if(!rec) return;
@@ -2255,14 +2233,8 @@ function computeTargets(){
         }
         list.push(item);
       });
-    }else{
-      /* 受診状況ファイルがない検診は、従来どおり年齢・性別で判定 */
-      state.employees.forEach(function(e){
-        var j = judge(e, k.id);
-        if(!j.ok) return;
-        list.push({ emp:e, assign:null, source:"rule", nyu:null, print:true, skipReason:"", needCheck:false });
-      });
     }
+    /* 予約状況ファイルを読み込んでいない検診は対象者なし（対象はファイルで決まります） */
 
     list.sort(cmpDeptKana);
     state.targets[k.id] = list;
@@ -2288,123 +2260,6 @@ function activeTargets(kid){
 }
 
 /* =========================================================================
-   7. 日程・会場
-   ========================================================================= */
-
-function renderScheduleCards(){
-  var box = $("scheduleCards");
-  box.innerHTML = "";
-  KENSHIN.forEach(function(k){
-    var c = el("div", {class:"kenshin-card", id:"sc_" + k.id});
-    c.innerHTML = '<div class="title">' + esc(k.name) + ' <span class="badge" id="scCount_' + k.id + '"></span></div>'
-      + '<table class="grid" id="scTable_' + k.id + '"></table>'
-      + '<div class="row" style="margin-top:8px"><button class="btn" data-add="' + k.id + '">＋ 実施日を追加</button></div>';
-    box.appendChild(c);
-    renderScheduleTable(k.id);
-  });
-
-  box.addEventListener("click", function(e){
-    var add = e.target.dataset.add, del = e.target.dataset.del;
-    if(add){
-      state.schedules[add].push({ date:"", place:"", capacity:60, start:"09:00", interval:10, perSlot:5 });
-      renderScheduleTable(add);
-    }
-    if(del){
-      var p = del.split(":");
-      state.schedules[p[0]].splice(parseInt(p[1],10), 1);
-      renderScheduleTable(p[0]);
-    }
-  });
-  box.addEventListener("input", function(e){
-    var f = e.target.dataset.sc;
-    if(!f) return;
-    var p = f.split(":");
-    state.schedules[p[0]][parseInt(p[1],10)][p[2]] = e.target.value;
-    updateScheduleCount(p[0]);
-  });
-}
-
-function renderScheduleTable(kid){
-  var rows = state.schedules[kid];
-  var h = "<thead><tr><th>実施日</th><th>会場</th><th>定員</th><th>開始時刻</th><th>枠の間隔(分)</th><th>1枠の人数</th><th></th></tr></thead><tbody>";
-  if(!rows.length){
-    h += '<tr><td colspan="7" class="hint">実施日が未登録です。登録しない場合、受検票の受診日・会場欄は空欄（手書き用）になります。</td></tr>';
-  }
-  rows.forEach(function(s, i){
-    var d = kid + ":" + i + ":";
-    h += "<tr>"
-      + '<td><input type="date" data-sc="' + d + 'date" value="' + esc(s.date) + '"></td>'
-      + '<td><input type="text" data-sc="' + d + 'place" value="' + esc(s.place) + '" placeholder="例）市役所 3階 大会議室" style="width:220px"></td>'
-      + '<td><input type="number" data-sc="' + d + 'capacity" value="' + esc(s.capacity) + '" style="width:70px"></td>'
-      + '<td><input type="time" data-sc="' + d + 'start" value="' + esc(s.start) + '"></td>'
-      + '<td><input type="number" data-sc="' + d + 'interval" value="' + esc(s.interval) + '" style="width:64px"></td>'
-      + '<td><input type="number" data-sc="' + d + 'perSlot" value="' + esc(s.perSlot) + '" style="width:64px"></td>'
-      + '<td><button class="btn" data-del="' + kid + ":" + i + '">削除</button></td>'
-      + "</tr>";
-  });
-  $("scTable_" + kid).innerHTML = h + "</tbody>";
-  updateScheduleCount(kid);
-}
-
-function updateScheduleCount(kid){
-  var cap = state.schedules[kid].reduce(function(a, s){ return a + (parseInt(s.capacity,10) || 0); }, 0);
-  var n = activeTargets(kid).length;
-  var e = $("scCount_" + kid);
-  if(!e) return;
-  e.textContent = "対象 " + n + "名 ／ 定員計 " + cap + "名"
-    + (state.schedules[kid].length && cap < n ? "　※定員不足" : "");
-}
-
-function addMinutes(hhmm, mins){
-  var p = String(hhmm || "09:00").split(":");
-  var t = (parseInt(p[0],10) || 0) * 60 + (parseInt(p[1],10) || 0) + mins;
-  var h = Math.floor(t / 60) % 24, m = t % 60;
-  return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
-}
-
-$("btnAssign").addEventListener("click", function(){
-  var msgs = [];
-  var skipped = [];
-  KENSHIN.forEach(function(k){
-    if(state.nyuryoku[k.id]){ skipped.push(k.name); return; }   // 日時は受診状況ファイルで決まっています
-    var list = activeTargets(k.id);
-    list.forEach(function(t){ t.assign = null; });
-    var days = state.schedules[k.id].filter(function(s){ return s.date; });
-    if(!days.length){ return; }
-    days.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
-
-    var idx = 0;
-    days.forEach(function(s){
-      var cap = parseInt(s.capacity,10) || 0;
-      var per = Math.max(1, parseInt(s.perSlot,10) || 1);
-      var iv  = Math.max(0, parseInt(s.interval,10) || 0);
-      for(var n = 0; n < cap && idx < list.length; n++, idx++){
-        list[idx].assign = {
-          date: s.date,
-          place: s.place,
-          time: addMinutes(s.start, Math.floor(n / per) * iv)
-        };
-      }
-    });
-    var rest = list.length - idx;
-    if(rest > 0) msgs.push(k.name + "：" + rest + "名が未割当（定員不足）");
-  });
-
-  KENSHIN.forEach(function(k){ updateScheduleCount(k.id); });
-  renderTargets();
-  if(skipped.length){
-    msgs.push(skipped.join("・") + " は受診状況ファイルの日時を使うため、割当の対象外です");
-  }
-  if(msgs.length){
-    $("assignMsg").innerHTML = '<span style="color:#a8410f">' + esc(msgs.join(" / ")) + "</span>";
-    toast("割当しましたが、定員不足があります。日程を追加してください。", true);
-  }else{
-    $("assignMsg").innerHTML = '<span style="color:#1c6b45">すべての対象者を割り当てました。</span>';
-    toast("日程を割り当てました");
-  }
-});
-
-/* =========================================================================
    8. 対象者の確認
    ========================================================================= */
 
@@ -2427,7 +2282,6 @@ function renderTargetStat(){
   if(check) h += '<div style="border-color:#a8410f"><div class="n" style="color:#a8410f">' + check + '</div><div class="l">要確認</div></div>';
   var box = $("targetStat");
   if(box) box.innerHTML = h;
-  KENSHIN.forEach(function(k){ updateScheduleCount(k.id); });
 }
 
 ["filterKenshin","filterDept","filterState"].forEach(function(id){
@@ -2462,7 +2316,7 @@ function renderTargets(){
   var h = "<thead><tr><th>対象</th><th>検診</th><th>職員番号</th><th>氏名</th><th>年齢</th><th>性別</th>"
         + "<th>所属</th><th>状態</th><th>受診日</th><th>受付時間</th><th>会場</th></tr></thead><tbody>";
   if(!rows.length){
-    h += '<tr><td colspan="11" class="hint">該当する対象者がいません。名簿の読込、受診状況の取込、判定ルールを確認してください。</td></tr>';
+    h += '<tr><td colspan="11" class="hint">該当する対象者がいません。職員名簿と予約状況ファイルを読み込んでください。</td></tr>';
   }
   rows.forEach(function(r){
     var e = r.t.emp, a = r.t.assign, st = r.st;
@@ -2492,6 +2346,7 @@ $("targetTable").addEventListener("change", function(e){
   if(e.target.checked) state.excluded[kid].delete(no);
   else state.excluded[kid].add(no);
   renderTargetStat();
+  saveData();
 });
 
 /* =========================================================================
@@ -3383,15 +3238,9 @@ $("btnCsvUnassigned").addEventListener("click", function(){
   });
 
   KENSHIN.forEach(function(k){
-    var hasDays = state.schedules[k.id].some(function(sc){ return sc.date; });
     (state.targets[k.id] || []).forEach(function(t){
       var st = targetStatus(k.id, t);
-      if(st.key === "print"){
-        if(!state.nyuryoku[k.id] && !t.assign && hasDays){
-          rows.push(["未割当", k.name, t.emp.empNo, t.emp.name, t.emp.deptName, "定員不足により日程が割り当てられていません"]);
-        }
-        return;
-      }
+      if(st.key === "print") return;
       var kubun = st.key === "manual" ? "手動で除外"
                 : st.key === "check"  ? "要確認" : "印刷不要";
       var naiyou = st.key === "manual" ? "画面上で対象から除外されています"
@@ -3418,25 +3267,25 @@ $("btnCsvUnassigned").addEventListener("click", function(){
 
 var SAMPLE_CSV = [
   "職員番号,氏名,カナ,生年月日,性別,所属コード,所属名,雇用区分",
-  "1001,佐藤 太郎,サトウ タロウ,1972/4/12,男,110,総務課,正職員",
-  "1002,鈴木 花子,スズキ ハナコ,1981/8/3,女,110,総務課,正職員",
-  "1003,高橋 一郎,タカハシ イチロウ,1990/1/25,男,110,総務課,正職員",
-  "1004,田中 美咲,タナカ ミサキ,1986/11/9,女,110,総務課,会計年度任用",
-  "1101,伊藤 健二,イトウ ケンジ,1968/6/30,男,120,財政課,正職員",
-  "1102,渡辺 由美,ワタナベ ユミ,1984/3/17,女,120,財政課,正職員",
-  "1103,山本 三郎,ヤマモト サブロウ,1995/9/5,男,120,財政課,正職員",
-  "1201,中村 恵子,ナカムラ ケイコ,1976/12/22,女,210,市民課,正職員",
-  "1202,小林 大輔,コバヤシ ダイスケ,1979/2/14,男,210,市民課,正職員",
-  "1203,加藤 里奈,カトウ リナ,1998/7/8,女,210,市民課,正職員",
-  "1204,吉田 修,ヨシダ オサム,1963/5/2,男,210,市民課,再任用",
-  "1301,山田 千夏,ヤマダ チナツ,1988/10/11,女,220,税務課,正職員",
-  "1302,佐々木 亮,ササキ リョウ,1974/1/29,男,220,税務課,正職員",
-  "1303,松本 春美,マツモト ハルミ,1992/4/4,女,220,税務課,正職員",
-  "1401,井上 慎一,イノウエ シンイチ,1970/8/19,男,310,保健福祉課,正職員",
-  "1402,木村 真理,キムラ マリ,1983/6/26,女,310,保健福祉課,正職員",
-  "1403,林 直樹,ハヤシ ナオキ,1996/3/13,男,310,保健福祉課,正職員",
-  "1404,清水 早苗,シミズ サナエ,1966/9/1,女,310,保健福祉課,正職員",
-  "1501,森 雅彦,モリ マサヒコ,1978/5/23,男,410,建設課,正職員",
+  "1001,佐藤 太郎,サトウ タロウ,1972/4/12,1,110,総務課,正職員",
+  "1002,鈴木 花子,スズキ ハナコ,1981/8/3,0,110,総務課,正職員",
+  "1003,高橋 一郎,タカハシ イチロウ,1990/1/25,1,110,総務課,正職員",
+  "1004,田中 美咲,タナカ ミサキ,1986/11/9,0,110,総務課,会計年度任用",
+  "1101,伊藤 健二,イトウ ケンジ,1968/6/30,1,120,財政課,正職員",
+  "1102,渡辺 由美,ワタナベ ユミ,1984/3/17,0,120,財政課,正職員",
+  "1103,山本 三郎,ヤマモト サブロウ,1995/9/5,1,120,財政課,正職員",
+  "1201,中村 恵子,ナカムラ ケイコ,1976/12/22,0,210,市民課,正職員",
+  "1202,小林 大輔,コバヤシ ダイスケ,1979/2/14,1,210,市民課,正職員",
+  "1203,加藤 里奈,カトウ リナ,1998/7/8,0,210,市民課,正職員",
+  "1204,吉田 修,ヨシダ オサム,1963/5/2,1,210,市民課,再任用",
+  "1301,山田 千夏,ヤマダ チナツ,1988/10/11,0,220,税務課,正職員",
+  "1302,佐々木 亮,ササキ リョウ,1974/1/29,1,220,税務課,正職員",
+  "1303,松本 春美,マツモト ハルミ,1992/4/4,0,220,税務課,正職員",
+  "1401,井上 慎一,イノウエ シンイチ,1970/8/19,1,310,保健福祉課,正職員",
+  "1402,木村 真理,キムラ マリ,1983/6/26,0,310,保健福祉課,正職員",
+  "1403,林 直樹,ハヤシ ナオキ,1996/3/13,1,310,保健福祉課,正職員",
+  "1404,清水 早苗,シミズ サナエ,1966/9/1,0,310,保健福祉課,正職員",
+  "1501,森 雅彦,モリ マサヒコ,1978/5/23,1,410,建設課,正職員",
   "1502,池田 綾,イケダ アヤ,1994/12/6,女,410,建設課,正職員"
 ].join("\n");
 
@@ -3462,11 +3311,6 @@ $("btnSample").addEventListener("click", function(){
     if(saved && saved.rules){
       KENSHIN.forEach(function(k){
         if(saved.rules[k.id]) state.rules[k.id] = Object.assign(state.rules[k.id], saved.rules[k.id]);
-      });
-    }
-    if(saved && saved.schedules){
-      KENSHIN.forEach(function(k){
-        if(Array.isArray(saved.schedules[k.id])) state.schedules[k.id] = saved.schedules[k.id];
       });
     }
     if(saved && Array.isArray(saved.skipPhrases) && saved.skipPhrases.length) state.skipPhrases = saved.skipPhrases;
@@ -3503,6 +3347,8 @@ $("btnSample").addEventListener("click", function(){
     var ov = $("printMode").value === "overlay";
     $("rowKagami").style.display = ov ? "none" : "";
     $("overlayNote").style.display = ov ? "" : "none";
+    $("a4Notes").style.display = ov ? "none" : "";
+    if(state.rules[$("printKenshin").value]) $("ticketNotes").value = state.rules[$("printKenshin").value].notes || "";
     var L = state.layouts[$("printKenshin").value];
     var pg = L ? (PAPER[L.paper] || PAPER.b4l) : PAPER.b4l;
     $("printHint").textContent = ov
@@ -3514,12 +3360,45 @@ $("btnSample").addEventListener("click", function(){
   $("printKenshin").addEventListener("change", syncPrintMode);
   syncPrintMode();
 
-  renderRuleCards();
-  renderPrevYearLoaders();
-  renderScheduleCards();
   renderNyuCards();
   bindNyuCards();
   bindLayoutTab();
+
+  $("btnClearData").addEventListener("click", function(){
+    if(!confirm("この端末に保存されている職員名簿と予約状況をすべて消去します。よろしいですか？\n（様式レイアウトなどの設定は残ります）")) return;
+    clearData();
+    toast("保存データを消去しました");
+  });
+
+  function syncNotes(){
+    var kid = $("printKenshin").value;
+    $("ticketNotes").value = (state.rules[kid] && state.rules[kid].notes) || "";
+  }
+  $("btnSaveNotes").addEventListener("click", function(){
+    var kid = $("printKenshin").value;
+    if(!state.rules[kid]) state.rules[kid] = { notes:"" };
+    state.rules[kid].notes = $("ticketNotes").value;
+    try{ saveSettings(); toast("注意事項を保存しました"); }
+    catch(err){ toast("保存できませんでした: " + err.message, true); }
+  });
+
+  /* 前回この端末に保存したデータを復元する */
+  var restored = false;
+  try{ restored = loadData(); }catch(err){ restored = false; }
+  if(restored){
+    $("fiscalYear").value = state.fiscalYear;
+    $("baseDate").value = isoOf(state.baseDate);
+    computeTargets();
+    renderLoaded();
+    renderDeptFilter();
+    renderNyuCards();
+    setTimeout(function(){
+      toast("前回のデータを復元しました（職員名簿 " + state.employees.length + "名）");
+    }, 300);
+  }
+  renderSaveInfo();
+  renderTargets();
+  syncNotes();
   renderSkipPhrases();
   bindSkipPhrases();
   $("onlyActive").checked = !!state.onlyActive;
