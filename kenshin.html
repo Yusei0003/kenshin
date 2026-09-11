@@ -328,8 +328,9 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
 <nav>
   <button class="tab active" data-page="p1">１. 名簿の読込</button>
   <button class="tab" data-page="p7">２. 予約状況の取込</button>
-  <button class="tab" data-page="p8">３. 様式レイアウト</button>
-  <button class="tab" data-page="p5">４. 印刷・出力</button>
+  <button class="tab" data-page="p4">３. 対象者一覧</button>
+  <button class="tab" data-page="p8">４. 様式レイアウト</button>
+  <button class="tab" data-page="p5">５. 印刷・出力</button>
   <button class="tab" data-page="p6">使い方・注意</button>
 </nav>
 
@@ -416,40 +417,16 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
   <div class="panel">
     <h2>予約状況ファイルの取込</h2>
     <p class="hint">
-      職員番号と「入力」欄をもつファイル（Excel／CSV）を検診ごとに読み込みます。<br>
-      入力欄に <strong>受診日時</strong>（例：<code>8/22　10：30〜10：50</code>）が入っている人は、その日時で受検票を印刷します。<br>
-      入力欄が下の「印刷が不要になる入力値」に該当する人は、<strong>受検票を印刷しません</strong>。
+      職員番号と「入力」欄をもつファイル（Excel／CSV）を検診ごとに読み込みます。
+      入力欄には、予約すると予約時間などが入ります。
     </p>
     <div class="info">
-      <strong>受検票を印刷する人は、このファイルだけで決まります。</strong>
-      ファイルに載っていて、入力欄に受診日時が入っている人だけを印刷します。<br>
+      <strong>受検票を印刷する人は、このファイルだけで決まります。</strong><br>
+      入力欄が <strong>空欄</strong> の人と、下の「印刷が不要になる入力値」に<strong>該当する</strong>人は印刷しません。
+      <strong>それ以外は、入力欄の内容にかかわらずすべて印刷します。</strong><br>
       年齢や性別による絞り込みは行いません。読み込んでいない検診は対象者0名になります。
     </div>
     <div id="nyuCards"></div>
-  </div>
-
-<div class="panel">
-    <h2>対象者一覧（受検票が印刷される人の確認）</h2>
-    <div class="row">
-      <label>検診
-        <select id="filterKenshin"><option value="">（すべて）</option></select>
-      </label>
-      <label>所属
-        <select id="filterDept"><option value="">（すべて）</option></select>
-      </label>
-      <label>状態
-        <select id="filterState">
-          <option value="">（すべて）</option>
-          <option value="print">受検票を印刷する人</option>
-          <option value="skip">印刷不要（該当文言・空欄）</option>
-          <option value="check">要確認</option>
-          <option value="manual">手動で除外した人</option>
-        </select>
-      </label>
-      <span class="hint">「対象」のチェックを外すと、その人の受検票は印刷されません（個別の辞退・休職者等の除外に使用）。</span>
-    </div>
-    <div class="stat" id="targetStat"></div>
-    <div class="scroll"><table class="grid" id="targetTable"></table></div>
   </div>
 
   <div class="panel">
@@ -462,14 +439,48 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <button class="btn" id="btnSaveSkip">この内容を保存して判定し直す</button>
       <button class="btn" id="btnResetSkip">初期値に戻す</button>
     </div>
-    <div class="note">
-      どの文言にも当てはまらず、受診日時としても読み取れない入力値は
-      <strong>「要確認」</strong>として一覧に表示し、既定では印刷しません。
-      黙って対象から外れることはないので、印刷前に「対象者の確認」画面で必ずご確認ください。
+    <div class="info">
+      ここに書いた文言に<strong>部分一致</strong>する人と、入力欄が<strong>空欄</strong>の人だけが印刷対象外です。
+      それ以外は、日時として読み取れない書き方でも<strong>印刷されます</strong>
+      （日時として読み取れなかった場合は、入力欄の内容をそのまま受付時間欄に印字します）。
     </div>
+  </div>
+</section>
+
+<!-- ================= 4. 対象者一覧 ================= -->
+<section class="page" id="p4">
+  <div class="panel">
+    <h2>対象者一覧</h2>
+    <p class="hint">検診を選ぶと、その検診で受検票が印刷される人を確認できます。</p>
+    <div class="row" id="tgKenshinTabs"></div>
+    <div class="stat" id="targetStat" style="margin-top:12px"></div>
+  </div>
+
+  <div class="panel">
     <div class="row">
-      <label><input type="checkbox" id="printUnknown"> 要確認の人も印刷する（入力欄の内容をそのまま受付時間欄に印字）</label>
+      <label>所属
+        <select id="filterDept"><option value="">（すべて）</option></select>
+      </label>
+      <label>状態
+        <select id="filterState">
+          <option value="">（すべて）</option>
+          <option value="print">受検票を印刷する人</option>
+          <option value="check">印刷するが要確認（日時を読み取れない）</option>
+          <option value="skip">印刷しない（該当文言・空欄）</option>
+          <option value="manual">手動で除外した人</option>
+        </select>
+      </label>
+      <label>並び順
+        <select id="listOrder">
+          <option value="empNo">職員番号順</option>
+          <option value="dept">所属コード順</option>
+          <option value="kana">カナ順</option>
+          <option value="date">受診日時順</option>
+        </select>
+      </label>
+      <span class="hint">「対象」のチェックを外すと、その人の受検票は印刷されません（個別の辞退・休職者等の除外に使用）。</span>
     </div>
+    <div class="scroll"><table class="grid" id="targetTable"></table></div>
   </div>
 </section>
 
@@ -549,7 +560,8 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       </label>
       <label>並び順
         <select id="printOrder">
-          <option value="dept">所属コード順 → カナ順（配布の仕分けに便利）</option>
+          <option value="empNo">職員番号順（名簿のA列）</option>
+          <option value="dept" selected>所属コード順 → 職員番号順（名簿のM列・配布の仕分けに便利）</option>
           <option value="kana">カナ順</option>
           <option value="date">受診日 → 受付時間順（当日の受付順）</option>
         </select>
@@ -605,15 +617,26 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
     <ol>
       <li><strong>名簿の読込</strong>　職員名簿（Excel／CSV）を読み込み、列の対応付けを確認します。</li>
       <li><strong>予約状況の取込</strong>　検診ごとに予約状況ファイルを読み込み、職員番号の列と入力の列を指定して取り込みます。会場名もここで指定します。<br>
-          同じ画面の下に対象者一覧が出ます。<strong>要確認の件数が0であること</strong>を必ず確認してください。</li>
+          取り込むと、確認が必要な件があればこの画面に表示されます。</li>
+      <li><strong>対象者一覧</strong>　検診を選んで、受検票が印刷される人を確認します。辞退者などはここで個別に外せます。</li>
       <li><strong>様式レイアウト</strong>　初回のみ、協会の用紙に1枚テスト印刷して位置を確認します。合っていればそのままで構いません。</li>
-      <li><strong>印刷・出力</strong>　受検票を印刷します。</li>
+      <li><strong>印刷・出力</strong>　並び順を選んで受検票を印刷します。</li>
     </ol>
     <div class="info">
       <strong>誰の受検票を印刷するかは、予約状況ファイルだけで決まります。</strong><br>
-      予約状況ファイルに載っていて、入力欄に受診日時が入っている人だけを印刷します。
-      年齢や性別による絞り込みは行いません。
+      入力欄が<strong>空欄</strong>の人と、「印刷が不要になる入力値」に<strong>該当する</strong>人は印刷しません。
+      <strong>それ以外はすべて印刷します。</strong>年齢や性別による絞り込みは行いません。
     </div>
+    <table class="grid" style="margin-top:12px">
+      <thead><tr><th>入力欄の内容</th><th>受検票</th><th>印字のされ方</th></tr></thead>
+      <tbody>
+        <tr><td><code>8/22　10：30〜10：50</code></td><td>印刷する</td><td>受診日「8月22日（土）」／受付時間「10：30〜10：50」</td></tr>
+        <tr><td><code>9/3 午前</code></td><td>印刷する</td><td>受診日「9月3日（木）」／受付時間「午前」</td></tr>
+        <tr><td><code>要相談</code> など日時として読めない内容</td><td><strong>印刷する</strong></td><td>受診日は空欄／受付時間に「要相談」をそのまま印字（一覧に<strong>要確認</strong>と表示）</td></tr>
+        <tr><td><code>受診しない</code> など該当文言</td><td>印刷しない</td><td>―</td></tr>
+        <tr><td>空欄</td><td>印刷しない</td><td>―</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <div class="panel">
@@ -626,7 +649,7 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <thead><tr><th>保存されるもの</th><th>消し方</th></tr></thead>
       <tbody>
         <tr><td>職員名簿・予約状況・個別の除外</td><td>「１. 名簿の読込」画面の「保存データを消去」</td></tr>
-        <tr><td>様式レイアウト・団体名</td><td>「３. 様式レイアウト」画面の「この検診を初期値に戻す」</td></tr>
+        <tr><td>様式レイアウト・団体名</td><td>「４. 様式レイアウト」画面の「この検診を初期値に戻す」</td></tr>
         <tr><td>印刷が不要になる入力値・注意事項</td><td>それぞれの画面の「初期値に戻す」</td></tr>
       </tbody>
     </table>
@@ -693,7 +716,7 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
     </div>
     <p>A4 自前様式の枠線・文字サイズは、このファイル内の <code>&lt;style&gt;</code> 内 <code>.ticket</code> と
     <code>buildTicketHTML()</code> を編集すると変えられます。
-    注意事項の文面は「４. 印刷・出力」画面で A4 自前様式を選ぶと編集できます（ファイルの編集は不要です）。</p>
+    注意事項の文面は「５. 印刷・出力」画面で A4 自前様式を選ぶと編集できます（ファイルの編集は不要です）。</p>
   </div>
 </section>
 
@@ -1342,7 +1365,7 @@ Array.prototype.forEach.call(document.querySelectorAll("nav .tab"), function(b){
     Array.prototype.forEach.call(document.querySelectorAll("section.page"), function(x){ x.classList.remove("active"); });
     b.classList.add("active");
     $(b.dataset.page).classList.add("active");
-    if(b.dataset.page === "p4") renderTargets();
+    if(b.dataset.page === "p4"){ renderTgTabs(); renderTargets(); }
     if(b.dataset.page === "p7") KENSHIN.forEach(function(k){ renderNyuCard(k.id); });
     if(b.dataset.page === "p8") renderLayoutTab();
   });
@@ -1789,16 +1812,19 @@ function renderNyuCard(kid){
   if(ny){
     var cn = ny.counts;
     h += '<div class="stat" style="margin-top:10px">'
-       + statBox(cn.total, "対象者（実人数）")
-       + statBox(cn.print, "受検票を印刷")
-       + statBox(cn.skip, "印刷不要（該当文言）")
-       + statBox(cn.blank, "入力欄が空欄")
-       + statBox(cn.unknown, "要確認")
+       + statBox(cn.total, "ファイル掲載（実人数）")
+       + statBox((cn.print || 0) + (cn.unknown || 0), "受検票を印刷")
+       + statBox(cn.skip, "印刷しない（該当文言）")
+       + statBox(cn.blank, "印刷しない（空欄）")
+       + (cn.unknown ? '<div style="border-color:#a8410f"><div class="n" style="color:#a8410f">' + cn.unknown
+           + '</div><div class="l">うち要確認</div></div>' : "")
        + "</div>";
     h += '<div class="hint">読込元：' + esc(ny.label) + "（データ " + cn.lines + "行）</div>";
 
     if(cn.unknown){
-      h += '<div class="note"><strong>要確認が ' + cn.unknown + " 件あります。</strong>入力欄の内容を判別できませんでした。<br>"
+      h += '<div class="note"><strong>入力欄を受診日時として読み取れなかった方が ' + cn.unknown + " 件あります。</strong><br>"
+         + "この方たちの<strong>受検票は印刷されます</strong>が、受診日は空欄になり、入力欄の内容がそのまま受付時間欄に印字されます。"
+         + "印刷してよい内容かご確認ください。<br>"
          + '<table class="grid" style="margin-top:6px"><thead><tr><th>職員番号</th><th>氏名</th><th>入力欄の内容</th></tr></thead><tbody>';
       (state.targets[kid] || []).forEach(function(t){
         if(t.nyu && t.nyu.kind === "unknown"){
@@ -1984,15 +2010,16 @@ function importNyuryoku(kid){
   renderNyuCard(kid);
   renderTargets();
 
-  var msg = kenshinName(kid) + "：" + counts.total + "件を取り込みました（印刷 " + counts.print
-          + "／印刷不要 " + counts.skip + "／空欄 " + counts.blank + "／要確認 " + counts.unknown + "）";
+  var msg = kenshinName(kid) + "：" + counts.total + "件を取り込みました（印刷 "
+          + (counts.print + counts.unknown) + "／該当文言 " + counts.skip
+          + "／空欄 " + counts.blank
+          + (counts.unknown ? "／うち要確認 " + counts.unknown : "") + "）";
   toast(msg, counts.unknown > 0);
 }
 
 /* --- 印刷が不要になる入力値の設定 --- */
 function renderSkipPhrases(){
   $("skipPhrases").value = state.skipPhrases.join("\n");
-  $("printUnknown").checked = !!state.printUnknown;
 }
 
 function bindSkipPhrases(){
@@ -2008,12 +2035,6 @@ function bindSkipPhrases(){
     renderSkipPhrases();
     reparseAllNyuryoku();
     toast("初期値に戻しました");
-  });
-  $("printUnknown").addEventListener("change", function(){
-    state.printUnknown = this.checked;
-    computeTargets();
-    renderTargets();
-    KENSHIN.forEach(function(k){ renderNyuCard(k.id); });
   });
 }
 
@@ -2050,7 +2071,6 @@ function saveSettings(){
   localStorage.setItem(LS_KEY, JSON.stringify({
     rules: state.rules,
     skipPhrases: state.skipPhrases,
-    printUnknown: !!state.printUnknown,
     onlyActive: !!state.onlyActive,
     orgName: state.orgName,
     layouts: state.layouts
@@ -2224,12 +2244,11 @@ function computeTargets(){
         }else if(rec.kind === "blank"){
           item.skipReason = "入力欄が空欄";
         }else{
-          item.skipReason = "入力欄を判別できません";
+          /* 印刷不要の文言でも空欄でもないので印刷する。
+             日時として読み取れなかった場合は、入力欄の内容をそのまま受付時間欄へ印字する。 */
+          item.print = true;
           item.needCheck = true;
-          if(state.printUnknown){
-            item.print = true;
-            item.assign = { date:"", place: rec.place || ny.place || "", time: rec.raw };
-          }
+          item.assign = { date:"", place: rec.place || ny.place || "", time: rec.raw };
         }
         list.push(item);
       });
@@ -2242,14 +2261,28 @@ function computeTargets(){
   renderTargetStat();
 }
 
+/* 数字だけの値は数値として並ぶようにキーを作る（職員番号 9 が 10 より前に来るように） */
+function sortKey(v){
+  var x = String(v == null ? "" : v).trim();
+  if(!x) return "\uffff";
+  if(!/^\d+$/.test(x)) return "\ufffe" + x;
+  while(x.length < 14) x = "0" + x;
+  return x;
+}
+
+/* 職員番号順（名簿の A 列） */
+function cmpEmpNo(a, b){
+  var ka = sortKey(a.emp.empNo), kb = sortKey(b.emp.empNo);
+  return ka < kb ? -1 : ka > kb ? 1 : 0;
+}
+
+/* 所属コード順（名簿の M 列）→ 職員番号順 */
 function cmpDeptKana(a, b){
   var ea = a.emp, eb = b.emp;
-  var da = ea.deptCode || "zzzz", db = eb.deptCode || "zzzz";
+  var da = sortKey(ea.deptCode), db = sortKey(eb.deptCode);
   if(da !== db) return da < db ? -1 : 1;
   if(ea.deptName !== eb.deptName) return ea.deptName < eb.deptName ? -1 : 1;
-  var ka = ea.kana || ea.name, kb = eb.kana || eb.name;
-  if(ka !== kb) return ka < kb ? -1 : 1;
-  return ea.empNo < eb.empNo ? -1 : 1;
+  return cmpEmpNo(a, b);
 }
 
 /* 実際に受検票を印刷する人 */
@@ -2274,49 +2307,76 @@ function renderDeptFilter(){
 }
 
 function renderTargetStat(){
-  var h = "", check = 0;
-  KENSHIN.forEach(function(k){
-    h += statBox(activeTargets(k.id).length, k.name);
-    (state.targets[k.id] || []).forEach(function(t){ if(t.needCheck) check++; });
-  });
-  if(check) h += '<div style="border-color:#a8410f"><div class="n" style="color:#a8410f">' + check + '</div><div class="l">要確認</div></div>';
   var box = $("targetStat");
-  if(box) box.innerHTML = h;
+  if(!box) return;
+  var kid = tgKid || (ticketKenshin()[0] && ticketKenshin()[0].id);
+  var list = state.targets[kid] || [];
+  var c = { print:0, check:0, skip:0, manual:0 };
+  list.forEach(function(t){ c[targetStatus(kid, t).key]++; });
+  var h = statBox(list.length, "予約状況ファイル掲載")
+        + statBox(c.print + c.check, "受検票を印刷")
+        + statBox(c.skip, "印刷しない（文言・空欄）")
+        + statBox(c.manual, "手動で除外");
+  if(c.check) h += '<div style="border-color:#a8410f"><div class="n" style="color:#a8410f">' + c.check
+                 + '</div><div class="l">印刷するが要確認</div></div>';
+  box.innerHTML = h;
 }
 
-["filterKenshin","filterDept","filterState"].forEach(function(id){
+["filterDept","filterState","listOrder"].forEach(function(id){
   $(id).addEventListener("change", renderTargets);
+});
+
+/* 対象者一覧の検診切替 */
+var tgKid = null;
+function renderTgTabs(){
+  var box = $("tgKenshinTabs");
+  if(!box) return;
+  if(!tgKid) tgKid = ticketKenshin()[0].id;
+  box.innerHTML = ticketKenshin().map(function(k){
+    var n = activeTargets(k.id).length;
+    return '<button class="btn' + (tgKid === k.id ? " primary" : "") + '" data-tgk="' + k.id + '">'
+         + esc(k.name) + "（" + n + "名）</button>";
+  }).join(" ");
+}
+document.addEventListener("click", function(e){
+  var k = e.target && e.target.dataset ? e.target.dataset.tgk : null;
+  if(!k) return;
+  tgKid = k;
+  renderTgTabs();
+  renderTargets();
 });
 
 /* 行の状態を表す（画面表示とCSV出力で共通に使う） */
 function targetStatus(kid, t){
-  if(state.excluded[kid].has(t.emp.empNo)) return { key:"manual", label:"手動で除外", warn:true };
-  if(t.needCheck) return { key:"check", label:"要確認：" + (t.nyu ? t.nyu.raw : ""), warn:true };
-  if(!t.print)    return { key:"skip",  label:"印刷不要：" + t.skipReason, warn:false };
+  if(state.excluded[kid].has(t.emp.empNo)) return { key:"manual", label:"手動で除外（印刷しません）", warn:true };
+  if(!t.print)    return { key:"skip",  label:"印刷しない：" + t.skipReason, warn:false };
+  if(t.needCheck) return { key:"check", label:"印刷する（日時を読み取れません）", warn:true };
   return { key:"print", label:"印刷する", warn:false };
 }
 
 function renderTargets(){
+  if(!$("targetTable")) return;
+  renderTgTabs();
   renderTargetStat();
-  var fk = $("filterKenshin").value;
+  var kid = tgKid || (ticketKenshin()[0] && ticketKenshin()[0].id);
   var fd = $("filterDept").value;
   var fs = $("filterState").value;
+  var ord = $("listOrder").value;
 
   var rows = [];
-  KENSHIN.forEach(function(k){
-    if(fk && fk !== k.id) return;
-    (state.targets[k.id] || []).forEach(function(t){
-      if(fd && t.emp.deptName !== fd) return;
-      var st = targetStatus(k.id, t);
-      if(fs && fs !== st.key) return;
-      rows.push({ kid:k.id, t:t, st:st });
-    });
+  sortForPrint(state.targets[kid] || [], ord).forEach(function(t){
+    if(fd && t.emp.deptName !== fd) return;
+    var st = targetStatus(kid, t);
+    if(fs && fs !== st.key) return;
+    rows.push({ kid:kid, t:t, st:st });
   });
 
-  var h = "<thead><tr><th>対象</th><th>検診</th><th>職員番号</th><th>氏名</th><th>年齢</th><th>性別</th>"
-        + "<th>所属</th><th>状態</th><th>受診日</th><th>受付時間</th><th>会場</th></tr></thead><tbody>";
+  var h = "<thead><tr><th>対象</th><th>職員番号</th><th>所属コード</th><th>氏名</th><th>年齢</th><th>性別</th>"
+        + "<th>所属名</th><th>状態</th><th>受診日</th><th>受付時間</th><th>入力欄の内容</th></tr></thead><tbody>";
   if(!rows.length){
-    h += '<tr><td colspan="11" class="hint">該当する対象者がいません。職員名簿と予約状況ファイルを読み込んでください。</td></tr>';
+    h += '<tr><td colspan="11" class="hint">該当する方がいません。'
+       + (state.nyuryoku[kid] ? "絞り込みの条件をご確認ください。" : "「２. 予約状況の取込」でこの検診のファイルを読み込んでください。")
+       + "</td></tr>";
   }
   rows.forEach(function(r){
     var e = r.t.emp, a = r.t.assign, st = r.st;
@@ -2325,16 +2385,16 @@ function renderTargets(){
     h += "<tr>"
       + '<td><input type="checkbox" class="tgt" data-k="' + r.kid + '" data-n="' + esc(e.empNo) + '"'
         + (checked ? " checked" : "") + (disabled ? " disabled" : "") + "></td>"
-      + "<td>" + esc(kenshinName(r.kid)) + "</td>"
       + "<td>" + esc(e.empNo) + "</td>"
+      + "<td>" + esc(e.deptCode) + "</td>"
       + "<td>" + esc(e.name) + "</td>"
       + '<td class="num">' + e.age + "</td>"
       + "<td>" + sexLabel(e.sex) + "</td>"
       + "<td>" + esc(e.deptName) + "</td>"
       + "<td" + (st.warn ? ' style="color:#a8410f"' : "") + ">" + esc(st.label) + "</td>"
-      + "<td>" + (a && a.date ? fmtDateWithDow(a.date) : (r.t.print ? '<span class="hint">未割当</span>' : "")) + "</td>"
+      + "<td>" + (a && a.date ? fmtDateWithDow(a.date) : "") + "</td>"
       + "<td>" + (a ? esc(a.time) : "") + "</td>"
-      + "<td>" + (a ? esc(a.place) : "") + "</td>"
+      + "<td>" + (r.t.nyu ? esc(r.t.nyu.raw) : "") + "</td>"
       + "</tr>";
   });
   $("targetTable").innerHTML = h + "</tbody>";
@@ -2961,7 +3021,9 @@ document.addEventListener("keydown", function(e){
 
 function sortForPrint(list, order){
   var a = list.slice();
-  if(order === "kana"){
+  if(order === "empNo"){
+    a.sort(cmpEmpNo);
+  }else if(order === "kana"){
     a.sort(function(x, y){
       var kx = x.emp.kana || x.emp.name, ky = y.emp.kana || y.emp.name;
       if(kx !== ky) return kx < ky ? -1 : 1;
@@ -3241,11 +3303,13 @@ $("btnCsvUnassigned").addEventListener("click", function(){
     (state.targets[k.id] || []).forEach(function(t){
       var st = targetStatus(k.id, t);
       if(st.key === "print") return;
-      var kubun = st.key === "manual" ? "手動で除外"
-                : st.key === "check"  ? "要確認" : "印刷不要";
-      var naiyou = st.key === "manual" ? "画面上で対象から除外されています"
-                 : st.key === "check"  ? "入力欄を判別できません：" + (t.nyu ? t.nyu.raw : "")
-                 : t.skipReason;
+      if(st.key === "check"){
+        rows.push(["要確認（印刷します）", k.name, t.emp.empNo, t.emp.name, t.emp.deptName,
+                   "入力欄を受診日時として読み取れません：" + (t.nyu ? t.nyu.raw : "")]);
+        return;
+      }
+      var kubun = st.key === "manual" ? "手動で除外" : "印刷しない";
+      var naiyou = st.key === "manual" ? "画面上で対象から除外されています" : t.skipReason;
       rows.push([kubun, k.name, t.emp.empNo, t.emp.name, t.emp.deptName, naiyou]);
     });
 
@@ -3314,7 +3378,6 @@ $("btnSample").addEventListener("click", function(){
       });
     }
     if(saved && Array.isArray(saved.skipPhrases) && saved.skipPhrases.length) state.skipPhrases = saved.skipPhrases;
-    if(saved && typeof saved.printUnknown === "boolean") state.printUnknown = saved.printUnknown;
     if(saved && typeof saved.onlyActive === "boolean") state.onlyActive = saved.onlyActive;
     if(saved && saved.orgName) state.orgName = saved.orgName;
     if(saved && saved.layouts){
@@ -3335,9 +3398,6 @@ $("btnSample").addEventListener("click", function(){
     }
   });
 
-  KENSHIN.forEach(function(k){
-    $("filterKenshin").appendChild(el("option", {value:k.id}, esc(k.name)));
-  });
   ticketKenshin().forEach(function(k){
     $("printKenshin").appendChild(el("option", {value:k.id}, esc(k.name)));
   });
