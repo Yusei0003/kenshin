@@ -435,7 +435,8 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <strong>受検票を印刷する人は、このファイルだけで決まります。</strong><br>
       入力欄が <strong>空欄</strong> の人と、下の「印刷が不要になる入力値」に<strong>該当する</strong>人は印刷しません。
       <strong>それ以外は、入力欄の内容にかかわらずすべて印刷します。</strong><br>
-      <strong>婦人検診</strong>は1つのファイルから、年齢区分に応じて乳がん検診・子宮頸がん検診に振り分けます。
+      <strong>婦人検診</strong>は1つのファイルから、年齢区分に応じて乳がん検診・子宮頸がん検診に振り分けます。<br>
+      日付は入力欄に書かれているものをそのまま使います。年や月を入力する必要はありません。
     </div>
     <div id="nyuCards"></div>
   </div>
@@ -659,7 +660,7 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
     <h3>作業の流れ</h3>
     <ol>
       <li><strong>名簿の読込</strong>　上で作った職員名簿の Excel を読み込み、列の対応付けを確認します。</li>
-      <li><strong>予約状況の取込</strong>　胃がん検診・婦人検診それぞれの Excel を読み込み、職員番号の列と入力の列を指定して取り込みます。実施年月（または受診日）と会場もここで指定します。<br>
+      <li><strong>予約状況の取込</strong>　胃がん検診・婦人検診それぞれの Excel を読み込み、職員番号の列と入力の列を指定して取り込みます。<br>
           取り込むと、確認が必要な件があればこの画面に表示されます。</li>
       <li><strong>対象者一覧</strong>　検診を選んで、受検票が印刷される人を確認します。辞退者などはここで個別に外せます。</li>
       <li><strong>様式レイアウト</strong>　初回のみ、協会の用紙に1枚テスト印刷して位置を確認します。合っていればそのままで構いません。</li>
@@ -676,11 +677,11 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <tbody>
         <tr><td><code>【男】6日（火）　7：00〜7：15</code><br><span class="hint">胃がん検診</span></td>
             <td>印刷する</td>
-            <td>受診日「10月6日（火）」（実施年月の指定から）／受付時間「7：00〜7：15」<br>
-                <span class="hint">【男】【女】が名簿の性別と違うとき、曜日が合わないときは一覧に要確認と表示します。</span></td></tr>
+            <td>受診日「6日（火）」／受付時間「7：00〜7：15」<br>
+                <span class="hint">【男】【女】が名簿の性別と違うときは一覧に要確認と表示します。</span></td></tr>
         <tr><td><code>09:30〜09:45（35歳以上）</code><br><span class="hint">婦人検診</span></td>
             <td>印刷する</td>
-            <td>受診日は指定した日／受付時間「09:30〜09:45」<br>
+            <td>受付時間「09:30〜09:45」<br>
                 <span class="hint">年齢区分で乳がん検診・子宮頸がん検診に振り分けます。</span></td></tr>
         <tr><td><code>要相談</code> など日時として読めない内容</td><td><strong>印刷する</strong></td>
             <td>受診日は空欄／受付時間に内容をそのまま印字（一覧に<strong>要確認</strong>と表示）</td></tr>
@@ -875,7 +876,7 @@ var state = {
   onlyActive: true,      // 「在職」列がある場合、在職者のみを対象にする
   inactive:   [],        // 在職でないため除外した職員
   nyuSrc:     {},        // 取込元(srcId) -> 読み込んだ内容
-  nyuOpt:     {},        // 取込元(srcId) -> 実施年月・受診日・会場の設定
+  nyuOpt:     {},        // 取込元(srcId) -> 会場の設定
   nyuryoku:   {},        // kenshinId -> 検診ごとに振り分けた結果（nyuSrc から組み立て）
   fujinRules: defaultFujinRules(),
   fujinFallback: "both", // 年齢区分がどのルールにも当てはまらないときの扱い
@@ -1761,13 +1762,11 @@ $("baseDate").addEventListener("change", function(){
 
 var NYU_SOURCES = [
   { id:"i",     name:"胃がん検診", kenshin:["i"],
-    needMonth:true,  needDate:false,
     sample:"【男】6日（火）　7：00〜7：15",
-    note:"入力欄に日だけが書かれているため、実施年月をここで指定します。" },
+    note:"性別・日・受付時間帯を読み取ります。" },
   { id:"fujin", name:"婦人検診（乳がん・子宮頸がん）", kenshin:["nyu","shikyu"],
-    needMonth:false, needDate:true,
     sample:"09:30〜09:45（35歳以上）",
-    note:"入力欄に日付がないため、受診日をここで指定します。年齢区分で対象の検診が決まります。" }
+    note:"受付時間帯と年齢区分を読み取り、年齢区分で対象の検診が決まります。" }
 ];
 
 function nyuSourceOf(id){
@@ -1792,6 +1791,13 @@ function empKey(v){
 }
 function empKeyLoose(v){
   return empKey(v).replace(/^0+(?=.)/, "");
+}
+
+/* 受診日の表示。月まで分かれば「10月6日（火）」、日しかなければ「6日（火）」 */
+function assignDateLabel(a){
+  if(!a) return "";
+  if(a.date) return fmtDateWithDow(a.date);
+  return a.dateText || "";
 }
 
 function isoOf(d){
@@ -1835,7 +1841,7 @@ function parseNyuryoku(raw, srcId){
               .replace(/[‐-―−]/g, "-")   // 各種ダッシュを半角ハイフンに
               .replace(/　/g, " ");                        // 全角スペース
   var orig = s;
-  var rec = { kind:"time", raw:s, date:null, timeText:"", sexMark:"", ageBand:"", dow:"", warn:"" };
+  var rec = { kind:"time", raw:s, date:null, dateText:"", timeText:"", sexMark:"", ageBand:"", dow:"", warn:"" };
 
   function blankAt(str, at, len){
     var pad = "";
@@ -1896,41 +1902,30 @@ function parseNyuryoku(raw, srcId){
 
   rec.timeText = orig.replace(/[\s　]+/g, " ").replace(/^[\s・,、]+|[\s・,、]+$/g, "");
 
-  /* 年と月を決める */
+  /* 受診日。入力欄に月まで書かれているときだけ日付として組み立てる。
+     「6日（火）」のように日しかない場合は、書かれたまま文字として扱います。 */
   if(da != null){
-    if(mo == null && opt.month){
-      var mp = String(opt.month).split("-");
-      rec.date = mkDate(+mp[0], +mp[1], da);
-      if(!rec.date) rec.warn = "実施年月と日が合いません（" + opt.month + " に " + da + "日はありません）";
-    }else if(mo != null){
-      if(mo >= 1 && mo <= 12 && da >= 1 && da <= 31){
-        var y = (mo >= 4) ? state.fiscalYear : state.fiscalYear + 1;
-        rec.date = mkDate(y, mo, da);
-      }
+    if(mo != null && mo >= 1 && mo <= 12 && da >= 1 && da <= 31){
+      var y = (mo >= 4) ? state.fiscalYear : state.fiscalYear + 1;
+      rec.date = mkDate(y, mo, da);
+      rec.dateText = mo + "月" + da + "日" + (rec.dow ? "（" + rec.dow + "）" : "");
     }else{
-      rec.warn = "入力欄に日しかありません。実施年月を指定してください";
+      rec.dateText = da + "日" + (rec.dow ? "（" + rec.dow + "）" : "");
     }
-  }else if(opt.date){
-    rec.date = parseIso(opt.date);
+  }else if(rec.dow){
+    rec.dateText = "（" + rec.dow + "）";
   }
 
-  /* 受診日が決まらないときは知らせる（受検票の受診日欄が空欄になります） */
-  if(!rec.date && !rec.warn && (src.needMonth || src.needDate)){
-    rec.warn = src.needMonth
-      ? "受診日が決まりません。実施年月の指定と入力欄の日付をご確認ください"
-      : "受診日が決まりません。受診日を指定してください";
-  }
-
-  /* 曜日が書かれていれば突き合わせる */
+  /* 月まで書かれていれば曜日を突き合わせる */
   if(rec.date && rec.dow){
     var actual = DOW_NAMES[rec.date.getDay()];
     if(actual !== rec.dow){
-      rec.warn = "曜日が合いません（入力欄は" + rec.dow + "曜、指定の年月では" + actual + "曜）";
+      rec.warn = "曜日が合いません（入力欄は" + rec.dow + "曜、" + (rec.date.getMonth()+1) + "月" + rec.date.getDate() + "日は" + actual + "曜）";
     }
   }
 
   /* 日時として何も読み取れなかった場合 */
-  if(!rec.date && !rec.timeText) rec.kind = "unknown";
+  if(!rec.dateText && !rec.timeText) rec.kind = "unknown";
 
   return finishRec(rec, src, opt);
 }
@@ -2026,14 +2021,8 @@ function renderNyuCard(sid){
 
   h += '<div class="row">'
      + '<button class="btn" data-nypick="' + sid + '">予約状況ファイルを選択…</button>'
-     + '<input type="file" id="nyfile_' + sid + '" accept=".xlsx,.xlsm,.csv,.txt" style="display:none">';
-  if(src.needMonth){
-    h += '<label>実施年月 <input type="month" data-nymonth="' + sid + '" value="' + esc(opt.month || "") + '"></label>';
-  }
-  if(src.needDate){
-    h += '<label>受診日 <input type="date" data-nydate="' + sid + '" value="' + esc(opt.date || "") + '"></label>';
-  }
-  h += '<label>会場 <input type="text" data-nyplace="' + sid + '" value="' + esc(s ? s.place : (opt.place || ""))
+     + '<input type="file" id="nyfile_' + sid + '" accept=".xlsx,.xlsm,.csv,.txt" style="display:none">'
+     + '<label>会場 <input type="text" data-nyplace="' + sid + '" value="' + esc(s ? s.place : (opt.place || ""))
      + '" placeholder="例）市役所 3階 大会議室" style="width:210px"></label>';
   if(s) h += '<button class="btn" data-nyclear="' + sid + '">取込を解除</button>';
   h += "</div>";
@@ -2189,13 +2178,6 @@ function bindNyuCards(){
     if(t.dataset.nycol){
       var p = t.dataset.nycol.split(":");
       nyuPending[p[0]][p[1]] = parseInt(t.value, 10);
-    }
-    if(t.dataset.nymonth || t.dataset.nydate){
-      var sid = t.dataset.nymonth || t.dataset.nydate;
-      state.nyuOpt[sid] = state.nyuOpt[sid] || {};
-      if(t.dataset.nymonth) state.nyuOpt[sid].month = t.value;
-      else state.nyuOpt[sid].date = t.value;
-      reparseSource(sid);
     }
     if(t.dataset.fr){
       var q = t.dataset.fr.split(":"), r = state.fujinRules[parseInt(q[0], 10)];
@@ -2413,7 +2395,7 @@ function saveData(){
     loadErrors: state.loadErrors,
     inactive: state.inactive,
     nyuSrc: {},
-    nyuOpt: state.nyuOpt,
+    nyuOpt: state.nyuOpt,   // 会場のみ
     excluded: {}
   };
   NYU_SOURCES.forEach(function(src){
@@ -2556,7 +2538,8 @@ function computeTargets(){
                      needCheck:false, checkWhy:"" };
         if(rec.kind === "time"){
           item.print = true;
-          item.assign = { date: isoOf(rec.date), place: rec.place || ny.place || "", time: rec.timeText };
+          item.assign = { date: isoOf(rec.date), dateText: rec.dateText || "",
+                          place: rec.place || ny.place || "", time: rec.timeText };
           if(rec.warn){ item.needCheck = true; item.checkWhy = rec.warn; }
           /* 入力欄の【男】【女】と名簿の性別が食い違っていないか */
           if(rec.sexMark && sexLabel(e.sex) !== rec.sexMark){
@@ -2575,7 +2558,7 @@ function computeTargets(){
           item.print = true;
           item.needCheck = true;
           item.checkWhy = rec.warn || "受診日時として読み取れません";
-          item.assign = { date:"", place: rec.place || ny.place || "", time: rec.raw };
+          item.assign = { date:"", dateText:"", place: rec.place || ny.place || "", time: rec.raw };
         }
         list.push(item);
       });
@@ -2719,7 +2702,7 @@ function renderTargets(){
       + "<td>" + sexLabel(e.sex) + "</td>"
       + "<td>" + esc(e.deptName) + "</td>"
       + "<td" + (st.warn ? ' style="color:#a8410f"' : "") + ">" + esc(st.label) + "</td>"
-      + "<td>" + (a && a.date ? fmtDateWithDow(a.date) : "") + "</td>"
+      + "<td>" + esc(assignDateLabel(a)) + "</td>"
       + "<td>" + (a ? esc(a.time) : "") + "</td>"
       + "<td>" + (r.t.nyu ? esc(r.t.nyu.raw) : "") + "</td>"
       + "</tr>";
@@ -2936,10 +2919,10 @@ function personCtx(t, kid){
   var e = t.emp, a = t.assign, L = state.layouts[kid] || {};
   var w = toWareki(e.birth);
   var age = ageFor(e, L.ageBasis, a);
-  var ed = "", em = "", edd = "";
+  var ed = assignDateLabel(a), em = "", edd = "";
   if(a && a.date){
     var p = a.date.split("-");
-    ed = fmtDateWithDow(a.date); em = String(+p[1]); edd = String(+p[2]);
+    em = String(+p[1]); edd = String(+p[2]);
   }
   return {
     "団体名": state.orgName,
@@ -3358,8 +3341,8 @@ function sortForPrint(list, order){
     });
   }else if(order === "date"){
     a.sort(function(x, y){
-      var dx = x.assign ? x.assign.date + " " + x.assign.time : "9999";
-      var dy = y.assign ? y.assign.date + " " + y.assign.time : "9999";
+      var dx = x.assign ? (x.assign.date || "zz" + (x.assign.dateText || "")) + " " + x.assign.time : "zzzz";
+      var dy = y.assign ? (y.assign.date || "zz" + (y.assign.dateText || "")) + " " + y.assign.time : "zzzz";
       if(dx !== dy) return dx < dy ? -1 : 1;
       return cmpDeptKana(x, y);
     });
