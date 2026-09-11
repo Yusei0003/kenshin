@@ -417,14 +417,14 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
   <div class="panel">
     <h2>予約状況ファイルの取込</h2>
     <p class="hint">
-      職員番号と「入力」欄をもつファイル（Excel／CSV）を検診ごとに読み込みます。
-      入力欄には、予約すると予約時間などが入ります。
+      職員番号と「入力」欄をもつファイル（Excel／CSV）を読み込みます。
+      入力欄には、職員が予約すると予約時間などが入ります。
     </p>
     <div class="info">
       <strong>受検票を印刷する人は、このファイルだけで決まります。</strong><br>
       入力欄が <strong>空欄</strong> の人と、下の「印刷が不要になる入力値」に<strong>該当する</strong>人は印刷しません。
       <strong>それ以外は、入力欄の内容にかかわらずすべて印刷します。</strong><br>
-      年齢や性別による絞り込みは行いません。読み込んでいない検診は対象者0名になります。
+      <strong>婦人検診</strong>は1つのファイルから、年齢区分に応じて乳がん検診・子宮頸がん検診に振り分けます。
     </div>
     <div id="nyuCards"></div>
   </div>
@@ -627,16 +627,30 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       入力欄が<strong>空欄</strong>の人と、「印刷が不要になる入力値」に<strong>該当する</strong>人は印刷しません。
       <strong>それ以外はすべて印刷します。</strong>年齢や性別による絞り込みは行いません。
     </div>
-    <table class="grid" style="margin-top:12px">
+    <h3>入力欄の読み取り方</h3>
+    <table class="grid">
       <thead><tr><th>入力欄の内容</th><th>受検票</th><th>印字のされ方</th></tr></thead>
       <tbody>
-        <tr><td><code>8/22　10：30〜10：50</code></td><td>印刷する</td><td>受診日「8月22日（土）」／受付時間「10：30〜10：50」</td></tr>
-        <tr><td><code>9/3 午前</code></td><td>印刷する</td><td>受診日「9月3日（木）」／受付時間「午前」</td></tr>
-        <tr><td><code>要相談</code> など日時として読めない内容</td><td><strong>印刷する</strong></td><td>受診日は空欄／受付時間に「要相談」をそのまま印字（一覧に<strong>要確認</strong>と表示）</td></tr>
+        <tr><td><code>【男】6日（火）　7：00〜7：15</code><br><span class="hint">胃がん検診</span></td>
+            <td>印刷する</td>
+            <td>受診日「10月6日（火）」（実施年月の指定から）／受付時間「7：00〜7：15」<br>
+                <span class="hint">【男】【女】が名簿の性別と違うとき、曜日が合わないときは一覧に要確認と表示します。</span></td></tr>
+        <tr><td><code>09:30〜09:45（35歳以上）</code><br><span class="hint">婦人検診</span></td>
+            <td>印刷する</td>
+            <td>受診日は指定した日／受付時間「09:30〜09:45」<br>
+                <span class="hint">年齢区分で乳がん検診・子宮頸がん検診に振り分けます。</span></td></tr>
+        <tr><td><code>要相談</code> など日時として読めない内容</td><td><strong>印刷する</strong></td>
+            <td>受診日は空欄／受付時間に内容をそのまま印字（一覧に<strong>要確認</strong>と表示）</td></tr>
         <tr><td><code>受診しない</code> など該当文言</td><td>印刷しない</td><td>―</td></tr>
         <tr><td>空欄</td><td>印刷しない</td><td>―</td></tr>
       </tbody>
     </table>
+    <div class="info">
+      入力欄の<strong>全角・半角はどちらでも読み取れます。</strong>
+      数字（<code>６日</code> と <code>6日</code>）、コロン（<code>７：００</code> と <code>7:00</code>）、
+      かっこ（<code>（火）</code> と <code>(火)</code>）、<code>【男】</code> と <code>[男]</code>、
+      区切りの <code>〜 ～ - ー</code> などが混ざっていても構いません。
+    </div>
   </div>
 
   <div class="panel">
@@ -814,7 +828,11 @@ var state = {
 
   onlyActive: true,      // 「在職」列がある場合、在職者のみを対象にする
   inactive:   [],        // 在職でないため除外した職員
-  nyuryoku:   {},        // kenshinId -> 予約状況ファイルの取込結果
+  nyuSrc:     {},        // 取込元(srcId) -> 読み込んだ内容
+  nyuOpt:     {},        // 取込元(srcId) -> 実施年月・受診日・会場の設定
+  nyuryoku:   {},        // kenshinId -> 検診ごとに振り分けた結果（nyuSrc から組み立て）
+  fujinRules: defaultFujinRules(),
+  fujinFallback: "both", // 年齢区分がどのルールにも当てはまらないときの扱い
   pending:    null,      // 読込中のブック（シート・ヘッダ行の選択待ち）
   rosterLabel: "",       // 読み込んだ名簿のファイル名
   savedAt:    "",        // この端末に保存した日時
@@ -1366,7 +1384,7 @@ Array.prototype.forEach.call(document.querySelectorAll("nav .tab"), function(b){
     b.classList.add("active");
     $(b.dataset.page).classList.add("active");
     if(b.dataset.page === "p4"){ renderTgTabs(); renderTargets(); }
-    if(b.dataset.page === "p7") KENSHIN.forEach(function(k){ renderNyuCard(k.id); });
+    if(b.dataset.page === "p7") NYU_SOURCES.forEach(function(x){ renderNyuCard(x.id); });
     if(b.dataset.page === "p8") renderLayoutTab();
   });
 });
@@ -1688,9 +1706,37 @@ $("baseDate").addEventListener("change", function(){
 
 /* =========================================================================
    予約状況ファイルの取込
+
+   ファイルは「取込元」ごとに読み込みます。
+     胃がん検診   … 入力欄の例「【男】6日（火）　7：00〜7：15」
+     婦人検診     … 入力欄の例「09:30〜09:45（35歳以上）」
+                    年齢区分によって乳がん検診・子宮頸がん検診に振り分けます
    ========================================================================= */
 
-var nyuPending = {};   // kenshinId -> 読込中のブック（列の指定待ち）
+var NYU_SOURCES = [
+  { id:"i",     name:"胃がん検診", kenshin:["i"],
+    needMonth:true,  needDate:false,
+    sample:"【男】6日（火）　7：00〜7：15",
+    note:"入力欄に日だけが書かれているため、実施年月をここで指定します。" },
+  { id:"fujin", name:"婦人検診（乳がん・子宮頸がん）", kenshin:["nyu","shikyu"],
+    needMonth:false, needDate:true,
+    sample:"09:30〜09:45（35歳以上）",
+    note:"入力欄に日付がないため、受診日をここで指定します。年齢区分で対象の検診が決まります。" }
+];
+
+function nyuSourceOf(id){
+  for(var i = 0; i < NYU_SOURCES.length; i++) if(NYU_SOURCES[i].id === id) return NYU_SOURCES[i];
+  return null;
+}
+
+function defaultFujinRules(){
+  return [
+    { text:"35歳以上", kenshin:["nyu", "shikyu"] },
+    { text:"20歳以上", kenshin:["shikyu"] }
+  ];
+}
+
+var nyuPending = {};   // srcId -> 読込中のブック（列の指定待ち）
 
 /* 職員番号の突合キー。Excelの数値 1007 と文字列 "1007"、"01007" を同一視する */
 function empKey(v){
@@ -1708,74 +1754,265 @@ function isoOf(d){
   return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
 }
 
-/* 「入力」欄の1件を解釈する */
-function parseNyuryoku(raw, fy){
+var DOW_NAMES = ["日", "月", "火", "水", "木", "金", "土"];
+
+/* --- 「入力」欄の1件を解釈する --- */
+function parseNyuryoku(raw, srcId){
+  var src = nyuSourceOf(srcId) || NYU_SOURCES[0];
+  var opt = state.nyuOpt[srcId] || {};
+
   if(raw instanceof Date){
-    var t = "";
+    var tt = "";
     if(raw.getHours() || raw.getMinutes()){
-      var p = function(n){ return (n < 10 ? "0" : "") + n; };
-      t = p(raw.getHours()) + ":" + p(raw.getMinutes());
+      var q = function(n){ return (n < 10 ? "0" : "") + n; };
+      tt = q(raw.getHours()) + ":" + q(raw.getMinutes());
     }
-    return { kind:"time", date:new Date(raw.getFullYear(), raw.getMonth(), raw.getDate()),
-             timeText:t, raw:fmtDateSlash(raw) };
+    return finishRec({ kind:"time", date:new Date(raw.getFullYear(), raw.getMonth(), raw.getDate()),
+                       timeText:tt, raw:fmtDateSlash(raw) }, src, opt);
   }
 
   var s = String(raw == null ? "" : raw).trim();
-  if(!s) return { kind:"blank", raw:"" };
+  if(!s) return { kind:"blank", raw:"", kenshinSet:src.kenshin.slice() };
 
   var n = normText(s);
   for(var i = 0; i < state.skipPhrases.length; i++){
     var ph = normText(state.skipPhrases[i]);
-    if(ph && n.indexOf(ph) >= 0) return { kind:"skip", reason:state.skipPhrases[i], raw:s };
-  }
-
-  /* 「8/22　10：30〜10：50」のような 日付＋時間 を読み取る */
-  var z = s.replace(/[０-９]/g, function(c){ return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
-           .replace(/／/g, "/");
-  var m = z.match(/^\s*(\d{1,2})\s*[\/\.\-月]\s*(\d{1,2})\s*日?\s*([\s\S]*)$/);
-  if(m){
-    var mo = parseInt(m[1], 10), da = parseInt(m[2], 10);
-    if(mo >= 1 && mo <= 12 && da >= 1 && da <= 31){
-      var y = (mo >= 4) ? fy : fy + 1;                  // 年度から西暦年を決める
-      var d = mkDate(y, mo, da);
-      if(d) return { kind:"time", date:d, timeText:String(m[3] || "").trim(), raw:s };
+    if(ph && n.indexOf(ph) >= 0){
+      return { kind:"skip", reason:state.skipPhrases[i], raw:s, kenshinSet:src.kenshin.slice() };
     }
   }
-  return { kind:"unknown", raw:s };
+
+  /* 解析用に全角の英数字・記号を半角へ直す。
+     いずれも1文字を1文字に置き換えるため位置は元の文字列と一致し、
+     取り出した「受付時間」は元の表記（全角のコロンなど）のまま残せます。 */
+  var work = s.replace(/[！-～]/g, function(c){ return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
+              .replace(/[‐-―−]/g, "-")   // 各種ダッシュを半角ハイフンに
+              .replace(/　/g, " ");                        // 全角スペース
+  var orig = s;
+  var rec = { kind:"time", raw:s, date:null, timeText:"", sexMark:"", ageBand:"", dow:"", warn:"" };
+
+  function blankAt(str, at, len){
+    var pad = "";
+    while(pad.length < len) pad += " ";
+    return str.slice(0, at) + pad + str.slice(at + len);
+  }
+  function eat(re){
+    var m = work.match(re);
+    if(!m) return null;
+    work = blankAt(work, m.index, m[0].length);
+    orig = blankAt(orig, m.index, m[0].length);
+    return m;
+  }
+
+  /* 日付の候補のうち、前後がコロンや数字（つまり時刻の一部）のものは採用しない。
+     「7:00-7:15」を 0月7日 と読み違えないための保険です。 */
+  function eatDate(re){
+    var g = new RegExp(re.source, "g"), mm;
+    while((mm = g.exec(work)) !== null){
+      var before = mm.index > 0 ? work.charAt(mm.index - 1) : "";
+      var after  = work.charAt(mm.index + mm[0].length);
+      if(before === ":" || after === ":" || /[0-9]/.test(before) || /[0-9]/.test(after)){
+        g.lastIndex = mm.index + 1;
+        continue;
+      }
+      work = blankAt(work, mm.index, mm[0].length);
+      orig = blankAt(orig, mm.index, mm[0].length);
+      return mm;
+    }
+    return null;
+  }
+
+  /* 【男】【女】（かっこの種類は問いません） */
+  var m = eat(/[【\[(［〔]\s*(男性|女性|男|女)\s*[】\])］〕]/);
+  if(m) rec.sexMark = m[1].charAt(0);
+
+  /* （35歳以上） などの年齢区分 */
+  m = eat(/[(【\[〔]\s*([^()【】\[\]〔〕]*歳[^()【】\[\]〔〕]*)\s*[)】\]〕]/);
+  if(m) rec.ageBand = m[1].replace(/\s+/g, "");
+
+  /* （火）（火曜）（火曜日）などの曜日 */
+  m = eat(/[(【\[〔]\s*([日月火水木金土])\s*曜?日?\s*[)】\]〕]/);
+  if(m) rec.dow = m[1];
+
+  /* 日付。「8/22」「11月2日」→ 月日、「6日」→ 日のみ */
+  var mo = null, da = null;
+  m = eatDate(/(\d{1,2})\s*[\/.\-月]\s*(\d{1,2})(?:\s*日)?/);
+  if(m){ mo = parseInt(m[1], 10); da = parseInt(m[2], 10); }
+  else{
+    m = eatDate(/(\d{1,2})\s*日/);
+    if(m) da = parseInt(m[1], 10);
+    else if(rec.dow){
+      /* 「6（火）7:00〜7:15」のように「日」がない書き方。曜日があるときだけ日とみなす */
+      m = eatDate(/(\d{1,2})/);
+      if(m) da = parseInt(m[1], 10);
+    }
+  }
+
+  rec.timeText = orig.replace(/[\s　]+/g, " ").replace(/^[\s・,、]+|[\s・,、]+$/g, "");
+
+  /* 年と月を決める */
+  if(da != null){
+    if(mo == null && opt.month){
+      var mp = String(opt.month).split("-");
+      rec.date = mkDate(+mp[0], +mp[1], da);
+      if(!rec.date) rec.warn = "実施年月と日が合いません（" + opt.month + " に " + da + "日はありません）";
+    }else if(mo != null){
+      if(mo >= 1 && mo <= 12 && da >= 1 && da <= 31){
+        var y = (mo >= 4) ? state.fiscalYear : state.fiscalYear + 1;
+        rec.date = mkDate(y, mo, da);
+      }
+    }else{
+      rec.warn = "入力欄に日しかありません。実施年月を指定してください";
+    }
+  }else if(opt.date){
+    rec.date = parseIso(opt.date);
+  }
+
+  /* 受診日が決まらないときは知らせる（受検票の受診日欄が空欄になります） */
+  if(!rec.date && !rec.warn && (src.needMonth || src.needDate)){
+    rec.warn = src.needMonth
+      ? "受診日が決まりません。実施年月の指定と入力欄の日付をご確認ください"
+      : "受診日が決まりません。受診日を指定してください";
+  }
+
+  /* 曜日が書かれていれば突き合わせる */
+  if(rec.date && rec.dow){
+    var actual = DOW_NAMES[rec.date.getDay()];
+    if(actual !== rec.dow){
+      rec.warn = "曜日が合いません（入力欄は" + rec.dow + "曜、指定の年月では" + actual + "曜）";
+    }
+  }
+
+  /* 日時として何も読み取れなかった場合 */
+  if(!rec.date && !rec.timeText) rec.kind = "unknown";
+
+  return finishRec(rec, src, opt);
+}
+
+/* 年齢区分から対象の検診を決める */
+function finishRec(rec, src, opt){
+  if(src.kenshin.length === 1){
+    rec.kenshinSet = src.kenshin.slice();
+    return rec;
+  }
+  var band = normText(rec.ageBand || "");
+  if(band){
+    for(var i = 0; i < state.fujinRules.length; i++){
+      var r = state.fujinRules[i];
+      if(r.text && band.indexOf(normText(r.text)) >= 0){
+        rec.kenshinSet = r.kenshin.slice();
+        rec.bandRule = r.text;
+        return rec;
+      }
+    }
+  }
+  /* 年齢区分が読み取れない、またはどのルールにも当てはまらない */
+  rec.bandUnknown = true;
+  if(!rec.warn){
+    rec.warn = band ? "年齢区分「" + rec.ageBand + "」に対応するルールがありません"
+                    : "入力欄に年齢区分がありません";
+  }
+  if(state.fujinFallback === "none") rec.kenshinSet = [];
+  else if(state.fujinFallback === "shikyu") rec.kenshinSet = ["shikyu"];
+  else rec.kenshinSet = src.kenshin.slice();
+  return rec;
 }
 
 function nyuLookup(ny, empNo){
   var k = empKey(empNo);
   if(ny.map[k]) return ny.map[k];
-  var l = empKeyLoose(empNo);
-  return ny.loose[l] || null;
+  return ny.loose[empKeyLoose(empNo)] || null;
+}
+
+/* 取込元から検診ごとの一覧を組み立て直す */
+function countOf(map){
+  var c = { total:0, print:0, skip:0, blank:0, unknown:0, lines:0 };
+  Object.keys(map).forEach(function(no){
+    c.total++;
+    c[map[no].kind === "time" ? "print" : map[no].kind]++;
+  });
+  return c;
+}
+
+function rebuildNyuryoku(){
+  state.nyuryoku = {};
+  NYU_SOURCES.forEach(function(src){
+    var s = state.nyuSrc[src.id];
+    if(!s) return;
+    src.kenshin.forEach(function(kid){
+      var map = {}, loose = {};
+      Object.keys(s.map).forEach(function(no){
+        var rec = s.map[no];
+        var set = rec.kenshinSet || src.kenshin;
+        if(rec.kind === "time" && set.indexOf(kid) < 0) return;   // 対象外の検診には出さない
+        map[no] = rec;
+        loose[empKeyLoose(no)] = rec;
+      });
+      state.nyuryoku[kid] = {
+        srcId: src.id, label: s.label, place: s.place || "",
+        map: map, loose: loose, counts: countOf(map),
+        dup: s.dup || [], notInRoster: s.notInRoster || []
+      };
+    });
+  });
 }
 
 /* --- 画面の描画 --- */
 function renderNyuCards(){
   var box = $("nyuCards");
   box.innerHTML = "";
-  KENSHIN.forEach(function(k){
-    var c = el("div", { class:"kenshin-card", id:"ny_" + k.id });
-    box.appendChild(c);
-    renderNyuCard(k.id);
+  NYU_SOURCES.forEach(function(src){
+    box.appendChild(el("div", { class:"kenshin-card", id:"ny_" + src.id }));
+    renderNyuCard(src.id);
   });
 }
 
-function renderNyuCard(kid){
-  var c = $("ny_" + kid);
+function renderNyuCard(sid){
+  var src = nyuSourceOf(sid);
+  if(!src) return;
+  var c = $("ny_" + sid);
   if(!c) return;
-  var ny = state.nyuryoku[kid], pn = nyuPending[kid];
+  var s = state.nyuSrc[sid], pn = nyuPending[sid];
+  var opt = state.nyuOpt[sid] || (state.nyuOpt[sid] = {});
 
-  var h = '<div class="title">' + esc(kenshinName(kid)) + "</div>";
+  var h = '<div class="title">' + esc(src.name) + "</div>"
+        + '<div class="hint" style="margin-bottom:8px">入力欄の例：<code>' + esc(src.sample) + "</code>　" + esc(src.note) + "</div>";
 
   h += '<div class="row">'
-     + '<button class="btn" data-nypick="' + kid + '">予約状況ファイルを選択…</button>'
-     + '<input type="file" id="nyfile_' + kid + '" accept=".xlsx,.xlsm,.csv,.txt" style="display:none">'
-     + '<label>会場（受検票に印字） <input type="text" data-nyplace="' + kid + '" value="'
-     + esc(ny ? ny.place : "") + '" placeholder="例）市役所 3階 大会議室" style="width:240px"></label>';
-  if(ny) h += '<button class="btn" data-nyclear="' + kid + '">取込を解除</button>';
+     + '<button class="btn" data-nypick="' + sid + '">予約状況ファイルを選択…</button>'
+     + '<input type="file" id="nyfile_' + sid + '" accept=".xlsx,.xlsm,.csv,.txt" style="display:none">';
+  if(src.needMonth){
+    h += '<label>実施年月 <input type="month" data-nymonth="' + sid + '" value="' + esc(opt.month || "") + '"></label>';
+  }
+  if(src.needDate){
+    h += '<label>受診日 <input type="date" data-nydate="' + sid + '" value="' + esc(opt.date || "") + '"></label>';
+  }
+  h += '<label>会場 <input type="text" data-nyplace="' + sid + '" value="' + esc(s ? s.place : (opt.place || ""))
+     + '" placeholder="例）市役所 3階 大会議室" style="width:210px"></label>';
+  if(s) h += '<button class="btn" data-nyclear="' + sid + '">取込を解除</button>';
   h += "</div>";
+
+  /* 婦人検診：年齢区分の振り分け */
+  if(src.kenshin.length > 1){
+    h += '<div class="row" style="align-items:flex-start"><div style="flex:1">'
+       + '<div class="hint" style="margin-bottom:4px">年齢区分による振り分け（入力欄に含まれる文字で判定します）</div>'
+       + '<table class="grid" style="max-width:560px"><thead><tr><th>入力欄に含まれる文字</th><th>乳がん検診</th><th>子宮頸がん検診</th><th></th></tr></thead><tbody>';
+    state.fujinRules.forEach(function(r, i){
+      h += "<tr>"
+        + '<td><input type="text" data-fr="' + i + ':text" value="' + esc(r.text) + '" style="width:150px"></td>'
+        + '<td style="text-align:center"><input type="checkbox" data-fr="' + i + ':nyu"' + (r.kenshin.indexOf("nyu") >= 0 ? " checked" : "") + "></td>"
+        + '<td style="text-align:center"><input type="checkbox" data-fr="' + i + ':shikyu"' + (r.kenshin.indexOf("shikyu") >= 0 ? " checked" : "") + "></td>"
+        + '<td><button class="btn" data-frdel="' + i + '">削除</button></td></tr>';
+    });
+    h += "</tbody></table>"
+       + '<div class="row" style="margin-top:6px">'
+       + '<button class="btn" id="frAdd">＋ 振り分けを追加</button>'
+       + '<label>どれにも当てはまらないとき <select id="frFallback">'
+       + '<option value="both"' + (state.fujinFallback === "both" ? " selected" : "") + ">両方に含める（要確認として表示）</option>"
+       + '<option value="shikyu"' + (state.fujinFallback === "shikyu" ? " selected" : "") + ">子宮頸がん検診のみ</option>"
+       + '<option value="none"' + (state.fujinFallback === "none" ? " selected" : "") + ">対象外にする</option>"
+       + "</select></label></div></div></div>";
+  }
 
   if(pn){
     var rows = pn.sheets[pn.sheetIndex].rows;
@@ -1788,65 +2025,71 @@ function renderNyuCard(kid){
       });
       return o;
     };
-    h += '<div class="info" style="margin-top:10px"><strong>' + esc(pn.label) + "</strong> を読み込みました。列を指定して取り込んでください。</div>";
-    h += '<div class="row">'
-       + '<label>シート <select data-nysheet="' + kid + '">'
+    h += '<div class="info" style="margin-top:10px"><strong>' + esc(pn.label) + "</strong> を読み込みました。列を指定して取り込んでください。</div>"
+       + '<div class="row">'
+       + '<label>シート <select data-nysheet="' + sid + '">'
        + pn.sheets.map(function(sh, i){
            return '<option value="' + i + '"' + (i === pn.sheetIndex ? " selected" : "") + ">"
-                + esc(sh.name) + "（" + sh.rows.length + "行）</option>";
-         }).join("")
+                + esc(sh.name) + "（" + sh.rows.length + "行）</option>"; }).join("")
        + "</select></label>"
-       + '<label>見出しの行 <input type="number" min="1" data-nyheader="' + kid + '" value="' + (pn.headerRow + 1) + '" style="width:66px"> 行目</label>'
+       + '<label>見出しの行 <input type="number" min="1" data-nyheader="' + sid + '" value="' + (pn.headerRow + 1) + '" style="width:66px"> 行目</label>'
        + "</div>"
        + '<div class="row">'
-       + '<label>職員番号の列 <select data-nycol="' + kid + ':colEmp">' + opts(pn.colEmp, false) + "</select></label>"
-       + '<label>入力の列 <select data-nycol="' + kid + ':colInput">' + opts(pn.colInput, false) + "</select></label>"
-       + '<label>会場の列 <select data-nycol="' + kid + ':colPlace">' + opts(pn.colPlace, true) + "</select></label>"
+       + '<label>職員番号の列 <select data-nycol="' + sid + ':colEmp">' + opts(pn.colEmp, false) + "</select></label>"
+       + '<label>入力の列 <select data-nycol="' + sid + ':colInput">' + opts(pn.colInput, false) + "</select></label>"
+       + '<label>会場の列 <select data-nycol="' + sid + ':colPlace">' + opts(pn.colPlace, true) + "</select></label>"
        + "</div>"
        + '<div class="row">'
-       + '<button class="btn primary" data-nyimport="' + kid + '">この内容で取り込む</button>'
-       + '<button class="btn" data-nycancel="' + kid + '">やめる</button>'
+       + '<button class="btn primary" data-nyimport="' + sid + '">この内容で取り込む</button>'
+       + '<button class="btn" data-nycancel="' + sid + '">やめる</button>'
        + "</div>";
   }
 
-  if(ny){
-    var cn = ny.counts;
+  if(s){
+    var cn = countOf(s.map);
     h += '<div class="stat" style="margin-top:10px">'
        + statBox(cn.total, "ファイル掲載（実人数）")
-       + statBox((cn.print || 0) + (cn.unknown || 0), "受検票を印刷")
+       + statBox(cn.print, "受検票を印刷")
        + statBox(cn.skip, "印刷しない（該当文言）")
        + statBox(cn.blank, "印刷しない（空欄）")
-       + (cn.unknown ? '<div style="border-color:#a8410f"><div class="n" style="color:#a8410f">' + cn.unknown
-           + '</div><div class="l">うち要確認</div></div>' : "")
        + "</div>";
-    h += '<div class="hint">読込元：' + esc(ny.label) + "（データ " + cn.lines + "行）</div>";
 
-    if(cn.unknown){
-      h += '<div class="note"><strong>入力欄を受診日時として読み取れなかった方が ' + cn.unknown + " 件あります。</strong><br>"
-         + "この方たちの<strong>受検票は印刷されます</strong>が、受診日は空欄になり、入力欄の内容がそのまま受付時間欄に印字されます。"
-         + "印刷してよい内容かご確認ください。<br>"
-         + '<table class="grid" style="margin-top:6px"><thead><tr><th>職員番号</th><th>氏名</th><th>入力欄の内容</th></tr></thead><tbody>';
-      (state.targets[kid] || []).forEach(function(t){
-        if(t.nyu && t.nyu.kind === "unknown"){
-          h += "<tr><td>" + esc(t.emp.empNo) + "</td><td>" + esc(t.emp.name) + "</td><td>" + esc(t.nyu.raw) + "</td></tr>";
-        }
+    if(src.kenshin.length > 1){
+      h += '<div class="stat">' + src.kenshin.map(function(kid){
+        var ny = state.nyuryoku[kid];
+        return statBox(ny ? ny.counts.print : 0, kenshinName(kid) + "へ");
+      }).join("") + "</div>";
+    }
+    h += '<div class="hint">読込元：' + esc(s.label) + "（データ " + (s.lines || cn.total) + "行）</div>";
+
+    /* 確認事項 */
+    var warns = [];
+    Object.keys(s.map).forEach(function(no){
+      var r = s.map[no];
+      if(r.kind === "unknown" || r.warn || r.bandUnknown) warns.push({ no:no, r:r });
+    });
+    if(warns.length){
+      h += '<div class="note"><strong>確認が必要な入力欄が ' + warns.length + " 件あります。</strong><br>"
+         + '<table class="grid" style="margin-top:6px"><thead><tr><th>職員番号</th><th>入力欄の内容</th><th>内容</th></tr></thead><tbody>';
+      warns.slice(0, 60).forEach(function(w){
+        var why = w.r.warn || (w.r.kind === "unknown" ? "受診日時として読み取れません" : "");
+        h += "<tr><td>" + esc(w.no) + "</td><td>" + esc(w.r.raw) + "</td><td>" + esc(why) + "</td></tr>";
       });
+      if(warns.length > 60) h += '<tr><td colspan="3" class="hint">ほか ' + (warns.length - 60) + "件（CSVで出力できます）</td></tr>";
       h += "</tbody></table></div>";
     }
-    if(ny.notInRoster.length){
-      h += '<div class="note"><strong>職員名簿と突合できない職員番号が ' + ny.notInRoster.length + " 件あります。</strong>"
+    if(s.notInRoster && s.notInRoster.length){
+      h += '<div class="note"><strong>職員名簿と突合できない職員番号が ' + s.notInRoster.length + " 件あります。</strong>"
          + "この人たちの受検票は印刷されません。<br>"
          + '<table class="grid" style="margin-top:6px"><thead><tr><th>職員番号</th><th>入力欄の内容</th><th>理由</th></tr></thead><tbody>';
-      ny.notInRoster.slice(0, 50).forEach(function(x){
+      s.notInRoster.slice(0, 50).forEach(function(x){
         h += "<tr><td>" + esc(x.empNo) + "</td><td>" + esc(x.raw) + "</td><td>" + esc(x.why) + "</td></tr>";
       });
-      if(ny.notInRoster.length > 50) h += '<tr><td colspan="3" class="hint">ほか ' + (ny.notInRoster.length - 50) + "件（CSVで出力できます）</td></tr>";
       h += "</tbody></table></div>";
     }
-    if(ny.dup.length){
-      h += '<div class="note"><strong>同じ職員番号が複数の行に出てきます（' + ny.dup.length + "件）。</strong>"
-         + "それぞれ<strong>最後の行</strong>の内容を採用しました： " + esc(ny.dup.slice(0, 20).join("、"))
-         + (ny.dup.length > 20 ? " ほか" : "") + "</div>";
+    if(s.dup && s.dup.length){
+      h += '<div class="note"><strong>同じ職員番号が複数の行に出てきます（' + s.dup.length + "件）。</strong>"
+         + "それぞれ<strong>最後の行</strong>の内容を採用しました： " + esc(s.dup.slice(0, 20).join("、")) + "</div>";
     }
   }
 
@@ -1859,19 +2102,27 @@ function bindNyuCards(){
 
   box.addEventListener("click", function(e){
     var t = e.target;
-    var pick = t.dataset.nypick, clr = t.dataset.nyclear,
-        imp  = t.dataset.nyimport, cancel = t.dataset.nycancel;
-    if(pick){ $("nyfile_" + pick).click(); }
-    if(clr){
-      delete state.nyuryoku[clr];
-      computeTargets();
-      saveData();
-      renderNyuCard(clr);
-      renderTargets();
-      toast(kenshinName(clr) + "：予約状況の取込を解除しました");
+    if(t.dataset.nypick){ $("nyfile_" + t.dataset.nypick).click(); return; }
+    if(t.dataset.nyclear){
+      var sid = t.dataset.nyclear;
+      delete state.nyuSrc[sid];
+      rebuildNyuryoku(); computeTargets(); saveData();
+      renderNyuCard(sid); renderTargets();
+      toast(nyuSourceOf(sid).name + "：取込を解除しました");
+      return;
     }
-    if(imp){ importNyuryoku(imp); }
-    if(cancel){ delete nyuPending[cancel]; renderNyuCard(cancel); }
+    if(t.dataset.nyimport){ importNyuryoku(t.dataset.nyimport); return; }
+    if(t.dataset.nycancel){ delete nyuPending[t.dataset.nycancel]; renderNyuCard(t.dataset.nycancel); return; }
+    if(t.dataset.frdel){
+      state.fujinRules.splice(parseInt(t.dataset.frdel, 10), 1);
+      applyFujin();
+      return;
+    }
+    if(t.id === "frAdd"){
+      state.fujinRules.push({ text:"", kenshin:["shikyu"] });
+      applyFujin();
+      return;
+    }
   });
 
   box.addEventListener("change", function(e){
@@ -1890,46 +2141,67 @@ function bindNyuCards(){
       renderNyuCard(t.dataset.nyheader);
     }
     if(t.dataset.nycol){
-      var parts = t.dataset.nycol.split(":");
-      nyuPending[parts[0]][parts[1]] = parseInt(t.value, 10);
+      var p = t.dataset.nycol.split(":");
+      nyuPending[p[0]][p[1]] = parseInt(t.value, 10);
     }
+    if(t.dataset.nymonth || t.dataset.nydate){
+      var sid = t.dataset.nymonth || t.dataset.nydate;
+      state.nyuOpt[sid] = state.nyuOpt[sid] || {};
+      if(t.dataset.nymonth) state.nyuOpt[sid].month = t.value;
+      else state.nyuOpt[sid].date = t.value;
+      reparseSource(sid);
+    }
+    if(t.dataset.fr){
+      var q = t.dataset.fr.split(":"), r = state.fujinRules[parseInt(q[0], 10)];
+      if(q[1] === "text") r.text = t.value;
+      else{
+        var k = q[1], at = r.kenshin.indexOf(k);
+        if(t.checked && at < 0) r.kenshin.push(k);
+        if(!t.checked && at >= 0) r.kenshin.splice(at, 1);
+      }
+      applyFujin();
+    }
+    if(t.id === "frFallback"){ state.fujinFallback = t.value; applyFujin(); }
+  });
+
+  box.addEventListener("input", function(e){
+    var t = e.target;
     if(t.dataset.nyplace){
-      var kid = t.dataset.nyplace;
-      if(state.nyuryoku[kid]){
-        state.nyuryoku[kid].place = t.value;
-        computeTargets();
-        saveData();
-        renderTargets();
-      }else{
-        nyuPending[kid] = nyuPending[kid] || {};
-        nyuPending[kid].placeText = t.value;
+      var sid = t.dataset.nyplace;
+      state.nyuOpt[sid] = state.nyuOpt[sid] || {};
+      state.nyuOpt[sid].place = t.value;
+      if(state.nyuSrc[sid]){
+        state.nyuSrc[sid].place = t.value;
+        rebuildNyuryoku(); computeTargets(); saveData(); renderTargets();
       }
     }
   });
 
-  KENSHIN.forEach(function(k){
+  NYU_SOURCES.forEach(function(src){
     document.addEventListener("change", function(e){
-      if(e.target.id !== "nyfile_" + k.id) return;
+      if(e.target.id !== "nyfile_" + src.id) return;
       var f = e.target.files && e.target.files[0];
       e.target.value = "";
       if(!f) return;
       readTableFile(f).then(function(sheets){
-        var pn = {
-          label: f.name, sheets: sheets,
-          sheetIndex: guessSheetIndex(sheets), headerRow: 0,
-          colEmp: 0, colInput: -1, colPlace: -1,
-          placeText: state.nyuryoku[k.id] ? state.nyuryoku[k.id].place : ""
-        };
+        var pn = { label:f.name, sheets:sheets, sheetIndex:guessSheetIndex(sheets),
+                   headerRow:0, colEmp:0, colInput:-1, colPlace:-1 };
         pn.headerRow = guessHeaderRow(sheets[pn.sheetIndex].rows);
         guessNyuColumns(pn);
-        nyuPending[k.id] = pn;
-        renderNyuCard(k.id);
+        nyuPending[src.id] = pn;
+        renderNyuCard(src.id);
         toast(f.name + " を読み込みました。列の指定を確認して「取り込む」を押してください。");
       }).catch(function(err){
         toast("ファイルを読み込めませんでした: " + err.message, true);
       });
     });
   });
+}
+
+/* 振り分けルールを変更したときの再計算 */
+function applyFujin(){
+  reparseSource("fujin");
+  renderNyuCard("fujin");
 }
 
 /* 職員番号列・入力列・会場列を見出しから推定する */
@@ -1951,39 +2223,38 @@ function guessNyuColumns(pn){
   pn.colPlace = p;
 }
 
-function importNyuryoku(kid){
-  var pn = nyuPending[kid];
+function importNyuryoku(sid){
+  var pn = nyuPending[sid];
   if(!pn) return;
   if(pn.colEmp === pn.colInput){
     toast("職員番号の列と入力の列が同じです。指定し直してください。", true);
     return;
   }
   var rows = pn.sheets[pn.sheetIndex].rows.slice(pn.headerRow + 1);
-  var map = {}, loose = {}, dup = [], seen = {}, lines = 0;
+  var map = {}, dup = [], seen = {}, lines = 0, rawMap = {};
 
   rows.forEach(function(r){
     var no = empKey(r[pn.colEmp]);
     if(!no) return;
-    var rec = parseNyuryoku(pn.colInput >= 0 ? r[pn.colInput] : "", state.fiscalYear);
-    rec.place = pn.colPlace >= 0 ? String(r[pn.colPlace] == null ? "" : r[pn.colPlace]).trim() : "";
+    var val = pn.colInput >= 0 ? r[pn.colInput] : "";
+    var place = pn.colPlace >= 0 ? String(r[pn.colPlace] == null ? "" : r[pn.colPlace]).trim() : "";
     if(seen[no] && dup.indexOf(no) < 0) dup.push(no);
     seen[no] = 1;
-    map[no] = rec;                       // 同じ職員番号が複数あれば最後の行を採用
-    loose[empKeyLoose(no)] = rec;
+    rawMap[no] = { val:val, place:place };
     lines++;
   });
 
-  /* 集計は最終的な内容から取る（重複行を二重に数えないため） */
-  var counts = { total:0, print:0, skip:0, blank:0, unknown:0, lines:lines };
-  Object.keys(map).forEach(function(no){
-    counts.total++;
-    counts[map[no].kind === "time" ? "print" : map[no].kind]++;
-  });
-
-  if(!counts.total){
+  if(!lines){
     toast("職員番号を1件も読み取れませんでした。列の指定と見出しの行をご確認ください。", true);
     return;
   }
+
+  var opt = state.nyuOpt[sid] || (state.nyuOpt[sid] = {});
+  Object.keys(rawMap).forEach(function(no){
+    var rec = parseNyuryoku(rawMap[no].val, sid);
+    rec.place = rawMap[no].place;
+    map[no] = rec;
+  });
 
   var known = {}, inactive = {};
   state.employees.forEach(function(e){ known[empKey(e.empNo)] = 1; known[empKeyLoose(e.empNo)] = 1; });
@@ -1991,30 +2262,49 @@ function importNyuryoku(kid){
   var notInRoster = [];
   Object.keys(map).forEach(function(no){
     if(known[no] || known[empKeyLoose(no)]) return;
-    var inact = inactive[no] || inactive[empKeyLoose(no)];
-    notInRoster.push({
-      empNo: no,
-      raw: map[no].raw,
-      why: inact ? "「在職」欄が " + inact.value + " のため名簿から除外されています" : "名簿に該当する職員番号がありません"
-    });
+    var ia = inactive[no] || inactive[empKeyLoose(no)];
+    notInRoster.push({ empNo:no, raw:map[no].raw,
+      why: ia ? "「在職」欄が " + ia.value + " のため名簿から除外されています" : "名簿に該当する職員番号がありません" });
   });
 
-  state.nyuryoku[kid] = {
-    label: pn.label, place: pn.placeText || "", map: map, loose: loose,
-    counts: counts, dup: dup, notInRoster: notInRoster
-  };
-  delete nyuPending[kid];
+  state.nyuSrc[sid] = { label:pn.label, place:opt.place || "", raw:rawMap, map:map,
+                        dup:dup, notInRoster:notInRoster, lines:lines };
+  delete nyuPending[sid];
 
+  rebuildNyuryoku();
   computeTargets();
   saveData();
-  renderNyuCard(kid);
+  renderNyuCard(sid);
   renderTargets();
 
-  var msg = kenshinName(kid) + "：" + counts.total + "件を取り込みました（印刷 "
-          + (counts.print + counts.unknown) + "／該当文言 " + counts.skip
-          + "／空欄 " + counts.blank
-          + (counts.unknown ? "／うち要確認 " + counts.unknown : "") + "）";
-  toast(msg, counts.unknown > 0);
+  var cn = countOf(map);
+  var src = nyuSourceOf(sid);
+  var msg = src.name + "：" + cn.total + "件を取り込みました（印刷 " + cn.print
+          + "／該当文言 " + cn.skip + "／空欄 " + cn.blank + "）";
+  toast(msg);
+}
+
+/* 設定を変えたときに、取込済みの入力欄を解釈し直す */
+function reparseSource(sid){
+  var s = state.nyuSrc[sid];
+  if(s && s.raw){
+    var map = {};
+    Object.keys(s.raw).forEach(function(no){
+      var rec = parseNyuryoku(s.raw[no].val, sid);
+      rec.place = s.raw[no].place;
+      map[no] = rec;
+    });
+    s.map = map;
+  }
+  rebuildNyuryoku();
+  computeTargets();
+  saveData();
+  renderTargets();
+}
+
+function reparseAllNyuryoku(){
+  NYU_SOURCES.forEach(function(src){ if(state.nyuSrc[src.id]) reparseSource(src.id); });
+  NYU_SOURCES.forEach(function(src){ renderNyuCard(src.id); });
 }
 
 /* --- 印刷が不要になる入力値の設定 --- */
@@ -2038,28 +2328,6 @@ function bindSkipPhrases(){
   });
 }
 
-/* 文言を変更したときに、取込済みの入力値をすべて判定し直す */
-function reparseAllNyuryoku(){
-  KENSHIN.forEach(function(k){
-    var ny = state.nyuryoku[k.id];
-    if(!ny) return;
-    var counts = { total:0, print:0, skip:0, blank:0, unknown:0 };
-    Object.keys(ny.map).forEach(function(no){
-      var old = ny.map[no];
-      var rec = parseNyuryoku(old.raw, state.fiscalYear);
-      rec.place = old.place;
-      ny.map[no] = rec;
-      ny.loose[empKeyLoose(no)] = rec;
-      counts.total++;
-      counts[rec.kind === "time" ? "print" : rec.kind]++;
-    });
-    ny.counts = counts;
-  });
-  computeTargets();
-  renderTargets();
-  KENSHIN.forEach(function(k){ renderNyuCard(k.id); });
-}
-
 /* =========================================================================
    設定とデータの保存（この端末のブラウザ内に保存します）
    LGWAN接続系の専用端末での利用を前提に、名簿と予約状況も保存します。
@@ -2073,7 +2341,9 @@ function saveSettings(){
     skipPhrases: state.skipPhrases,
     onlyActive: !!state.onlyActive,
     orgName: state.orgName,
-    layouts: state.layouts
+    layouts: state.layouts,
+    fujinRules: state.fujinRules,
+    fujinFallback: state.fujinFallback
   }));
 }
 
@@ -2096,21 +2366,18 @@ function saveData(){
     }),
     loadErrors: state.loadErrors,
     inactive: state.inactive,
-    nyuryoku: {},
+    nyuSrc: {},
+    nyuOpt: state.nyuOpt,
     excluded: {}
   };
+  NYU_SOURCES.forEach(function(src){
+    var s0 = state.nyuSrc[src.id];
+    if(!s0) return;
+    /* 入力欄の元の値だけ保存し、開いたときに設定に従って解釈し直します */
+    d.nyuSrc[src.id] = { label:s0.label, place:s0.place, lines:s0.lines,
+                         dup:s0.dup, notInRoster:s0.notInRoster, raw:s0.raw };
+  });
   KENSHIN.forEach(function(k){
-    var ny = state.nyuryoku[k.id];
-    if(ny){
-      var m = {};
-      Object.keys(ny.map).forEach(function(no){
-        var r = ny.map[no];
-        m[no] = { kind:r.kind, raw:r.raw, reason:r.reason || "", timeText:r.timeText || "",
-                  place:r.place || "", date:r.date ? isoOf(r.date) : "" };
-      });
-      d.nyuryoku[k.id] = { label:ny.label, place:ny.place, counts:ny.counts,
-                           dup:ny.dup, notInRoster:ny.notInRoster, map:m };
-    }
     d.excluded[k.id] = [];
     state.excluded[k.id].forEach(function(no){ d.excluded[k.id].push(no); });
   });
@@ -2154,25 +2421,28 @@ function loadData(){
   state.loadErrors = Array.isArray(d.loadErrors) ? d.loadErrors : [];
   state.inactive   = Array.isArray(d.inactive)   ? d.inactive   : [];
 
-  state.nyuryoku = {};
   KENSHIN.forEach(function(k){
     state.excluded[k.id] = new Set();
     if(d.excluded && Array.isArray(d.excluded[k.id])){
       d.excluded[k.id].forEach(function(no){ state.excluded[k.id].add(no); });
     }
-    var ny = d.nyuryoku && d.nyuryoku[k.id];
-    if(!ny) return;
-    var map = {}, loose = {};
-    Object.keys(ny.map || {}).forEach(function(no){
-      var r = ny.map[no];
-      var rec = { kind:r.kind, raw:r.raw, reason:r.reason, timeText:r.timeText,
-                  place:r.place, date: r.date ? parseIso(r.date) : null };
-      map[no] = rec;
-      loose[empKeyLoose(no)] = rec;
-    });
-    state.nyuryoku[k.id] = { label:ny.label || "", place:ny.place || "", counts:ny.counts || {},
-                             dup:ny.dup || [], notInRoster:ny.notInRoster || [], map:map, loose:loose };
   });
+
+  if(d.nyuOpt) state.nyuOpt = d.nyuOpt;
+  state.nyuSrc = {};
+  NYU_SOURCES.forEach(function(src){
+    var s0 = d.nyuSrc && d.nyuSrc[src.id];
+    if(!s0 || !s0.raw) return;
+    var map = {};
+    Object.keys(s0.raw).forEach(function(no){
+      var rec = parseNyuryoku(s0.raw[no].val, src.id);
+      rec.place = s0.raw[no].place;
+      map[no] = rec;
+    });
+    state.nyuSrc[src.id] = { label:s0.label || "", place:s0.place || "", lines:s0.lines || 0,
+                             dup:s0.dup || [], notInRoster:s0.notInRoster || [], raw:s0.raw, map:map };
+  });
+  rebuildNyuryoku();
   return true;
 }
 
@@ -2182,6 +2452,7 @@ function clearData(){
   state.loadErrors = [];
   state.inactive = [];
   state.nyuryoku = {};
+  state.nyuSrc = {};
   state.pending = null;
   state.rawRows = [];
   state.rawHeader = [];
@@ -2201,7 +2472,7 @@ function renderSaveInfo(){
   var box = $("saveInfo");
   if(!box) return;
   var n = state.employees.length;
-  var ks = KENSHIN.filter(function(k){ return state.nyuryoku[k.id]; }).map(function(k){ return k.name; });
+  var ks = NYU_SOURCES.filter(function(x){ return state.nyuSrc[x.id]; }).map(function(x){ return x.name; });
   if(!n && !ks.length){
     box.innerHTML = '<span class="hint">この端末に保存されているデータはありません。</span>';
     return;
@@ -2235,10 +2506,19 @@ function computeTargets(){
       state.employees.forEach(function(e){
         var rec = nyuLookup(ny, e.empNo);
         if(!rec) return;
-        var item = { emp:e, assign:null, source:"nyuryoku", nyu:rec, print:false, skipReason:"", needCheck:false };
+        var item = { emp:e, assign:null, source:"nyuryoku", nyu:rec, print:false, skipReason:"",
+                     needCheck:false, checkWhy:"" };
         if(rec.kind === "time"){
           item.print = true;
           item.assign = { date: isoOf(rec.date), place: rec.place || ny.place || "", time: rec.timeText };
+          if(rec.warn){ item.needCheck = true; item.checkWhy = rec.warn; }
+          /* 入力欄の【男】【女】と名簿の性別が食い違っていないか */
+          if(rec.sexMark && sexLabel(e.sex) !== rec.sexMark){
+            item.needCheck = true;
+            item.checkWhy = (item.checkWhy ? item.checkWhy + " / " : "")
+              + "入力欄は【" + rec.sexMark + "】ですが、名簿は「" + sexLabel(e.sex) + "」です";
+          }
+          if(!rec.date && !rec.timeText){ item.needCheck = true; item.checkWhy = item.checkWhy || "受診日時が読み取れません"; }
         }else if(rec.kind === "skip"){
           item.skipReason = rec.reason;
         }else if(rec.kind === "blank"){
@@ -2248,6 +2528,7 @@ function computeTargets(){
              日時として読み取れなかった場合は、入力欄の内容をそのまま受付時間欄へ印字する。 */
           item.print = true;
           item.needCheck = true;
+          item.checkWhy = rec.warn || "受診日時として読み取れません";
           item.assign = { date:"", place: rec.place || ny.place || "", time: rec.raw };
         }
         list.push(item);
@@ -2350,7 +2631,7 @@ document.addEventListener("click", function(e){
 function targetStatus(kid, t){
   if(state.excluded[kid].has(t.emp.empNo)) return { key:"manual", label:"手動で除外（印刷しません）", warn:true };
   if(!t.print)    return { key:"skip",  label:"印刷しない：" + t.skipReason, warn:false };
-  if(t.needCheck) return { key:"check", label:"印刷する（日時を読み取れません）", warn:true };
+  if(t.needCheck) return { key:"check", label:"印刷する（要確認：" + (t.checkWhy || "内容をご確認ください") + "）", warn:true };
   return { key:"print", label:"印刷する", warn:false };
 }
 
@@ -3380,6 +3661,8 @@ $("btnSample").addEventListener("click", function(){
     if(saved && Array.isArray(saved.skipPhrases) && saved.skipPhrases.length) state.skipPhrases = saved.skipPhrases;
     if(saved && typeof saved.onlyActive === "boolean") state.onlyActive = saved.onlyActive;
     if(saved && saved.orgName) state.orgName = saved.orgName;
+    if(saved && Array.isArray(saved.fujinRules) && saved.fujinRules.length) state.fujinRules = saved.fujinRules;
+    if(saved && saved.fujinFallback) state.fujinFallback = saved.fujinFallback;
     if(saved && saved.layouts){
       ticketKenshin().forEach(function(k){
         if(saved.layouts[k.id] && Array.isArray(saved.layouts[k.id].fields)) state.layouts[k.id] = saved.layouts[k.id];
