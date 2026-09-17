@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>職員検診 受検票作成アプリ 操作マニュアル</title>
+<style>
+  @page { size: A4 portrait; margin: 0; }
+
+  html, body { margin:0; padding:0; }
+  body {
+    font-family: "Noto Sans JP","Yu Gothic","YuGothic","Hiragino Kaku Gothic ProN","IPAPGothic","IPAGothic","Meiryo",sans-serif;
+    font-size: 8.1pt; line-height: 1.45; color:#1a1a1a;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .page {
+    width: 210mm; height: 297mm; box-sizing: border-box;
+    padding: 10mm 11mm 12mm; overflow: hidden;
+    page-break-after: always; position: relative;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* --- 見出し --- */
+  h1 { font-size: 14.5pt; margin:0 0 .8mm; letter-spacing:.02em; }
+  .sub { font-size: 7.9pt; color:#555; margin:0 0 2.5mm; }
+  h2 { font-size: 10pt; margin: 3mm 0 1.3mm; padding-bottom: .8mm;
+       border-bottom: 1.5px solid #1c4e80; color:#1c4e80; }
+
+  /* --- 手順ブロック --- */
+  .step { margin: 0 0 1.9mm; }
+  .step > .head {
+    display:flex; align-items:baseline; gap:2mm;
+    background:#1c4e80; color:#fff; padding:1mm 2.5mm; border-radius:1mm;
+  }
+  .step > .head .n, .step > .head .t { font-weight:700; font-size:9.2pt; }
+  .step > .head .tab { margin-left:auto; font-size:7.4pt; opacity:.92; }
+  .step ol { margin: 1.2mm 0 0; padding-left: 5.5mm; }
+  .step ol li { margin-bottom: .3mm; }
+  .step .body { padding-left: .5mm; }
+
+  /* --- 図 --- */
+  figure { margin: 1.2mm 0 0; }
+  figure img { width:auto; max-width:100%; display:block; border:1px solid #c9d3dd; border-radius:1mm; }
+  .f-nav img  { max-height: 7mm; }
+  .f-btn img  { max-height: 8mm; }
+  .f-stat img { max-height: 12mm; }
+  .f-ny img   { max-height: 28mm; }
+  .f-tg img   { max-height: 15mm; }
+  .f-pr img   { max-height: 20mm; }
+  .f-off img  { max-height: 7mm; }
+  figcaption { font-size:7.2pt; color:#5a6672; margin-top:.6mm; }
+
+  /* --- 流れ図 --- */
+  .flow { display:flex; align-items:stretch; gap:1.2mm; margin:0 0 2mm; }
+  .flow .box {
+    flex:1; border:1.2px solid #1c4e80; border-radius:1.2mm; padding:1.3mm .8mm;
+    text-align:center; font-size:7.4pt; line-height:1.3; background:#f4f8fc;
+  }
+  .flow .box b { display:block; font-size:8.3pt; color:#1c4e80; }
+  .flow .arw { align-self:center; color:#1c4e80; font-weight:700; font-size:10pt; }
+
+  /* --- 注意 --- */
+  .note { border-left:3px solid #1c4e80; background:#f4f8fc; padding:1.4mm 2.4mm; margin:1.2mm 0; }
+  .warn { border-left:3px solid #c0491f; background:#fdf4ef; padding:1.8mm 2.6mm; margin:1.8mm 0; }
+  .warn b { color:#a83c16; }
+  .tip  { font-size:7.8pt; color:#4a5560; margin:1mm 0 0; }
+
+  /* --- 表 --- */
+  table { width:100%; border-collapse:collapse; margin:1.2mm 0 2.5mm; font-size:8pt; }
+  th, td { border:1px solid #c9d3dd; padding:1mm 1.8mm; text-align:left; vertical-align:top; }
+  th { background:#eef3f8; font-weight:700; }
+  .warn table { margin:1.2mm 0 0; font-size:8.2pt; }
+  .warn th { background:#f7e8de; border-color:#e0c3b2; white-space:nowrap; }
+  .warn td { border-color:#e0c3b2; }
+  td.c { text-align:center; }
+
+  ul { margin:.8mm 0; padding-left:5mm; }
+  li { margin-bottom:.3mm; }
+  .kbd { border:1px solid #9aa7b4; border-bottom-width:2px; border-radius:1mm;
+         padding:0 1.2mm; font-size:7.6pt; background:#fff; white-space:nowrap; }
+  .hl { background:#fff2a8; padding:0 .5mm; }
+  .check { display:flex; gap:4mm; margin:1.2mm 0 0; }
+  .check > div { flex:1; }
+  .check ul { list-style:none; margin:0; padding:0; }
+  .check li { margin-bottom:1.1mm; padding-left:6mm; position:relative; }
+  .check li::before {
+    content:""; position:absolute; left:0; top:.6mm;
+    width:3.2mm; height:3.2mm; border:1.2px solid #55636f; border-radius:.5mm; background:#fff;
+  }
+  .check h3 { font-size:8.6pt; margin:0 0 1mm; color:#1c4e80; }
+  .foot { position:absolute; left:11mm; right:11mm; bottom:5mm;
+          padding-top:1.2mm; border-top:1px solid #d5dde5;
+          font-size:7.1pt; color:#6a7580; display:flex; }
+  .foot span:last-child { margin-left:auto; }
+</style>
+</head>
+<body>
+
+<!-- ============================ 1ページ目 ============================ -->
+<section class="page">
+
+  <h1>職員検診　受検票作成アプリ　操作マニュアル</h1>
+  <p class="sub">
+    対象：胃がん検診・乳がん検診・子宮頸がん検診（生活習慣病健診は受検票の印刷が不要です）　／
+    アプリ：<b>kenshin.html</b> をダブルクリックするとブラウザで開きます。
+  </p>
+
+  <div class="note" style="margin-top:0">
+    <b>はじめに</b>　インターネットにはつながらず、名簿はこの端末の中だけで処理されます。読み込んだデータは
+    <b>この端末に保存され、次に開いたときそのまま出てきます</b>。作業は下のタブを<b>左から順に進めるだけ</b>です。
+  </div>
+
+  <figure class="f-nav" style="margin-top:1.5mm">
+    <img src="manual/m0_nav.png" alt="アプリ上部のタブ">
+    <figcaption>タブは左から順に。「4. 様式レイアウト」は、印字位置がずれたときだけ使います（→ 2ページ目）。</figcaption>
+  </figure>
+
+  <h2>作業の全体像</h2>
+  <div class="flow">
+    <div class="box"><b>人事システム</b>名簿と予約状況を<br>画面に表示</div>
+    <div class="arw">▶</div>
+    <div class="box"><b>Excel</b><span class="kbd">Ctrl</span>+<span class="kbd">A</span> で全選択<br>貼り付けて保存</div>
+    <div class="arw">▶</div>
+    <div class="box"><b>このアプリ</b>2つを読み込んで<br>対象者を確認</div>
+    <div class="arw">▶</div>
+    <div class="box"><b>PDF</b>ボタン1つで<br>受検票を作成</div>
+    <div class="arw">▶</div>
+    <div class="box"><b>印刷</b>協会のB4用紙に<br>重ねて印刷</div>
+  </div>
+
+  <div class="step">
+    <div class="head"><span class="n">STEP 1</span><span class="t">職員名簿を読み込む</span><span class="tab">タブ「1. 名簿の読込」</span></div>
+    <div class="body">
+      <ol>
+        <li>人事システムの画面<b>左上</b>で <b>「在職」「写真無」「詳細」</b> を選んで検索します。</li>
+        <li>表示された一覧の上で <span class="kbd">Ctrl</span>+<span class="kbd">A</span> → <span class="kbd">Ctrl</span>+<span class="kbd">C</span>。Excel に貼り付けて保存します。</li>
+        <li>アプリの <b>「名簿ファイルを選択…」</b> で、その Excel を選びます（ドラッグ＆ドロップでも読み込めます）。</li>
+        <li>列の対応付けの画面が出ます。ふつうは直す必要がないので、そのまま <b>「この内容で読み込む」</b> を押します。</li>
+      </ol>
+      <figure class="f-stat"><img src="manual/m1_stat.png" alt="読込結果">
+        <figcaption>人数が出れば成功です。<b>「エラー行」が 0 でないとき</b>は、画面の下に出る一覧でその行だけ確認してください。</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="head"><span class="n">STEP 2</span><span class="t">予約状況を取り込む</span><span class="tab">タブ「2. 予約状況の取込」</span></div>
+    <div class="body">
+      <ol>
+        <li>人事システムの <b>「ヨ　予約管理」</b> を開き、<b>「入力結果○　その1」</b> を選びます。</li>
+        <li>一覧の上で <span class="kbd">Ctrl</span>+<span class="kbd">A</span> → Excel に貼り付けて保存。<b>胃がん検診用と婦人検診用の2ファイル</b>を作ります。</li>
+        <li>アプリのそれぞれの枠で <b>「予約状況ファイルを選択…」</b> → <b>「この内容で取り込む」</b> を押します。</li>
+      </ol>
+      <figure class="f-ny"><img src="manual/m2_pick.png" alt="予約状況ファイルの取込">
+        <figcaption>ファイルを選ぶと出てくる画面。シート・列はふつう自動で合っているので、そのまま「この内容で取り込む」。</figcaption>
+      </figure>
+      <div class="note" style="margin-top:1.2mm">
+        <b>受検票を印刷する人は、この予約状況ファイルの「入力」欄だけで決まります。</b>
+        入力欄が<b>空欄</b>の人と、<b>「受診しない」「派遣元自治体で受診」</b>などの文言が入っている人は印刷されません。それ以外は全員印刷されます。<br>
+        <b>婦人検診は1ファイルで2つの検診に自動で振り分けます。</b>
+        入力欄に「35歳以上」とあれば乳がん・子宮頸がんの両方、「20歳以上」とあれば子宮頸がん検診だけが印刷されます。
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="head"><span class="n">STEP 3</span><span class="t">対象者を確認する</span><span class="tab">タブ「3. 対象者一覧」</span></div>
+    <div class="body">
+      検診ごとのボタンで切り替え、<b>人数</b>と、1人ずつの<b>受診日・受付時間</b>を確認します。
+      辞退・休職などで個別に外したい人は、表の左端 <b>「対象」のチェックを外します</b>（その人は印刷されません）。
+      <figure class="f-tg"><img src="manual/m3.png" alt="対象者一覧"></figure>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="head"><span class="n">STEP 4</span><span class="t">PDFを作って印刷する</span><span class="tab">タブ「5. 印刷・出力」</span></div>
+    <div class="body">
+      <ol>
+        <li><b>印刷する検診</b>を選びます（検診ごとに1回ずつ作ります）。</li>
+        <li><b>並び順</b>を選びます。配布の仕分けをするなら <b>「所属コード順」</b> が便利です。</li>
+        <li><b>「受検票のPDFを作成（ダウンロード）」</b> を押すと、PDFファイルが保存されます。</li>
+        <li>そのPDFを開いて、協会から届いた <b>B4の用紙</b> に印刷します。<span class="hl">印刷設定は必ず2ページ目を確認してください。</span></li>
+      </ol>
+      <figure class="f-pr"><img src="manual/m4.png" alt="受検票の印刷"></figure>
+    </div>
+  </div>
+
+  <div class="foot"><span>職員検診 受検票作成アプリ 操作マニュアル</span><span>1 / 2</span></div>
+</section>
+
+<!-- ============================ 2ページ目 ============================ -->
+<section class="page">
+
+  <h2 style="margin-top:0">いちばん大事：印刷の設定</h2>
+
+  <div class="warn" style="margin-top:0">
+    <b>PDFを開いて印刷するとき、必ずこの3つを設定してください。</b>
+    忘れると、協会の用紙の枠から印字が全部ずれます。
+    <table>
+      <tr><th style="width:30mm">倍率（拡大／縮小）</th><td><b>100％（実際のサイズ）</b>　／　「用紙に合わせる」は <b>オフ</b></td></tr>
+      <tr><th>用紙サイズ</th><td><b>B4</b></td></tr>
+      <tr><th>向き</th><td><b>横</b></td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <b>本番の前に、必ず試し刷りを。</b>
+    まず <b>1〜2枚を白紙に印刷</b> し、協会の用紙と重ねて光にかざして、枠に収まっているか確認してから全員分を刷ってください。
+    用紙は毎年届くもので、プリンタとの相性もあります。<b>この確認だけは毎年やってください。</b>
+  </div>
+
+  <h2>困ったときの早見表</h2>
+  <table>
+    <tr><th style="width:50mm">こうなったら</th><th>こうする</th></tr>
+    <tr>
+      <td>印字が <b>全体的に</b> 上下左右へずれている</td>
+      <td>タブ「4. 様式レイアウト」の <b>「全体のずれ補正」</b> に、定規で測ったずれを mm で入力（右へずらすなら横をプラス、下なら縦をプラス）。<b>「この設定を保存」</b>を押せば次回以降も同じ位置になります。</td>
+    </tr>
+    <tr>
+      <td><b>ひとつの項目だけ</b> ずれている</td>
+      <td>同じタブの用紙の絵の上で、<b>その項目をドラッグ</b>して動かします。動かしたら「この設定を保存」を押します。</td>
+    </tr>
+    <tr>
+      <td>予約状況にいる職員が <b>名簿に見つからない</b> と出る</td>
+      <td>タブ「2. 予約状況の取込」にその職員番号の一覧が出ます。<b>退職・休職で名簿から外れている</b>のか、<b>名簿を取り直す必要がある</b>のかを確認してください。</td>
+    </tr>
+    <tr>
+      <td>対象者一覧に <b>「要確認」</b> と出る人がいる</td>
+      <td>入力欄の書き方が読み取れなかった人です。<b>受検票は印刷されます</b>ので、印刷後にその人の受診日・受付時間が正しいか目で確認してください。</td>
+    </tr>
+    <tr>
+      <td>去年のデータが残っている</td>
+      <td>タブ「1. 名簿の読込」の <b>「保存データを消去」</b> を押してから、今年の名簿を読み込みます。</td>
+    </tr>
+    <tr>
+      <td>まず動きを試してみたい</td>
+      <td>タブ「1. 名簿の読込」の <b>「サンプル名簿を読み込む」</b> で、架空のデータを使って一通り試せます。</td>
+    </tr>
+    <tr>
+      <td>担当が替わる／別の端末でも使う</td>
+      <td>タブ「4. 様式レイアウト」の <b>「レイアウトをファイルに書き出す」</b> で位置の設定を渡せます。受け取った側は「ファイルから読み込む…」。</td>
+    </tr>
+  </table>
+
+  <figure class="f-off" style="margin-bottom:1.5mm">
+    <img src="manual/c_off.png" alt="全体のずれ補正">
+    <figcaption>タブ「4. 様式レイアウト」の「全体のずれ補正」。ふだんは触りません。ずれたときだけ、ここに mm で入力します。</figcaption>
+  </figure>
+
+  <h2>検診ごとのちがい</h2>
+  <table>
+    <tr><th style="width:32mm">検診</th><th style="width:50mm">使う予約状況ファイル</th><th>受検票</th></tr>
+    <tr><td>胃がん検診</td><td>胃がん検診用（1ファイル）</td><td>協会のB4用紙に重ね刷り</td></tr>
+    <tr><td>乳がん検診</td><td rowspan="2">婦人検診用（1ファイルを2検診で共用）<br>入力欄の年齢区分で自動的に振り分け</td><td>協会のB4用紙に重ね刷り（入力欄が「35歳以上」の人）</td></tr>
+    <tr><td>子宮頸がん検診</td><td>協会のB4用紙に重ね刷り（「35歳以上」「20歳以上」の人）</td></tr>
+    <tr><td>生活習慣病健診</td><td class="c">—</td><td><b>受検票の印刷は不要</b></td></tr>
+  </table>
+
+  <h2>個人情報の取扱い・最後の確認</h2>
+  <ul>
+    <li>検診の情報は<b>要配慮個人情報</b>です。<b>共用のパソコンでは使わないでください。</b>
+        出力したPDF・CSVの保存場所も、庁の情報セキュリティポリシーに従って管理してください。</li>
+    <li>読み込んだ名簿・予約状況はこの端末のブラウザの中に保存されます。<b>年度の作業が終わったら「保存データを消去」</b>を押してください。</li>
+  </ul>
+  <div class="warn" style="margin-top:1.2mm">
+    <b>印刷したら、枚数を数えてください。</b>
+    タブ「3. 対象者一覧」に出ていた <b>「受検票を印刷」の人数</b> と合っているか、また<b>数枚を抜き取って</b>氏名・所属・生年月日・年齢が名簿どおりかを確認します。ここまでできれば、あとは配布するだけです。
+  </div>
+
+  <h2>作業チェックリスト</h2>
+  <p class="tip" style="margin:0 0 .5mm">このページを印刷して、上から順に消しながら進めてください。</p>
+  <div class="check">
+    <div>
+      <h3>準備・取込</h3>
+      <ul>
+        <li>人事システムから<b>名簿</b>を Excel に貼り付けて保存した</li>
+        <li>人事システムから<b>胃がん検診</b>の予約状況を Excel に保存した</li>
+        <li>人事システムから<b>婦人検診</b>の予約状況を Excel に保存した</li>
+        <li>去年のデータが残っていれば <b>「保存データを消去」</b> した</li>
+        <li>アプリに名簿を読み込み、<b>エラー行が 0</b> だった</li>
+        <li>予約状況を <b>2ファイルとも</b> 取り込んだ</li>
+      </ul>
+    </div>
+    <div>
+      <h3>確認・印刷</h3>
+      <ul>
+        <li>対象者一覧で <b>3検診それぞれの人数</b> を確認した</li>
+        <li>辞退・休職の人の<b>チェックを外した</b></li>
+        <li>試し刷りを白紙にして、協会の用紙と<b>重ねて位置を確認</b>した</li>
+        <li>印刷設定を <b>100％・B4・横</b> にした</li>
+        <li>3検診ぶんの受検票を印刷した</li>
+        <li>印刷した<b>枚数が人数と合っている</b>ことを数えて確認した</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot"><span>職員検診 受検票作成アプリ 操作マニュアル</span><span>2 / 2</span></div>
+</section>
+
+</body>
+</html>
