@@ -316,6 +316,36 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
 }
 #toast.show{opacity:.95}
 #toast.err{background:#8c2f12}
+
+/* ===== 重ね刷りの印刷手順（Acrobatで「実際のサイズ」を徹底させるための案内） ===== */
+.howto{border:2px solid var(--warn);border-radius:6px;margin-top:14px;background:#fff;overflow:hidden}
+.howto-head{background:var(--warn);color:#fff;font-weight:bold;padding:7px 12px;font-size:15px;letter-spacing:.02em}
+.howto-step{display:flex;gap:10px;padding:11px 12px;border-top:1px solid #edd9cc}
+.howto-step:first-of-type{border-top:none}
+.howto-n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--warn);color:#fff;
+  font-weight:bold;font-size:15px;display:flex;align-items:center;justify-content:center}
+.howto-b{flex:1;min-width:0}
+.howto-t{font-weight:bold;font-size:15px;margin-bottom:4px}
+.howto-t u{text-decoration-thickness:2px;text-underline-offset:2px}
+.howto-d{color:var(--text-sub);font-size:13px;line-height:1.6}
+.howto-act{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:2px 0 4px}
+.howto.flash{animation:howtoFlash 1.6s ease-out 2}
+@keyframes howtoFlash{0%,100%{box-shadow:0 0 0 0 rgba(168,65,15,0)}50%{box-shadow:0 0 0 6px rgba(168,65,15,.35)}}
+.ng-box{display:flex;gap:8px;align-items:flex-start;margin-top:6px;padding:7px 10px;
+  background:var(--warn-bg);border:1px solid #e6c3ad;border-radius:4px;font-size:13px;line-height:1.6}
+.ng-mark{flex:none;color:#c0392b;font-weight:bold;font-size:20px;line-height:1.1}
+.kbd2{border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:3px;
+  padding:0 5px;background:#fff;font-size:12px}
+.dlg{margin-top:6px;border:1px solid var(--line-strong);border-radius:4px;background:#f7f8fa;
+  padding:8px 12px 10px;max-width:430px}
+.dlg-cap{font-size:12px;color:var(--text-sub);margin-bottom:6px}
+.dlg-row{display:flex;align-items:center;gap:7px;padding:3px 6px;border-radius:3px;font-size:14px}
+.dlg-row.hit{background:#fff3cd;outline:2px solid #c0392b}
+.rd{flex:none;width:13px;height:13px;border:1.5px solid #6b7683;border-radius:50%;background:#fff}
+.rd.on{border-color:var(--accent);box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 9px var(--accent)}
+.here{color:#c0392b;font-weight:bold;font-size:13px;margin-left:4px}
+.box100{border:1px solid var(--line-strong);background:#fff;padding:0 8px;border-radius:2px}
+.alt{color:var(--text-sub);font-size:12px;margin-left:4px}
 </style>
 </head>
 <body>
@@ -522,17 +552,20 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
   <div class="panel">
     <h2>位置合わせの手順</h2>
     <ol class="hint" style="margin:0;padding-left:22px">
-      <li><strong>方眼を重ねて1枚テスト印刷</strong>します（下のボタン）。実際の用紙に印刷し、ずれを定規で測ります。</li>
+      <li><strong>方眼を重ねた位置合わせ用のPDF</strong>を作ります（下のボタン）。
+          <strong>Acrobat で開き「実際のサイズ」で</strong>実際の用紙に印刷し、ずれを定規で測ります。</li>
       <li>測ったずれを<strong>「全体のずれ補正」</strong>に入力します（右にずらしたいなら横をプラス、下なら縦をプラス）。</li>
       <li>個別の項目だけ合わない場合は、用紙の絵の上で<strong>その項目をドラッグ</strong>します。</li>
       <li>合ったら<strong>「この設定を保存」</strong>を押します。次回以降も同じ位置で印刷されます。</li>
     </ol>
     <div class="note" style="margin-top:12px">
-      <strong>印刷ダイアログの設定を必ず確認してください。</strong>
-      「倍率：100％（実際のサイズ）」「用紙に合わせる：オフ」「余白：なし」にしないと位置がずれます。
+      <strong>印刷は必ず Adobe Acrobat から行ってください。</strong>
+      ブラウザでPDFを開いたまま印刷すると倍率が変わり、位置合わせの意味がなくなります。
+      Acrobat の印刷画面で「ページサイズ処理」→<strong>「実際のサイズ」</strong>を選んでください。<br>
+      PDFの1ページ目には<strong>ものさしの入った確認ページ</strong>が付きます。印刷して 10cm の線がちょうど 10cm なら、倍率は正しく出ています。
     </div>
     <div class="row">
-      <button class="btn primary" id="btnTestPrint">位置合わせ用に1枚テスト印刷</button>
+      <button class="btn primary" id="btnTestPrint">位置合わせ用のPDFを作成（ダウンロード）</button>
       <label><input type="checkbox" id="testGrid" checked> 10mmの方眼と目盛を重ねる</label>
       <button class="btn" id="btnSaveLayout">この設定を保存</button>
       <button class="btn" id="btnResetLayout">この検診を初期値に戻す</button>
@@ -582,21 +615,9 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
     <div class="row" id="rowKagami">
       <label><input type="checkbox" id="printKagami" checked> 所属の変わり目に配布鑑（かがみ）を挟む（A4 自前様式のみ）</label>
     </div>
-    <div class="row">
+    <div class="row" id="rowPlainButtons">
       <button class="btn primary" id="btnPrintTickets">受検票を印刷</button>
-      <button class="btn" id="btnPrintBrowser">ブラウザの印刷画面を開く</button>
-      <label id="rowDpi">画質
-        <select id="pdfDpi"></select>
-      </label>
       <span id="printHint" class="hint"></span>
-    </div>
-    <div class="row" id="pdfProgressRow" style="display:none">
-      <div style="flex:1;max-width:420px">
-        <div style="height:10px;border:1px solid var(--line-strong);border-radius:5px;overflow:hidden;background:#fff">
-          <div id="pdfBar" style="height:100%;width:0;background:var(--accent);transition:width .1s"></div>
-        </div>
-      </div>
-      <span id="pdfProgress" class="hint"></span>
     </div>
     <div class="panel" id="a4Notes" style="margin:12px 0 0;background:#fafbfc;display:none">
       <div style="font-weight:bold;margin-bottom:6px">A4 自前様式に印刷する注意事項</div>
@@ -607,12 +628,82 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       </div>
     </div>
 
-    <div class="note" id="overlayNote">
-      <strong>重ね刷りの注意</strong><br>
-      ボタンを押すと <strong>PDFファイルがダウンロード</strong>されます。そのPDFを開いて、協会の用紙に印刷してください。<br>
-      印刷時は <strong>「倍率：100％（実際のサイズ）」「用紙に合わせる：オフ」「用紙サイズ：B4」</strong>
-      に設定してください。これを忘れると位置がずれます。<br>
-      まず数枚を白紙に印刷し、用紙と重ねて位置を確認することをおすすめします。
+    <div id="overlayNote" class="howto">
+      <div class="howto-head">この順番で印刷してください　― 順番を飛ばすと位置がずれます ―</div>
+
+      <div class="howto-step">
+        <div class="howto-n">1</div>
+        <div class="howto-b">
+          <div class="howto-t">受検票のPDFを作る</div>
+          <div class="howto-act">
+            <button class="btn primary" id="btnPdfOverlay">受検票のPDFを作成（ダウンロード）</button>
+            <label id="rowDpi">画質 <select id="pdfDpi"></select></label>
+          </div>
+          <div class="howto-act">
+            <label><input type="checkbox" id="chkCalib" checked> 1ページ目に印刷設定の確認ページを付ける</label>
+          </div>
+          <div class="howto-d" id="printHint2"></div>
+          <div id="pdfProgressRow" style="display:none;margin-top:6px">
+            <div style="max-width:420px">
+              <div style="height:10px;border:1px solid var(--line-strong);border-radius:5px;overflow:hidden;background:#fff">
+                <div id="pdfBar" style="height:100%;width:0;background:var(--accent);transition:width .1s"></div>
+              </div>
+            </div>
+            <span id="pdfProgress" class="hint"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="howto-step">
+        <div class="howto-n">2</div>
+        <div class="howto-b">
+          <div class="howto-t">保存されたPDFを <u>Adobe Acrobat で</u> 開く</div>
+          <div class="howto-d">
+            ダウンロードフォルダのPDFを<strong>右クリック</strong> →「<strong>プログラムから開く</strong>」→「<strong>Adobe Acrobat</strong>」。
+          </div>
+          <div class="ng-box">
+            <span class="ng-mark">×</span>
+            <div>
+              <strong>ブラウザで開いたまま印刷しないでください。</strong>
+              画面にPDFが出たときの「印刷」ボタンや <span class="kbd2">Ctrl</span>+<span class="kbd2">P</span> は使いません。
+              ブラウザから印刷すると<strong>必ず位置がずれます</strong>。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="howto-step">
+        <div class="howto-n">3</div>
+        <div class="howto-b">
+          <div class="howto-t">Acrobat の印刷画面で「<u>実際のサイズ</u>」を選ぶ</div>
+          <div class="dlg">
+            <div class="dlg-cap">Acrobat の印刷画面（ページサイズ処理）</div>
+            <div class="dlg-row"><span class="rd"></span>サイズ に合わせる</div>
+            <div class="dlg-row hit"><span class="rd on"></span><strong>実際のサイズ</strong><span class="here">◀ これを選ぶ</span></div>
+            <div class="dlg-row"><span class="rd"></span>特大ページを縮小</div>
+            <div class="dlg-row"><span class="rd"></span>カスタム倍率：<span class="box100">100</span> ％<span class="alt">（この場合は 100 ％でも可）</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="howto-step">
+        <div class="howto-n">4</div>
+        <div class="howto-b">
+          <div class="howto-t">用紙サイズ <u id="howtoPaper">B4</u>・向き <u id="howtoOrient">横</u> にする</div>
+          <div class="howto-d">プリンタのトレイにも用紙が入っているか確認してください。</div>
+        </div>
+      </div>
+
+      <div class="howto-step">
+        <div class="howto-n">5</div>
+        <div class="howto-b">
+          <div class="howto-t">まず <u>1ページ目だけ</u> を白紙に印刷して、定規で確かめる</div>
+          <div class="howto-d">
+            PDFの1ページ目は<strong>ものさしが刷られた確認用のページ</strong>です。印刷して <strong>10cm の線がちょうど 10cm</strong> なら設定は正しく、
+            そのまま2ページ目以降を協会の用紙に印刷できます。長さが違うときは手順3をやり直してください。
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -677,9 +768,9 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <li><strong>予約状況の取込</strong>　胃がん検診・婦人検診それぞれの Excel を読み込み、職員番号の列と入力の列を指定して取り込みます。<br>
           取り込むと、確認が必要な件があればこの画面に表示されます。</li>
       <li><strong>対象者一覧</strong>　検診を選んで、受検票が印刷される人を確認します。辞退者などはここで個別に外せます。</li>
-      <li><strong>様式レイアウト</strong>　初回のみ、協会の用紙に1枚テスト印刷して位置を確認します。合っていればそのままで構いません。</li>
+      <li><strong>様式レイアウト</strong>　初回のみ、位置合わせ用のPDFを作って協会の用紙に1枚印刷し、位置を確認します。合っていればそのままで構いません。</li>
       <li><strong>印刷・出力</strong>　並び順を選んで「受検票のPDFを作成」を押すと、PDFファイルがダウンロードされます。
-          そのPDFを開いて、協会の用紙に印刷してください。</li>
+          そのPDFを <strong>Adobe Acrobat で開き、「実際のサイズ」を選んで</strong>協会の用紙に印刷してください。</li>
     </ol>
     <div class="info">
       <strong>誰の受検票を印刷するかは、予約状況ファイルだけで決まります。</strong><br>
@@ -769,6 +860,16 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
 
   <div class="panel">
     <h2>受検票の印刷について</h2>
+    <div class="note" style="border-left-color:var(--warn);background:var(--warn-bg)">
+      <strong>B4 の重ね刷りは、ブラウザから印刷できません。</strong>
+      ブラウザに内蔵されたPDFの表示機能から印刷すると、用紙に合わせて自動的に拡大・縮小されてしまい、
+      記入欄と印字が合わなくなります。このため、アプリからブラウザで印刷する操作は用意していません。<br>
+      必ず <strong>ダウンロードしたPDFを Adobe Acrobat で開き</strong>、印刷画面の「ページサイズ処理」で
+      <strong>「実際のサイズ」</strong>を選んでください。<br>
+      PDFの1ページ目には<strong>ものさしの入った確認ページ</strong>が付きます。これを白紙に1枚印刷し、
+      <strong>10cm の線がちょうど 10cm</strong>であること、<strong>四隅のかぎ印が用紙のふちから 15mm</strong> であることを
+      定規で確かめてから、2ページ目以降を協会の用紙に印刷してください。
+    </div>
     <p>印刷のしかたは2通りあります。</p>
     <table class="grid">
       <thead><tr><th>様式</th><th>用紙</th><th>内容</th></tr></thead>
@@ -777,7 +878,8 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
           <td><strong>B4 の用紙に重ね刷り</strong></td>
           <td>協会から届く B4 の用紙</td>
           <td>受検票と電算処理用紙の記入欄に、氏名・所属・生年月日などを重ねて印刷します。1人あたり1枚。<br>
-              ボタンを押すと<strong>PDFファイルがダウンロード</strong>されます。位置は「様式レイアウト」画面で調整できます。</td>
+              ボタンを押すと<strong>PDFファイルがダウンロード</strong>されます。位置は「様式レイアウト」画面で調整できます。<br>
+              <strong>必ず Adobe Acrobat で開き、「実際のサイズ」を選んで印刷してください。</strong></td>
         </tr>
         <tr>
           <td>A4 の自前様式</td>
@@ -796,8 +898,7 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       フォントの埋め込みが不要な作り方にしているため、この端末のフォントでそのまま正しく出力されます。<br>
       画質は 200／300／400 dpi から選べます（初期値は 300 dpi）。
       1枚あたり 30KB 程度、200名分でおよそ 6MB・15秒が目安です。<br>
-      PDFの中では文字は画像として記録されるため、PDF上での文字検索やコピーはできません。印刷する分には問題ありません。<br>
-      用紙に直接印刷したい場合は「ブラウザの印刷画面を開く」をお使いください。
+      PDFの中では文字は画像として記録されるため、PDF上での文字検索やコピーはできません。印刷する分には問題ありません。
     </div>
     <p>A4 自前様式の枠線・文字サイズは、このファイル内の <code>&lt;style&gt;</code> 内 <code>.ticket</code> と
     <code>buildTicketHTML()</code> を編集すると変えられます。
@@ -898,6 +999,7 @@ var state = {
   excluded:   {},        // kenshinId -> Set(職員番号)  手動で除外した人
 
   onlyActive: true,      // 「在職」列がある場合、在職者のみを対象にする
+  calibPage: true,       // 受検票PDFの先頭に印刷設定の確認ページを入れる
   inactive:   [],        // 在職でないため除外した職員
   nyuSrc:     {},        // 取込元(srcId) -> 読み込んだ内容
   nyuOpt:     {},        // 取込元(srcId) -> 会場の設定
@@ -2392,6 +2494,7 @@ function saveSettings(){
     rules: state.rules,
     skipPhrases: state.skipPhrases,
     onlyActive: !!state.onlyActive,
+    calibPage: !!state.calibPage,
     orgName: state.orgName,
     layouts: state.layouts,
     fujinRules: state.fujinRules,
@@ -3410,7 +3513,7 @@ function fillTextSpaced(g, txt, x, y, spacingPx, align){
 }
 
 /* 重ね刷りの内容をキャンバスに描く（画面の印刷用HTMLと同じ配置） */
-function drawOverlayOnCanvas(g, cw, ch, pctx, kid, band, dpi){
+function drawOverlayOnCanvas(g, cw, ch, pctx, kid, band, dpi, grid){
   var L = state.layouts[kid];
   var k = dpi / 25.4;
 
@@ -3419,6 +3522,8 @@ function drawOverlayOnCanvas(g, cw, ch, pctx, kid, band, dpi){
   g.fillRect(0, 0, cw, ch);
   g.fillStyle = "#000000";
   g.strokeStyle = "#000000";
+
+  if(grid) drawGridOnCanvas(g, k, band);
 
   L.fields.forEach(function(f){
     if(!showField(f, pctx)) return;
@@ -3455,6 +3560,35 @@ function drawOverlayOnCanvas(g, cw, ch, pctx, kid, band, dpi){
     }
     if(CANVAS_LETTER_SPACING) g.letterSpacing = "0px";
   });
+}
+
+/* 位置合わせ用の 10mm 方眼（50mm ごとに目盛を入れます） */
+function drawGridOnCanvas(g, k, band){
+  var x, y;
+  g.save();
+  g.strokeStyle = "#b9c2cc";
+  g.lineWidth = Math.max(1, 0.15 * k);
+  for(x = 0; x <= band.w; x += 10){
+    g.beginPath();
+    g.moveTo((x - band.x) * k, 0);
+    g.lineTo((x - band.x) * k, band.h * k);
+    g.stroke();
+  }
+  for(y = 0; y <= band.h; y += 10){
+    g.beginPath();
+    g.moveTo(0, (y - band.y) * k);
+    g.lineTo(band.w * k, (y - band.y) * k);
+    g.stroke();
+  }
+  g.fillStyle = "#6b7683";
+  g.font = (7 * 25.4 / 72 * k) + "px " + CALIB_FONT;
+  g.textAlign = "left";
+  g.textBaseline = "top";
+  for(x = 0; x <= band.w; x += 50) g.fillText(String(x), (x - band.x) * k + 1 * k, 1 * k);
+  for(y = 0; y <= band.h; y += 50) g.fillText(String(y), 1 * k, (y - band.y) * k + 1 * k);
+  g.restore();
+  g.fillStyle = "#000000";
+  g.strokeStyle = "#000000";
 }
 
 /* キャンバスを PDF に貼れる形に圧縮する */
@@ -3544,8 +3678,152 @@ function buildPdfBytes(pages, pgWmm, pgHmm){
   return out;
 }
 
-/* 受検票のPDFを作る */
-function makeTicketPdf(list, kid, dpi, onProgress){
+/* -------------------------------------------------------------------------
+   印刷設定の確認ページ
+
+   ブラウザから印刷したり「サイズに合わせる」で印刷すると倍率が変わってしまうため、
+   印刷物そのもので倍率を確かめられるページを PDF の先頭に付けます。
+   実寸のものさしと、用紙のふちから 15mm のかぎ印を刷ります。
+   ------------------------------------------------------------------------- */
+
+var CALIB_FONT = '"Meiryo","メイリオ","Yu Gothic","YuGothic","MS Pゴシック","MS PGothic",sans-serif';
+
+function drawCalibPage(g, k, W, H, info){
+  function mm(v){ return v * k; }
+  function text(str, x, y, pt, align, bold){
+    g.font = (bold ? "bold " : "") + (pt * 25.4 / 72 * k) + "px " + CALIB_FONT;
+    g.textAlign = align || "left";
+    g.textBaseline = "top";
+    g.fillText(str, mm(x), mm(y));
+  }
+  function line(x1, y1, x2, y2, w){
+    g.lineWidth = mm(w || 0.4);
+    g.beginPath(); g.moveTo(mm(x1), mm(y1)); g.lineTo(mm(x2), mm(y2)); g.stroke();
+  }
+  function rect(x, y, w, h, lw){ g.lineWidth = mm(lw || 0.4); g.strokeRect(mm(x), mm(y), mm(w), mm(h)); }
+
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.fillStyle = "#ffffff"; g.fillRect(0, 0, mm(W), mm(H));
+  g.fillStyle = "#000000"; g.strokeStyle = "#000000";
+  g.lineCap = "butt";
+
+  /* 四隅のかぎ印（用紙のふちから 15mm） */
+  var M = 15, a = 10;
+  [[M, M, 1, 1], [W - M, M, -1, 1], [M, H - M, 1, -1], [W - M, H - M, -1, -1]].forEach(function(c){
+    line(c[0], c[1], c[0] + a * c[2], c[1], 0.5);
+    line(c[0], c[1], c[0], c[1] + a * c[3], 0.5);
+  });
+
+  text("印刷設定の確認ページ", W / 2, 28, 30, "center", true);
+  g.fillStyle = "#b03a10";
+  text("この1枚は白紙に印刷してください。協会の受検票の用紙は使いません。", W / 2, 46, 14, "center", true);
+  g.fillStyle = "#000000";
+
+  /* ものさし（実寸 200mm） */
+  var RL = 200, RX = (W - RL) / 2, RY = 88, i;
+  text("① この目盛りを定規で測ってください", RX, 66, 16, "left", true);
+  line(RX, RY, RX + RL, RY, 0.6);
+  for(i = 0; i <= RL; i++){
+    var th = (i % 10 === 0) ? 7 : (i % 5 === 0 ? 4.5 : 2.5);
+    line(RX + i, RY, RX + i, RY + th, i % 10 === 0 ? 0.6 : 0.3);
+    if(i % 10 === 0) text(String(i / 10), RX + i, RY + 8.5, 10, "center", false);
+  }
+  text("cm", RX + RL + 5, RY + 8.5, 10, "left", false);
+
+  /* 100mm の指示バー */
+  var BY = RY + 26;
+  line(RX, BY - 4, RX, BY + 4, 0.5);
+  line(RX + 100, BY - 4, RX + 100, BY + 4, 0.5);
+  line(RX, BY, RX + 100, BY, 0.9);
+  [[RX, 1], [RX + 100, -1]].forEach(function(q){
+    g.beginPath();
+    g.moveTo(mm(q[0]), mm(BY));
+    g.lineTo(mm(q[0] + 3.5 * q[1]), mm(BY - 1.8));
+    g.lineTo(mm(q[0] + 3.5 * q[1]), mm(BY + 1.8));
+    g.closePath(); g.fill();
+  });
+  text("ちょうど 10cm（100mm）", RX + 50, BY + 4, 14, "center", true);
+
+  /* 判定 */
+  var BH = 34, BY2 = 134, HALF = RL / 2 - 4, RX2 = RX + RL / 2 + 4;
+  g.strokeStyle = "#1c6b45"; rect(RX, BY2, HALF, BH, 0.9);
+  g.fillStyle = "#1c6b45"; text("10cm ちょうど → 設定は正しい", RX + 6, BY2 + 6, 14, "left", true);
+  g.fillStyle = "#000000";
+  text("このまま 2ページ目以降を、協会の用紙に", RX + 6, BY2 + 16, 11, "left", false);
+  text("セットして印刷してください。", RX + 6, BY2 + 23, 11, "left", false);
+
+  g.strokeStyle = "#b03a10"; rect(RX2, BY2, HALF, BH, 0.9);
+  g.fillStyle = "#b03a10"; text("長さが違う → 印刷し直し", RX2 + 6, BY2 + 6, 14, "left", true);
+  g.fillStyle = "#000000";
+  text("Acrobat の印刷画面 →「ページサイズ処理」で", RX2 + 6, BY2 + 16, 11, "left", false);
+  text("「実際のサイズ」を選び、もう一度この1枚を印刷。", RX2 + 6, BY2 + 23, 11, "left", false);
+  g.strokeStyle = "#000000";
+
+  text("② 四隅の かぎ印 が、用紙のふちから 15mm のところにあるか確認してください", RX, 180, 16, "left", true);
+  text("ブラウザから印刷したり「サイズに合わせる」で印刷すると、ここが 15mm になりません。", RX, 191, 11, "left", false);
+
+  var HY = 206;
+  g.strokeStyle = "#888888"; rect(RX, HY, RL, 34, 0.4); g.strokeStyle = "#000000";
+  text("正しい印刷のしかた", RX + 7, HY + 6, 13, "left", true);
+  text("1. このPDFをダウンロードする（ブラウザで開いたまま印刷しない）", RX + 7, HY + 15, 11, "left", false);
+  text("2. Adobe Acrobat で開く　3.「実際のサイズ」を選ぶ　4. 用紙 " + PAGE_LABEL(W, H), RX + 7, HY + 23, 11, "left", false);
+
+  text(info, W / 2, 248, 11, "center", false);
+}
+
+function PAGE_LABEL(W, H){
+  var k, key;
+  for(key in PAPER){ if(PAPER[key].w === W && PAPER[key].h === H) return PAPER[key].name.replace(" ", "・向き "); }
+  return W + "×" + H + "mm";
+}
+
+/* 確認ページを1ページ分の画像にする（用紙の全面を使います） */
+function renderCalibPage(pg, dpi, info){
+  var k = dpi / 25.4;
+  var cw = Math.round(pg.w * k), ch = Math.round(pg.h * k);
+  var cv = document.createElement("canvas");
+  cv.width = cw; cv.height = ch;
+  var g = cv.getContext("2d", { willReadFrequently:true });
+  drawCalibPage(g, k, pg.w, pg.h, info);
+  return encodeCanvasForPdf(cv, g, cw, ch).then(function(enc){
+    return { data:enc.data, filter:enc.filter, gray:enc.gray, w:cw, h:ch,
+             xmm:0, ymm:0, wmm:pg.w, hmm:pg.h };
+  });
+}
+
+var testBusy = false;
+
+/* 位置合わせ用のPDF（1ページ目＝確認ページ、2ページ目＝方眼付きの受検票1枚） */
+function makeTestPdf(kid, ctx, grid){
+  var L = state.layouts[kid];
+  var pg = PAPER[L.paper] || PAPER.b4l;
+  var dpi = 200;
+  var k = dpi / 25.4;
+  var cw = Math.round(pg.w * k), ch = Math.round(pg.h * k);
+  var band = { x:0, y:0, w:pg.w, h:pg.h };
+
+  var cv = document.createElement("canvas");
+  cv.width = cw; cv.height = ch;
+  var g = cv.getContext("2d", { willReadFrequently:true });
+
+  var pages = [];
+  var info = kenshinName(kid) + "／位置合わせ用　このページは受検票ではありません";
+
+  return renderCalibPage(pg, dpi, info).then(function(pg1){
+    pages.push(pg1);
+    drawOverlayOnCanvas(g, cw, ch, ctx, kid, band, dpi, grid);
+    return encodeCanvasForPdf(cv, g, cw, ch);
+  }).then(function(enc){
+    pages.push({ data:enc.data, filter:enc.filter, gray:enc.gray, w:cw, h:ch,
+                 xmm:0, ymm:0, wmm:pg.w, hmm:pg.h });
+    return new Blob([buildPdfBytes(pages, pg.w, pg.h)], { type:"application/pdf" });
+  });
+}
+
+/* 受検票のPDFを作る
+   opt.calib を立てると、先頭に印刷設定の確認ページを1枚入れます。 */
+function makeTicketPdf(list, kid, dpi, opt, onProgress){
+  opt = opt || {};
   var L = state.layouts[kid];
   var pg = PAPER[L.paper] || PAPER.b4l;
   var band = layoutInkBand(kid);
@@ -3571,7 +3849,12 @@ function makeTicketPdf(list, kid, dpi, onProgress){
     });
   }
 
-  return step().then(function(){
+  /* 確認ページは細かい線が多くないので 200dpi で十分です（ファイルを小さく保ちます） */
+  var head = opt.calib
+    ? renderCalibPage(pg, Math.min(dpi, 200), opt.info || "").then(function(pg1){ pages.push(pg1); })
+    : Promise.resolve();
+
+  return head.then(step).then(function(){
     return new Blob([buildPdfBytes(pages, pg.w, pg.h)], { type:"application/pdf" });
   });
 }
@@ -3689,20 +3972,24 @@ function doPrint(html, paper){
   window.print();
 }
 
+/* 重ね刷り：PDFを作ってダウンロードする（ブラウザからは印刷させません） */
+$("btnPdfOverlay").addEventListener("click", function(){
+  var kid = $("printKenshin").value;
+  if(!kid){ toast("印刷する検診を選んでください", true); return; }
+  var list = sortForPrint(activeTargets(kid), $("printOrder").value);
+  if(!list.length){ toast("印刷対象の方がいません", true); return; }
+  var L = state.layouts[kid];
+  if(!L){ toast("この検診の様式レイアウトが設定されていません", true); return; }
+  makeTicketPdfAndSave(list, kid);
+});
+
+/* A4 の自前様式：ブラウザの印刷画面で刷ります（用紙に重ねないので倍率の影響がありません） */
 $("btnPrintTickets").addEventListener("click", function(){
   var kid = $("printKenshin").value;
   if(!kid){ toast("印刷する検診を選んでください", true); return; }
   var order = $("printOrder").value;
   var list = sortForPrint(activeTargets(kid), order);
   if(!list.length){ toast("印刷対象の方がいません", true); return; }
-
-  /* 対がん協会の用紙への重ね刷り → PDFを作成してダウンロード */
-  if($("printMode").value === "overlay"){
-    var L = state.layouts[kid];
-    if(!L){ toast("この検診の様式レイアウトが設定されていません", true); return; }
-    makeTicketPdfAndSave(list, kid);
-    return;
-  }
 
   var withKagami = $("printKagami").checked;
   var html = "";
@@ -3729,47 +4016,49 @@ function makeTicketPdfAndSave(list, kid){
   var pg = PAPER[L.paper] || PAPER.b4l;
   var dpi = parseInt($("pdfDpi").value, 10) || 300;
 
+  var calib = $("chkCalib").checked;
+  var info = kenshinName(kid) + "／受検票 " + list.length + "枚／" + (state.fiscalYear || "") + "年度"
+           + "　このページは受検票ではありません";
+
   pdfBusy = true;
-  $("btnPrintTickets").disabled = true;
+  $("btnPdfOverlay").disabled = true;
   $("pdfProgressRow").style.display = "";
   $("pdfBar").style.width = "0%";
   $("pdfProgress").textContent = "PDFを作成しています… 0 / " + list.length + " 枚";
 
-  makeTicketPdf(list, kid, dpi, function(done, total){
+  makeTicketPdf(list, kid, dpi, { calib:calib, info:info }, function(done, total){
     $("pdfBar").style.width = Math.round(done / total * 100) + "%";
     $("pdfProgress").textContent = "PDFを作成しています… " + done + " / " + total + " 枚";
   }).then(function(blob){
-    var name = kenshinName(kid) + "_受検票_" + (state.fiscalYear || "") + "年度.pdf";
+    var name = kenshinName(kid) + "_受検票_" + (state.fiscalYear || "") + "年度"
+             + "【Acrobatで開き実際のサイズで印刷】.pdf";
     downloadBlob(blob, name);
     var mb = Math.round(blob.size / 1024 / 1024 * 10) / 10;
-    $("pdfProgress").textContent = "完了：" + list.length + "枚（" + (mb >= 0.1 ? mb + "MB" : Math.round(blob.size/1024) + "KB") + "）";
+    $("pdfProgress").innerHTML = "保存しました：受検票 " + list.length + "枚"
+      + (calib ? "＋確認ページ 1枚" : "") + "（"
+      + (mb >= 0.1 ? mb + "MB" : Math.round(blob.size / 1024) + "KB") + "）"
+      + '　<strong style="color:#a8410f">つづけて下の手順2〜5を行ってください。</strong>';
     $("pdfBar").style.width = "100%";
-    toast(name + " を保存しました（" + pg.name + " " + list.length + "枚）");
+    toast(name + " を保存しました");
+    flashHowto();
   }).catch(function(err){
     $("pdfProgress").innerHTML = '<span style="color:#a8410f">PDFを作成できませんでした：' + esc(err.message) + "</span>";
     toast("PDFを作成できませんでした: " + err.message, true);
   }).then(function(){
     pdfBusy = false;
-    $("btnPrintTickets").disabled = false;
+    $("btnPdfOverlay").disabled = false;
   });
 }
 
-/* ブラウザの印刷画面を開く（用紙に直接印刷したいとき） */
-$("btnPrintBrowser").addEventListener("click", function(){
-  var kid = $("printKenshin").value;
-  if(!kid){ toast("印刷する検診を選んでください", true); return; }
-  var list = sortForPrint(activeTargets(kid), $("printOrder").value);
-  if(!list.length){ toast("印刷対象の方がいません", true); return; }
-
-  if($("printMode").value === "overlay"){
-    var L = state.layouts[kid];
-    if(!L){ toast("この検診の様式レイアウトが設定されていません", true); return; }
-    var oh = list.map(function(t){ return buildOverlayHTML(t, kid); }).join("");
-    doPrint(oh, PAPER[L.paper] || PAPER.b4l);
-    return;
-  }
-  $("btnPrintTickets").click();
-});
+/* PDFができたら、以降の手順に目が向くよう手順パネルを点滅させます */
+function flashHowto(){
+  var box = $("overlayNote");
+  if(!box) return;
+  box.classList.remove("flash");
+  void box.offsetWidth;                    // アニメーションを毎回やり直させます
+  box.classList.add("flash");
+  setTimeout(function(){ box.classList.remove("flash"); }, 4000);
+}
 
 $("btnPrintKagami").addEventListener("click", function(){
   var kid = $("printKenshin").value;
@@ -3800,13 +4089,32 @@ function bindLayoutTab(){
     renderLayoutTab();
   });
 
+  /* 位置合わせのテストも、受検票と同じ「PDFを作って Acrobat で実際のサイズで印刷」に揃えます。
+     ブラウザから印刷すると倍率が変わり、位置合わせの意味がなくなるためです。 */
   $("btnTestPrint").addEventListener("click", function(){
     var L = state.layouts[ly.kid];
     if(!L){ toast("この検診のレイアウトがありません", true); return; }
-    var opt = { grid: $("testGrid").checked };
+    if(testBusy){ toast("PDFを作成中です。しばらくお待ちください。", true); return; }
+
+    var pg = PAPER[L.paper] || PAPER.b4l;
     var t = firstTarget(ly.kid);
-    var html = t ? buildOverlayHTML(t, ly.kid, opt) : buildOverlayFromCtx(sampleCtx(), ly.kid, opt);
-    doPrint(html, PAPER[L.paper] || PAPER.b4l);
+    var ctx = t ? personCtx(t, ly.kid) : sampleCtx();
+    var grid = $("testGrid").checked;
+
+    testBusy = true;
+    $("btnTestPrint").disabled = true;
+    toast("位置合わせ用のPDFを作成しています…");
+
+    makeTestPdf(ly.kid, ctx, grid).then(function(blob){
+      downloadBlob(blob, kenshinName(ly.kid) + "_位置合わせ_"
+        + pg.name.replace(/[\s\u3000]+/g, "") + "【Acrobatで開き実際のサイズで印刷】.pdf");
+      toast("位置合わせ用のPDFを保存しました。Acrobatで開き「実際のサイズ」で印刷してください。");
+    }).catch(function(err){
+      toast("PDFを作成できませんでした: " + err.message, true);
+    }).then(function(){
+      testBusy = false;
+      $("btnTestPrint").disabled = false;
+    });
   });
 
   $("btnSaveLayout").addEventListener("click", function(){
@@ -3999,6 +4307,10 @@ $("btnSample").addEventListener("click", function(){
     }
     if(saved && Array.isArray(saved.skipPhrases) && saved.skipPhrases.length) state.skipPhrases = saved.skipPhrases;
     if(saved && typeof saved.onlyActive === "boolean") state.onlyActive = saved.onlyActive;
+    if(saved && typeof saved.calibPage === "boolean"){
+      state.calibPage = saved.calibPage;
+      $("chkCalib").checked = saved.calibPage;
+    }
     if(saved && saved.orgName) state.orgName = saved.orgName;
     if(saved && Array.isArray(saved.fujinRules) && saved.fujinRules.length) state.fujinRules = saved.fujinRules;
     if(saved && saved.fujinFallback) state.fujinFallback = saved.fujinFallback;
@@ -4036,20 +4348,29 @@ $("btnSample").addEventListener("click", function(){
     $("rowKagami").style.display = ov ? "none" : "";
     $("overlayNote").style.display = ov ? "" : "none";
     $("a4Notes").style.display = ov ? "none" : "";
-    $("rowDpi").style.display = ov ? "" : "none";
-    $("btnPrintBrowser").style.display = ov ? "" : "none";
+    $("rowPlainButtons").style.display = ov ? "none" : "";
     $("pdfProgressRow").style.display = "none";
-    $("btnPrintTickets").textContent = ov ? "受検票のPDFを作成（ダウンロード）" : "受検票を印刷";
+    $("pdfProgress").textContent = "";
     if(state.rules[$("printKenshin").value]) $("ticketNotes").value = state.rules[$("printKenshin").value].notes || "";
     var L = state.layouts[$("printKenshin").value];
     var pg = L ? (PAPER[L.paper] || PAPER.b4l) : PAPER.b4l;
     $("printHint").textContent = ov
-      ? "1人あたり " + pg.name + "（" + pg.w + "×" + pg.h + "mm）1枚のPDFを作ります。"
+      ? ""
       : "A4縦・1ページに2枚付けで出力します。印刷ダイアログでは「背景のグラフィック：オン」を推奨。";
+    $("printHint2").textContent = "1人あたり " + pg.name + "（" + pg.w + "×" + pg.h + "mm）1枚のPDFを作ります。"
+      + ($("chkCalib").checked ? "　これに確認ページが1枚加わります。" : "");
+    var nm = pg.name.split(/[\s\u3000]+/);
+    $("howtoPaper").textContent = nm[0];
+    $("howtoOrient").textContent = nm[1] || "";
     state.printMode = $("printMode").value;
   }
   $("printMode").addEventListener("change", syncPrintMode);
   $("printKenshin").addEventListener("change", syncPrintMode);
+  $("chkCalib").addEventListener("change", function(){
+    state.calibPage = $("chkCalib").checked;
+    try{ saveSettings(); }catch(e){ /* 保存できない環境でも動作は続きます */ }
+    syncPrintMode();
+  });
   syncPrintMode();
 
   renderNyuCards();
