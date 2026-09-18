@@ -346,6 +346,33 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
 .here{color:#c0392b;font-weight:bold;font-size:13px;margin-left:4px}
 .box100{border:1px solid var(--line-strong);background:#fff;padding:0 8px;border-radius:2px}
 .alt{color:var(--text-sub);font-size:12px;margin-left:4px}
+
+/* ===== 様式レイアウトを変更する前の確認 ===== */
+.mbg{position:fixed;inset:0;background:rgba(20,26,33,.55);display:flex;
+  align-items:center;justify-content:center;z-index:9000;padding:20px}
+.mbox{background:#fff;border-radius:6px;max-width:620px;width:100%;
+  box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden}
+.mhead{background:var(--warn);color:#fff;font-weight:bold;font-size:16px;padding:11px 18px}
+.mbody{padding:16px 18px 6px;font-size:14px;line-height:1.7}
+.mq{font-size:18px;font-weight:bold;margin:0 0 8px}
+.mfoot{display:flex;gap:10px;justify-content:flex-end;padding:12px 18px 16px;flex-wrap:wrap}
+.mfoot .btn{font-size:14px;padding:8px 16px}
+.mlist{margin:10px 0 4px;padding:10px 14px;background:var(--warn-bg);
+  border:1px solid #e6c3ad;border-radius:4px}
+.mlist ul{margin:6px 0 0;padding-left:0;list-style:none}
+.mlist li{position:relative;padding-left:22px;margin-bottom:4px}
+.mlist li::before{content:"";position:absolute;left:0;top:3px;width:13px;height:13px;
+  border:1.5px solid #8a6a58;border-radius:2px;background:#fff}
+.mstep{display:inline-block;background:#fff;border:1px solid var(--line-strong);
+  border-radius:3px;padding:0 6px;font-weight:bold}
+
+.lybar{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  margin:10px 0 0;padding:9px 12px;border-radius:4px;border:1.5px solid;line-height:1.7}
+.lybar-t{font-weight:bold;font-size:15px;padding:1px 9px;border-radius:3px;color:#fff;white-space:nowrap}
+.lybar.lock{border-color:var(--warn);background:var(--warn-bg)}
+.lybar.lock .lybar-t{background:var(--warn)}
+.lybar.open{border-color:var(--ok);background:#eef7f2}
+.lybar.open .lybar-t{background:var(--ok)}
 </style>
 </head>
 <body>
@@ -539,6 +566,7 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <span class="hint">すべての検診の「団体名」欄に共通で使われます。</span>
     </div>
     <div class="row" id="lyKenshinTabs" style="margin-top:10px"></div>
+    <div id="lyLockBar" class="note"></div>
     <div class="note">
       <strong>生活習慣病健診は受検票を印刷しません。</strong>
       対象者の把握とCSV出力には引き続き使えます。
@@ -768,7 +796,8 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <li><strong>予約状況の取込</strong>　胃がん検診・婦人検診それぞれの Excel を読み込み、職員番号の列と入力の列を指定して取り込みます。<br>
           取り込むと、確認が必要な件があればこの画面に表示されます。</li>
       <li><strong>対象者一覧</strong>　検診を選んで、受検票が印刷される人を確認します。辞退者などはここで個別に外せます。</li>
-      <li><strong>様式レイアウト</strong>　初回のみ、位置合わせ用のPDFを作って協会の用紙に1枚印刷し、位置を確認します。合っていればそのままで構いません。</li>
+      <li><strong>様式レイアウト</strong>　初回のみ、位置合わせ用のPDFを作って協会の用紙に1枚印刷し、位置を確認します。合っていればそのままで構いません。
+          位置を動かそうとすると<strong>確認の画面が2回出ます</strong>。ずれて見える原因は印刷のしかたであることが多いためです。</li>
       <li><strong>印刷・出力</strong>　並び順を選んで「受検票のPDFを作成」を押すと、PDFファイルがダウンロードされます。
           そのPDFを <strong>Adobe Acrobat で開き、「実際のサイズ」を選んで</strong>協会の用紙に印刷してください。</li>
     </ol>
@@ -910,6 +939,15 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
 
 <style id="pageStyle"></style>
 <div id="printArea"></div>
+
+<!-- 様式レイアウトを変更する前の確認 -->
+<div class="mbg" id="lyGuard" style="display:none">
+  <div class="mbox">
+    <div class="mhead" id="lyGuardHead"></div>
+    <div class="mbody" id="lyGuardBody"></div>
+    <div class="mfoot" id="lyGuardFoot"></div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -1550,16 +1588,20 @@ function kenshinName(id){
    3. タブ切替
    ========================================================================= */
 
-Array.prototype.forEach.call(document.querySelectorAll("nav .tab"), function(b){
-  b.addEventListener("click", function(){
-    Array.prototype.forEach.call(document.querySelectorAll("nav .tab"), function(x){ x.classList.remove("active"); });
-    Array.prototype.forEach.call(document.querySelectorAll("section.page"), function(x){ x.classList.remove("active"); });
-    b.classList.add("active");
-    $(b.dataset.page).classList.add("active");
-    if(b.dataset.page === "p4"){ renderTgTabs(); renderTargets(); }
-    if(b.dataset.page === "p7") NYU_SOURCES.forEach(function(x){ renderNyuCard(x.id); });
-    if(b.dataset.page === "p8") renderLayoutTab();
+function showPage(id){
+  Array.prototype.forEach.call(document.querySelectorAll("nav .tab"), function(x){
+    x.classList.toggle("active", x.dataset.page === id);
   });
+  Array.prototype.forEach.call(document.querySelectorAll("section.page"), function(x){
+    x.classList.toggle("active", x.id === id);
+  });
+  if(id === "p4"){ renderTgTabs(); renderTargets(); }
+  if(id === "p7") NYU_SOURCES.forEach(function(x){ renderNyuCard(x.id); });
+  if(id === "p8"){ ly.unlocked = false; renderLayoutTab(); }   // 開くたびに確認からやり直します
+}
+
+Array.prototype.forEach.call(document.querySelectorAll("nav .tab"), function(b){
+  b.addEventListener("click", function(){ showPage(b.dataset.page); });
 });
 
 /* =========================================================================
@@ -3133,14 +3175,115 @@ function buildGridHTML(pg){
    レイアウト編集画面
    ========================================================================= */
 
-var ly = { kid:"i", sel:-1, scale:2.0, bg:{}, bgOpacity:0.45, grid:false, drag:null };
+var ly = { kid:"i", sel:-1, scale:2.0, bg:{}, bgOpacity:0.45, grid:false, drag:null, unlocked:false };
+
+/* -------------------------------------------------------------------------
+   様式レイアウトを変更する前の確認
+
+   印字がずれて見える原因は、レイアウトそのものよりも
+   「ブラウザから印刷した」「実際のサイズを選んでいない」ことのほうが多いため、
+   レイアウトに触ろうとした時点で二段階の確認を出し、
+   先に「5. 印刷・出力」の手順を見直してもらいます。
+   ------------------------------------------------------------------------- */
+
+/* 確認なしで触ってよいもの（表示の切り替え・印刷・書き出しなど、レイアウトを変えない操作） */
+var LY_FREE = ["lyScale", "lyGrid", "lyBgPick", "lyBgFile", "lyBgClear", "lyBgOp",
+               "lyKenshinTabs", "lyList", "btnTestPrint", "testGrid",
+               "btnSaveLayout", "btnExportLayout", "lyGuard"];
+
+function lyGuardAllows(t){
+  if(ly.unlocked) return true;
+  for(var el = t; el && el !== document; el = el.parentNode){
+    if(el.id && LY_FREE.indexOf(el.id) >= 0) return true;
+  }
+  return false;
+}
+
+function lyGuardHandler(e){
+  if(lyGuardAllows(e.target)) return;
+  if(e.type === "keydown" && (e.key === "Tab" || e.key === "Escape")) return;
+  e.preventDefault();
+  e.stopPropagation();
+  openLyGuard();
+}
+
+function closeLyGuard(){ $("lyGuard").style.display = "none"; }
+
+function lyGuardStep2(){
+  $("lyGuardHead").textContent = "最終確認（2 / 2）　様式レイアウトの変更";
+  $("lyGuardBody").innerHTML =
+      '<p class="mq">もう一度おたずねします。本当にレイアウトを変更しますか？</p>'
+    + "<p>変更した位置は<strong>この端末に保存され、次回以降の印刷にも使われます</strong>。"
+    + "印刷の設定が正しいことを確かめないまま動かすと、<strong>かえって合わなくなります</strong>。</p>"
+    + '<div class="mlist"><strong>確認ページの 10cm の線は、定規でちょうど 10cm でしたか？</strong><br>'
+    + "10cm でなかった場合は、レイアウトではなく<strong>印刷の倍率</strong>が原因です。"
+    + "「5. 印刷・出力」に戻り、Adobe Acrobat で<strong>「実際のサイズ」</strong>を選び直してください。</div>";
+  $("lyGuardFoot").innerHTML =
+      '<button class="btn" id="lyGuardBack">やめる（変更しない）</button>'
+    + '<button class="btn primary" id="lyGuardGo">はい、確認しました。変更します</button>';
+  $("lyGuardBack").addEventListener("click", closeLyGuard);
+  $("lyGuardGo").addEventListener("click", function(){
+    ly.unlocked = true;
+    closeLyGuard();
+    renderLyLockBar();
+    renderLayoutEditor();
+    toast("レイアウトを変更できるようにしました。もう一度、動かしたい項目を操作してください。");
+  });
+}
+
+function openLyGuard(){
+  $("lyGuardHead").textContent = "確認（1 / 2）　様式レイアウトの変更";
+  $("lyGuardBody").innerHTML =
+      '<p class="mq">本当にレイアウトを変更しますか？</p>'
+    + '<p>印刷を <strong>「5. 印刷・出力」の手順</strong> に沿って、もう一度確認してください。<br>'
+    + "印字がずれて見える原因は、レイアウトではなく<strong>印刷のしかた</strong>であることがほとんどです。</p>"
+    + '<div class="mlist"><strong>「5. 印刷・出力」の手順 1〜5 は、すべて済んでいますか。</strong><ul>'
+    + "<li><span class=\"mstep\">1</span>　受検票のPDFを<strong>ダウンロード</strong>した</li>"
+    + "<li><span class=\"mstep\">2</span>　そのPDFを <strong>Adobe Acrobat で開いた</strong>（ブラウザで開いたまま印刷していない）</li>"
+    + "<li><span class=\"mstep\">3</span>　印刷画面で <strong>「実際のサイズ」</strong> を選んだ</li>"
+    + "<li><span class=\"mstep\">4</span>　用紙サイズ <strong>B4</strong>・向き <strong>横</strong> にした</li>"
+    + "<li><span class=\"mstep\">5</span>　1ページ目の確認ページを刷り、<strong>10cm の線がちょうど 10cm</strong> だった</li>"
+    + "</ul></div>"
+    + '<p class="hint" style="margin-top:8px">ひとつでも済んでいなければ、先にそちらを確認してください。'
+    + "レイアウトを動かす必要はありません。</p>";
+  $("lyGuardFoot").innerHTML =
+      '<button class="btn primary" id="lyGuardToPrint">「5. 印刷・出力」の手順を確認する</button>'
+    + '<button class="btn" id="lyGuardNext">確認済み。変更に進む</button>';
+  $("lyGuardToPrint").addEventListener("click", function(){
+    closeLyGuard();
+    showPage("p5");
+  });
+  $("lyGuardNext").addEventListener("click", lyGuardStep2);
+  $("lyGuard").style.display = "flex";
+}
+
 
 function renderLayoutTab(){
   var box = $("lyKenshinTabs");
   box.innerHTML = ticketKenshin().map(function(k){
     return '<button class="btn' + (ly.kid === k.id ? " primary" : "") + '" data-lyk="' + k.id + '">' + esc(k.name) + "</button>";
   }).join(" ");
+  renderLyLockBar();
   renderLayoutEditor();
+}
+
+/* いま変更できる状態かどうかを画面に出します */
+function renderLyLockBar(){
+  var bar = $("lyLockBar");
+  if(!bar) return;
+  if(ly.unlocked){
+    bar.className = "lybar open";
+    bar.innerHTML = '<span class="lybar-t">変更できる状態です</span>'
+      + "用紙の絵の上で項目をドラッグするか、右の数値を直してください。"
+      + "終わったら下の<strong>「この設定を保存」</strong>を押します。"
+      + "このタブを離れると、また確認からやり直しになります。";
+  }else{
+    bar.className = "lybar lock";
+    bar.innerHTML = '<span class="lybar-t">いまは変更できません</span>'
+      + "位置を動かそうとすると<strong>確認の画面が2回出ます</strong>。"
+      + "その前に、<strong>「5. 印刷・出力」の手順どおりに印刷できているか</strong>を確かめてください。"
+      + "印字がずれて見える原因は、レイアウトではなく<strong>印刷のしかた</strong>であることがほとんどです。";
+  }
 }
 
 function renderLayoutEditor(){
@@ -3443,6 +3586,8 @@ document.addEventListener("keydown", function(e){
   if(ly.sel < 0) return;
   var tag = (e.target.tagName || "").toLowerCase();
   if(tag === "input" || tag === "select" || tag === "textarea") return;
+  if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].indexOf(e.key) < 0) return;
+  if(!ly.unlocked){ e.preventDefault(); openLyGuard(); return; }
   var step = e.shiftKey ? 0.1 : 0.5, f = state.layouts[ly.kid].fields[ly.sel], moved = true;
   if(e.key === "ArrowLeft")       f.x = Math.round((+f.x - step) * 10) / 10;
   else if(e.key === "ArrowRight") f.x = Math.round((+f.x + step) * 10) / 10;
@@ -4076,6 +4221,10 @@ window.addEventListener("afterprint", function(){ $("printArea").innerHTML = "";
    ========================================================================= */
 
 function bindLayoutTab(){
+  /* レイアウトを変える操作は、確認が済むまで捕捉段階で止めます */
+  $("p8").addEventListener("mousedown", lyGuardHandler, true);
+  $("p8").addEventListener("keydown", lyGuardHandler, true);
+
   $("orgName").value = state.orgName;
   $("orgName").addEventListener("input", function(){
     state.orgName = this.value;
