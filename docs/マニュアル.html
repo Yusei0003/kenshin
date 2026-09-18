@@ -47,8 +47,8 @@
   .f-tg img   { max-height: 15mm; }
   .f-pr img   { max-height: 17mm; }
   .f-off img  { max-height: 7mm; }
-  .f-acro img { max-height: 24mm; }
-  .f-ruler img{ max-height: 23mm; }
+  .f-acro img { max-height: 21mm; }
+  .f-ruler img{ max-height: 17mm; }
   figcaption { font-size:7.2pt; color:#5a6672; margin-top:.6mm; }
 
   /* --- 流れ図 --- */
@@ -198,23 +198,24 @@
   <h2 style="margin-top:0">いちばん大事：PDFの印刷のしかた</h2>
 
   <div class="warn" style="margin-top:0">
-    <b>ブラウザでPDFを開いたまま印刷しないでください。</b>
-    ブラウザの表示機能から印刷すると用紙に合わせて勝手に拡大・縮小されるため、<b>必ず位置がずれます</b>。
-    画面にPDFが出たときの「印刷」ボタンや <span class="kbd">Ctrl</span>+<span class="kbd">P</span> は使いません。
+    <b>この2つを守らないと、必ず位置がずれます。</b><br>
+    <b>① ブラウザでPDFを開いたまま印刷しない。</b>勝手に拡大・縮小されます。画面にPDFが出たときの「印刷」ボタンや
+    <span class="kbd">Ctrl</span>+<span class="kbd">P</span> は使いません。<br>
+    <b>② プリンターは必ず複合機。</b>自分の席のプリンターなど、複合機以外で印刷するとずれます。印刷画面のいちばん上で確かめてください。
   </div>
 
   <div class="note">
-    ダウンロードしたPDFを<b>右クリック →「プログラムから開く」→「Adobe Acrobat」</b>で開き、印刷画面の「ページサイズ処理」で
-    <b>「実際のサイズ」</b>を選びます。用紙サイズは <b>B4</b>、向きは <b>横</b>。
+    ダウンロードしたPDFを<b>右クリック →「プログラムから開く」→「Adobe Acrobat」</b>で開き、プリンターに <b>複合機</b> を選んでから、
+    「ページサイズ処理」で <b>「実際のサイズ」</b>。用紙 <b>B4</b>・向き <b>横</b>。
   </div>
 
   <figure class="f-acro"><img src="manual/m5.png" alt="Acrobatで実際のサイズを選ぶ">
-    <figcaption>Acrobat の印刷画面の「ページサイズ処理」。アプリの画面にも同じ図が出ているので、見比べてください。</figcaption>
+    <figcaption>Acrobat の「ページサイズ処理」。アプリの画面にも同じ図が出ています。</figcaption>
   </figure>
 
   <h2>刷る前に、定規で1回だけ測る</h2>
   <p style="margin:0 0 1mm">
-    PDFの<b>1ページ目は、ものさしが刷られた確認用のページ</b>です（受検票ではありません）。<b>まずこの1ページ目だけを白紙に印刷</b>して、定規を当ててください。
+    PDFの<b>1ページ目は、ものさしが刷られた確認用のページ</b>です。<b>まずこの1ページ目だけを白紙に印刷</b>して、定規を当ててください。
   </p>
   <figure class="f-ruler"><img src="manual/m6_ruler.png" alt="確認ページのものさし"></figure>
   <table style="margin-top:1.2mm">
@@ -224,14 +225,14 @@
         <td>倍率が変わっています。<b>Acrobat の「実際のサイズ」を選び直して</b>、もう一度この1ページ目だけを印刷します。</td></tr>
   </table>
   <p class="tip" style="margin:0">
-    確認ページの<b>四隅のかぎ印</b>は用紙のふちから <b>15mm</b> です。用紙は毎年届くもので、プリンタとの相性もあります。<b>この確認だけは毎年やってください。</b>
+    確認ページの<b>四隅のかぎ印</b>は用紙のふちから <b>15mm</b> です。<b>この確認だけは毎年やってください。</b>
   </p>
 
   <h2>困ったときの早見表</h2>
   <table>
     <tr><th style="width:48mm">こうなったら</th><th>こうする</th></tr>
     <tr><td>印字が<b>全体的に小さい／大きい</b></td>
-        <td><b>ブラウザから印刷しています。</b>PDFをダウンロードし、Adobe Acrobat で開いて「実際のサイズ」を選び直してください。</td></tr>
+        <td><b>ブラウザから印刷したか、複合機以外で印刷しています。</b>PDFをダウンロードし、Adobe Acrobat で開き、複合機を選んで「実際のサイズ」を選び直してください。</td></tr>
     <tr><td>倍率は合っているのに<b>全体的にずれている</b></td>
         <td>タブ「4. 様式レイアウト」の <b>「全体のずれ補正」</b> に、定規で測ったずれを mm で入力（右へずらすなら横をプラス、下なら縦をプラス）し、<b>「この設定を保存」</b>を押します。動かそうとすると<b>確認の画面が2回出ます</b>。</td></tr>
     <tr><td><b>ひとつの項目だけ</b>ずれている</td>
@@ -272,6 +273,7 @@
       <ul>
         <li>PDFを<b>ダウンロード</b>した</li>
         <li>PDFを <b>Adobe Acrobat で開いた</b>（ブラウザのままにしていない）</li>
+        <li>プリンターに <b>複合機</b> を選んだ</li>
         <li>「<b>実際のサイズ</b>」を選び、用紙 <b>B4</b>・向き <b>横</b> にした</li>
         <li>1ページ目を白紙に刷り、<b>10cm の線を定規で測った</b></li>
         <li>2ページ目以降を協会の用紙に印刷した</li>

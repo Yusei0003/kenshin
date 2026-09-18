@@ -581,15 +581,16 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
     <h2>位置合わせの手順</h2>
     <ol class="hint" style="margin:0;padding-left:22px">
       <li><strong>方眼を重ねた位置合わせ用のPDF</strong>を作ります（下のボタン）。
-          <strong>Acrobat で開き「実際のサイズ」で</strong>実際の用紙に印刷し、ずれを定規で測ります。</li>
+          <strong>Acrobat で開き、複合機で「実際のサイズ」で</strong>実際の用紙に印刷し、ずれを定規で測ります。</li>
       <li>測ったずれを<strong>「全体のずれ補正」</strong>に入力します（右にずらしたいなら横をプラス、下なら縦をプラス）。</li>
       <li>個別の項目だけ合わない場合は、用紙の絵の上で<strong>その項目をドラッグ</strong>します。</li>
       <li>合ったら<strong>「この設定を保存」</strong>を押します。次回以降も同じ位置で印刷されます。</li>
     </ol>
     <div class="note" style="margin-top:12px">
-      <strong>印刷は必ず Adobe Acrobat から行ってください。</strong>
+      <strong>印刷は必ず Adobe Acrobat から、複合機で行ってください。</strong>
       ブラウザでPDFを開いたまま印刷すると倍率が変わり、位置合わせの意味がなくなります。
-      Acrobat の印刷画面で「ページサイズ処理」→<strong>「実際のサイズ」</strong>を選んでください。<br>
+      複合機以外のプリンターでも位置がずれます。
+      Acrobat の印刷画面でプリンターに<strong>複合機</strong>を選び、「ページサイズ処理」→<strong>「実際のサイズ」</strong>を選んでください。<br>
       PDFの1ページ目には<strong>ものさしの入った確認ページ</strong>が付きます。印刷して 10cm の線がちょうど 10cm なら、倍率は正しく出ています。
     </div>
     <div class="row">
@@ -703,7 +704,21 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <div class="howto-step">
         <div class="howto-n">3</div>
         <div class="howto-b">
-          <div class="howto-t">Acrobat の印刷画面で「<u>実際のサイズ</u>」を選ぶ</div>
+          <div class="howto-t">プリンターに <u>複合機</u> を選ぶ</div>
+          <div class="ng-box">
+            <span class="ng-mark">×</span>
+            <div>
+              <strong>複合機以外のプリンターでは位置がずれます。</strong>
+              自分の席のプリンターなどが選ばれたままになっていないか、印刷画面のいちばん上で確かめてください。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="howto-step">
+        <div class="howto-n">4</div>
+        <div class="howto-b">
+          <div class="howto-t">「<u>実際のサイズ</u>」を選ぶ</div>
           <div class="dlg">
             <div class="dlg-cap">Acrobat の印刷画面（ページサイズ処理）</div>
             <div class="dlg-row"><span class="rd"></span>サイズ に合わせる</div>
@@ -715,20 +730,20 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       </div>
 
       <div class="howto-step">
-        <div class="howto-n">4</div>
+        <div class="howto-n">5</div>
         <div class="howto-b">
           <div class="howto-t">用紙サイズ <u id="howtoPaper">B4</u>・向き <u id="howtoOrient">横</u> にする</div>
-          <div class="howto-d">プリンタのトレイにも用紙が入っているか確認してください。</div>
+          <div class="howto-d">複合機のトレイにも用紙が入っているか確認してください。</div>
         </div>
       </div>
 
       <div class="howto-step">
-        <div class="howto-n">5</div>
+        <div class="howto-n">6</div>
         <div class="howto-b">
           <div class="howto-t">まず <u>1ページ目だけ</u> を白紙に印刷して、定規で確かめる</div>
           <div class="howto-d">
             PDFの1ページ目は<strong>ものさしが刷られた確認用のページ</strong>です。印刷して <strong>10cm の線がちょうど 10cm</strong> なら設定は正しく、
-            そのまま2ページ目以降を協会の用紙に印刷できます。長さが違うときは手順3をやり直してください。
+            そのまま2ページ目以降を協会の用紙に印刷できます。長さが違うときは手順3・4をやり直してください。
           </div>
         </div>
       </div>
@@ -799,7 +814,7 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <li><strong>様式レイアウト</strong>　初回のみ、位置合わせ用のPDFを作って協会の用紙に1枚印刷し、位置を確認します。合っていればそのままで構いません。
           位置を動かそうとすると<strong>確認の画面が2回出ます</strong>。ずれて見える原因は印刷のしかたであることが多いためです。</li>
       <li><strong>印刷・出力</strong>　並び順を選んで「受検票のPDFを作成」を押すと、PDFファイルがダウンロードされます。
-          そのPDFを <strong>Adobe Acrobat で開き、「実際のサイズ」を選んで</strong>協会の用紙に印刷してください。</li>
+          そのPDFを <strong>Adobe Acrobat で開き、複合機を選び、「実際のサイズ」で</strong>協会の用紙に印刷してください。</li>
     </ol>
     <div class="info">
       <strong>誰の受検票を印刷するかは、予約状況ファイルだけで決まります。</strong><br>
@@ -893,8 +908,10 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
       <strong>B4 の重ね刷りは、ブラウザから印刷できません。</strong>
       ブラウザに内蔵されたPDFの表示機能から印刷すると、用紙に合わせて自動的に拡大・縮小されてしまい、
       記入欄と印字が合わなくなります。このため、アプリからブラウザで印刷する操作は用意していません。<br>
-      必ず <strong>ダウンロードしたPDFを Adobe Acrobat で開き</strong>、印刷画面の「ページサイズ処理」で
-      <strong>「実際のサイズ」</strong>を選んでください。<br>
+      必ず <strong>ダウンロードしたPDFを Adobe Acrobat で開き</strong>、
+      プリンターに <strong>複合機</strong> を選んだうえで、印刷画面の「ページサイズ処理」で
+      <strong>「実際のサイズ」</strong>を選んでください。
+      <strong>複合機以外のプリンターで印刷すると位置がずれます。</strong><br>
       PDFの1ページ目には<strong>ものさしの入った確認ページ</strong>が付きます。これを白紙に1枚印刷し、
       <strong>10cm の線がちょうど 10cm</strong>であること、<strong>四隅のかぎ印が用紙のふちから 15mm</strong> であることを
       定規で確かめてから、2ページ目以降を協会の用紙に印刷してください。
@@ -908,7 +925,7 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
           <td>協会から届く B4 の用紙</td>
           <td>受検票と電算処理用紙の記入欄に、氏名・所属・生年月日などを重ねて印刷します。1人あたり1枚。<br>
               ボタンを押すと<strong>PDFファイルがダウンロード</strong>されます。位置は「様式レイアウト」画面で調整できます。<br>
-              <strong>必ず Adobe Acrobat で開き、「実際のサイズ」を選んで印刷してください。</strong></td>
+              <strong>必ず Adobe Acrobat で開き、複合機を選び、「実際のサイズ」で印刷してください。</strong></td>
         </tr>
         <tr>
           <td>A4 の自前様式</td>
@@ -3217,7 +3234,8 @@ function lyGuardStep2(){
     + "印刷の設定が正しいことを確かめないまま動かすと、<strong>かえって合わなくなります</strong>。</p>"
     + '<div class="mlist"><strong>確認ページの 10cm の線は、定規でちょうど 10cm でしたか？</strong><br>'
     + "10cm でなかった場合は、レイアウトではなく<strong>印刷の倍率</strong>が原因です。"
-    + "「5. 印刷・出力」に戻り、Adobe Acrobat で<strong>「実際のサイズ」</strong>を選び直してください。</div>";
+    + "「5. 印刷・出力」に戻り、<strong>複合機</strong>を選んだうえで、"
+    + "Adobe Acrobat の<strong>「実際のサイズ」</strong>を選び直してください。</div>";
   $("lyGuardFoot").innerHTML =
       '<button class="btn" id="lyGuardBack">やめる（変更しない）</button>'
     + '<button class="btn primary" id="lyGuardGo">はい、確認しました。変更します</button>';
@@ -3237,12 +3255,13 @@ function openLyGuard(){
       '<p class="mq">本当にレイアウトを変更しますか？</p>'
     + '<p>印刷を <strong>「5. 印刷・出力」の手順</strong> に沿って、もう一度確認してください。<br>'
     + "印字がずれて見える原因は、レイアウトではなく<strong>印刷のしかた</strong>であることがほとんどです。</p>"
-    + '<div class="mlist"><strong>「5. 印刷・出力」の手順 1〜5 は、すべて済んでいますか。</strong><ul>'
+    + '<div class="mlist"><strong>「5. 印刷・出力」の手順 1〜6 は、すべて済んでいますか。</strong><ul>'
     + "<li><span class=\"mstep\">1</span>　受検票のPDFを<strong>ダウンロード</strong>した</li>"
     + "<li><span class=\"mstep\">2</span>　そのPDFを <strong>Adobe Acrobat で開いた</strong>（ブラウザで開いたまま印刷していない）</li>"
-    + "<li><span class=\"mstep\">3</span>　印刷画面で <strong>「実際のサイズ」</strong> を選んだ</li>"
-    + "<li><span class=\"mstep\">4</span>　用紙サイズ <strong>B4</strong>・向き <strong>横</strong> にした</li>"
-    + "<li><span class=\"mstep\">5</span>　1ページ目の確認ページを刷り、<strong>10cm の線がちょうど 10cm</strong> だった</li>"
+    + "<li><span class=\"mstep\">3</span>　プリンターに <strong>複合機</strong> を選んだ（複合機以外では位置がずれます）</li>"
+    + "<li><span class=\"mstep\">4</span>　<strong>「実際のサイズ」</strong> を選んだ</li>"
+    + "<li><span class=\"mstep\">5</span>　用紙サイズ <strong>B4</strong>・向き <strong>横</strong> にした</li>"
+    + "<li><span class=\"mstep\">6</span>　1ページ目の確認ページを刷り、<strong>10cm の線がちょうど 10cm</strong> だった</li>"
     + "</ul></div>"
     + '<p class="hint" style="margin-top:8px">ひとつでも済んでいなければ、先にそちらを確認してください。'
     + "レイアウトを動かす必要はありません。</p>";
@@ -3900,18 +3919,19 @@ function drawCalibPage(g, k, W, H, info){
   g.strokeStyle = "#b03a10"; rect(RX2, BY2, HALF, BH, 0.9);
   g.fillStyle = "#b03a10"; text("長さが違う → 印刷し直し", RX2 + 6, BY2 + 6, 14, "left", true);
   g.fillStyle = "#000000";
-  text("Acrobat の印刷画面 →「ページサイズ処理」で", RX2 + 6, BY2 + 16, 11, "left", false);
+  text("プリンターは複合機。Acrobat の「ページサイズ処理」で", RX2 + 6, BY2 + 16, 11, "left", false);
   text("「実際のサイズ」を選び、もう一度この1枚を印刷。", RX2 + 6, BY2 + 23, 11, "left", false);
   g.strokeStyle = "#000000";
 
   text("② 四隅の かぎ印 が、用紙のふちから 15mm のところにあるか確認してください", RX, 180, 16, "left", true);
-  text("ブラウザから印刷したり「サイズに合わせる」で印刷すると、ここが 15mm になりません。", RX, 191, 11, "left", false);
+  text("ブラウザから印刷したり、複合機以外のプリンターで印刷すると、ここが 15mm になりません。", RX, 191, 11, "left", false);
 
   var HY = 206;
   g.strokeStyle = "#888888"; rect(RX, HY, RL, 34, 0.4); g.strokeStyle = "#000000";
   text("正しい印刷のしかた", RX + 7, HY + 6, 13, "left", true);
-  text("1. このPDFをダウンロードする（ブラウザで開いたまま印刷しない）", RX + 7, HY + 15, 11, "left", false);
-  text("2. Adobe Acrobat で開く　3.「実際のサイズ」を選ぶ　4. 用紙 " + PAGE_LABEL(W, H), RX + 7, HY + 23, 11, "left", false);
+  text("1. このPDFをダウンロードする（ブラウザで開いたまま印刷しない）　2. Adobe Acrobat で開く", RX + 7, HY + 15, 11, "left", false);
+  text("3. プリンターは複合機（複合機以外ではずれます）　4.「実際のサイズ」を選ぶ　5. 用紙 " + PAGE_LABEL(W, H),
+       RX + 7, HY + 23, 11, "left", false);
 
   text(info, W / 2, 248, 11, "center", false);
 }
@@ -4182,7 +4202,7 @@ function makeTicketPdfAndSave(list, kid){
     $("pdfProgress").innerHTML = "保存しました：受検票 " + list.length + "枚"
       + (calib ? "＋確認ページ 1枚" : "") + "（"
       + (mb >= 0.1 ? mb + "MB" : Math.round(blob.size / 1024) + "KB") + "）"
-      + '　<strong style="color:#a8410f">つづけて下の手順2〜5を行ってください。</strong>';
+      + '　<strong style="color:#a8410f">つづけて下の手順2〜6を行ってください。</strong>';
     $("pdfBar").style.width = "100%";
     toast(name + " を保存しました");
     flashHowto();
@@ -4257,7 +4277,7 @@ function bindLayoutTab(){
     makeTestPdf(ly.kid, ctx, grid).then(function(blob){
       downloadBlob(blob, kenshinName(ly.kid) + "_位置合わせ_"
         + pg.name.replace(/[\s\u3000]+/g, "") + "【Acrobatで開き実際のサイズで印刷】.pdf");
-      toast("位置合わせ用のPDFを保存しました。Acrobatで開き「実際のサイズ」で印刷してください。");
+      toast("位置合わせ用のPDFを保存しました。Acrobatで開き、複合機で「実際のサイズ」で印刷してください。");
     }).catch(function(err){
       toast("PDFを作成できませんでした: " + err.message, true);
     }).then(function(){
