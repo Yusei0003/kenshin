@@ -11,95 +11,104 @@
    - このファイル1つで完結します。ブラウザで開くだけで動作します。
    ========================================================================= */
 
+/* 配色：検診・医療の現場になじむ、清潔感のあるティール */
 :root{
-  --bg:#f5f6f8;
+  --bg:#f4f8f9;
   --panel:#ffffff;
-  --line:#d3d8de;
-  --line-strong:#9aa4b0;
-  --text:#1d2733;
-  --text-sub:#5b6572;
-  --accent:#1a5fa8;
-  --accent-bg:#e8f0f9;
-  --warn:#a8410f;
-  --warn-bg:#fdf1e8;
-  --ok:#1c6b45;
+  --line:#d8e5e8;
+  --line-strong:#a3bcc2;
+  --text:#1f2e33;
+  --text-sub:#5a7078;
+  --accent:#0f7b8a;
+  --accent-bg:#e3f2f4;
+  --warn:#b8501f;
+  --warn-bg:#fdf1ea;
+  --ok:#1c7a58;
 }
 
 *{box-sizing:border-box}
 body{
   margin:0;
-  font-family:"Meiryo","Yu Gothic","MS PGothic",sans-serif;
+  /* BIZ UDPGothic は Windows 標準のユニバーサルデザインフォントです（未導入の端末ではメイリオになります） */
+  font-family:"BIZ UDPGothic","Meiryo","Yu Gothic","MS PGothic",sans-serif;
   font-size:14px;
   color:var(--text);
   background:var(--bg);
-  line-height:1.6;
+  line-height:1.7;
 }
-h1{font-size:18px;margin:0}
-h2{font-size:16px;margin:0 0 12px;padding-bottom:6px;border-bottom:2px solid var(--accent)}
+h1{font-size:19px;margin:0;color:var(--accent);letter-spacing:.05em}
+h2{font-size:15px;margin:0 0 12px;padding-bottom:8px;letter-spacing:.06em;border-bottom:1px solid var(--line)}
 h3{font-size:14px;margin:16px 0 8px}
 
 /* ---------- ヘッダ / タブ ---------- */
 header{
-  background:var(--accent);
-  color:#fff;
-  padding:10px 16px;
+  position:relative;
+  background:var(--panel);
+  color:var(--text);
+  border-bottom:1px solid var(--line);
+  padding:14px 22px;
   display:flex;
   align-items:baseline;
   gap:16px;
   flex-wrap:wrap;
 }
-header .sub{font-size:12px;opacity:.85}
+header::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--accent)}
+header .sub{font-size:12px;color:var(--text-sub)}
 
 nav{
   display:flex;
-  background:var(--panel);
+  background:var(--bg);
   border-bottom:1px solid var(--line);
+  padding:10px 14px;
   overflow-x:auto;
 }
 nav button{
   flex:0 0 auto;
-  padding:10px 18px;
-  border:0;
-  border-bottom:3px solid transparent;
-  background:transparent;
+  padding:9px 20px;
+  border:1px solid var(--line);
+  border-right:none;
+  background:var(--panel);
   font:inherit;
   color:var(--text-sub);
   cursor:pointer;
   white-space:nowrap;
 }
+nav button:first-child{border-radius:6px 0 0 6px}
+nav button:last-child{border-radius:0 6px 6px 0;border-right:1px solid var(--line)}
 nav button:hover{background:var(--accent-bg)}
-nav button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:bold}
+nav button.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:bold}
 
-main{padding:16px;max-width:1180px;margin:0 auto}
+main{padding:20px 16px;max-width:1180px;margin:0 auto}
 section.page{display:none}
 section.page.active{display:block}
 
 .panel{
   background:var(--panel);
   border:1px solid var(--line);
-  border-radius:4px;
-  padding:16px;
+  border-radius:6px;
+  padding:20px 22px;
   margin-bottom:16px;
+  box-shadow:0 1px 2px rgba(31,46,51,.05);
 }
 
 /* ---------- 部品 ---------- */
 button.btn{
-  padding:7px 14px;
+  padding:8px 16px;
   border:1px solid var(--line-strong);
-  border-radius:3px;
+  border-radius:5px;
   background:#fff;
   font:inherit;
   cursor:pointer;
 }
-button.btn:hover{background:#eef2f6}
+button.btn:hover{background:var(--accent-bg);border-color:var(--accent)}
 button.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-button.btn.primary:hover{background:#14477d}
+button.btn.primary:hover{background:#0b5f6b}
 button.btn:disabled{opacity:.45;cursor:not-allowed}
 
 input[type=text],input[type=number],input[type=date],input[type=time],select{
-  padding:5px 7px;
+  padding:7px 10px;
   border:1px solid var(--line-strong);
-  border-radius:3px;
+  border-radius:5px;
   font:inherit;
   background:#fff;
 }
@@ -110,7 +119,8 @@ label{cursor:pointer}
 .note{
   background:var(--warn-bg);
   border-left:4px solid var(--warn);
-  padding:10px 12px;
+  border-radius:0 5px 5px 0;
+  padding:11px 14px;
   font-size:13px;
   margin:12px 0;
 }
@@ -118,14 +128,15 @@ label{cursor:pointer}
 .info{
   background:var(--accent-bg);
   border-left:4px solid var(--accent);
-  padding:10px 12px;
+  border-radius:0 5px 5px 0;
+  padding:11px 14px;
   font-size:13px;
   margin:12px 0;
 }
 .badge{
   display:inline-block;
   padding:1px 8px;
-  border-radius:10px;
+  border-radius:3px;
   background:var(--accent-bg);
   color:var(--accent);
   font-size:12px;
@@ -134,9 +145,9 @@ label{cursor:pointer}
 
 table.grid{border-collapse:collapse;width:100%;font-size:13px;background:#fff}
 table.grid th,table.grid td{border:1px solid var(--line);padding:5px 8px;text-align:left}
-table.grid th{background:#eef2f6;font-weight:bold;white-space:nowrap}
+table.grid th{background:#eaf3f4;font-weight:bold;white-space:nowrap;letter-spacing:.03em}
 table.grid td.num{text-align:right;font-variant-numeric:tabular-nums}
-table.grid tbody tr:nth-child(even){background:#fafbfc}
+table.grid tbody tr:nth-child(even){background:#f8fbfb}
 
 .scroll{max-height:460px;overflow:auto;border:1px solid var(--line)}
 .scroll table.grid{border:0}
@@ -144,10 +155,11 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
 
 .kenshin-card{
   border:1px solid var(--line);
-  border-radius:4px;
-  padding:12px 14px;
+  border-left:4px solid var(--accent);
+  border-radius:6px;
+  padding:14px 16px;
   margin-bottom:12px;
-  background:#fcfdfe;
+  background:#fbfdfd;
 }
 .kenshin-card > .title{font-weight:bold;color:var(--accent);margin-bottom:8px}
 
@@ -157,19 +169,20 @@ table.grid tbody tr:nth-child(even){background:#fafbfc}
   padding:28px;
   text-align:center;
   color:var(--text-sub);
-  background:#fafbfc;
+  background:#f8fbfb;
 }
 .filedrop.over{border-color:var(--accent);background:var(--accent-bg)}
 
-.stat{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0}
+.stat{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
 .stat > div{
   border:1px solid var(--line);
-  border-radius:4px;
-  padding:8px 16px;
+  border-top:3px solid var(--accent);
+  border-radius:6px;
+  padding:10px 18px;
   background:#fff;
   min-width:120px;
 }
-.stat .n{font-size:22px;font-weight:bold;color:var(--accent);font-variant-numeric:tabular-nums}
+.stat .n{font-size:24px;font-weight:bold;color:var(--accent);font-variant-numeric:tabular-nums}
 .stat .l{font-size:12px;color:var(--text-sub)}
 
 /* ---------- 印刷領域（画面では非表示） ---------- */
