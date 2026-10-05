@@ -386,6 +386,29 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
 .lybar.lock .lybar-t{background:var(--warn)}
 .lybar.open{border-color:var(--ok);background:#eef7f2}
 .lybar.open .lybar-t{background:var(--ok)}
+
+/* ===== 年度の取り違え防止 ===== */
+.fybadge{margin-left:auto;align-self:center;font-weight:bold;font-size:14px;padding:4px 12px;
+  border-radius:4px;background:var(--accent-bg);color:var(--accent);border:1px solid #b9dadf;white-space:nowrap}
+.fybadge.old{background:var(--warn);color:#fff;border-color:var(--warn)}
+.fyalert{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0 0;padding:10px 14px;
+  border:2px solid var(--warn);border-radius:6px;background:var(--warn-bg)}
+.fyalert b{color:var(--warn)}
+.mq em{font-style:normal;color:var(--warn)}
+.fyfacts{margin:10px 0;padding:10px 14px;background:#f6f9fa;border:1px solid var(--line);border-radius:5px}
+.fyfacts td{padding:2px 14px 2px 0}
+
+/* ===== 名簿の読み直し：前回との違い ===== */
+.rdiff{border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin:0 0 14px;background:#fbfdfd}
+.rdiff h3{margin:0 0 8px;font-size:15px}
+.rdiff .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.rdiff .chip{border:1px solid var(--line);border-radius:4px;padding:3px 10px;background:#fff;font-size:13px}
+.rdiff .chip b{font-size:15px;color:var(--accent)}
+.rdiff .chip.bad{border-color:var(--warn);background:var(--warn-bg)}
+.rdiff .chip.bad b{color:var(--warn)}
+.rdiff table.grid{margin-top:4px}
+.rdiff details{margin-top:8px}
+.rdiff summary{cursor:pointer;font-weight:bold;font-size:13px;color:var(--text-sub)}
 </style>
 </head>
 <body>
@@ -393,6 +416,7 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
 <header>
   <h1>職員検診　受検票作成システム</h1>
   <span class="sub">胃がん／乳がん／子宮頸がん／生活習慣病健診　― 外部通信なし・単一ファイル動作</span>
+  <span id="fyBadge" class="fybadge"></span>
 </header>
 
 <nav>
@@ -421,6 +445,7 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
       <span class="hint">画面・受検票・CSVの年齢は、すべてこの日の満年齢です（既定は年度末＝翌年3月31日）。
         誕生日の前日に年を取る数え方なので、4月1日生まれの人も年度末の年齢に含まれます。</span>
     </div>
+    <div id="fyAlert" class="fyalert" style="display:none"></div>
 
     <div class="info" style="margin-top:14px">
       <strong>名簿ファイルの作り方</strong>　人事システムの画面左上で <strong>「在職」「写真無」「詳細」</strong> を選んで検索し、
@@ -483,6 +508,7 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
 
   <div class="panel" id="loadedPanel" style="display:none">
     <h2>読込結果</h2>
+    <div id="rosterDiff"></div>
     <div class="stat" id="loadStat"></div>
     <div id="loadErrors"></div>
     <div class="scroll"><table class="grid" id="loadedTable"></table></div>
@@ -881,11 +907,25 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
     </table>
     <div class="note">
       検診の情報は要配慮個人情報にあたります。<strong>共用のパソコンでは使わないでください。</strong>
-      年度の作業が終わったら「保存データを消去」を押してください。<br>
+      年度の作業が終わったら「保存データを消去」を押してください（対象年度も今年度に戻ります）。<br>
       保存先はこのパソコンのブラウザ内だけで、外部へ送信されることはありません。
       ただし、ブラウザの閲覧データを消去すると保存内容も消えます。
       元のExcelファイルは別に保管しておいてください。
     </div>
+  </div>
+
+  <div class="panel">
+    <h2>名簿の取り直しと、年度が替わったとき</h2>
+    <p><strong>検診ごとに、受検票を作る直前に名簿を取り直して読み込んでください。</strong>
+      予約状況と手動の除外はそのまま残ります。受検票はその時点の所属・氏名で印刷されます。
+      読み込むと「前回の名簿との違い」（追加・いなくなった人・所属や氏名の変更）が出ます。
+      <strong>予約のある人が名簿からいなくなったときは赤枠で出ます</strong>（その人の受検票は印刷されません）。</p>
+    <p><strong>年度が替わると、パソコンの日付から自動で気づきます。</strong>
+      前年度のデータが残ったまま開いたとき、名簿や予約状況を読み込もうとしたときに確認の画面が出ます。
+      「今年度の作業を始める」を押すと前年度のデータを消し、今年度（年齢は今年度末現在）で始められます。
+      画面右上には、いま作業している年度が常に表示されます（前年度のときは赤）。</p>
+  </div>
+
   <div class="panel">
     <h2>運用上の注意</h2>
     <div class="note">
@@ -981,6 +1021,13 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
     <div class="mhead" id="lyGuardHead"></div>
     <div class="mbody" id="lyGuardBody"></div>
     <div class="mfoot" id="lyGuardFoot"></div>
+  </div>
+</div>
+<div class="mbg" id="fyGuard" style="display:none">
+  <div class="mbox">
+    <div class="mhead" id="fyGuardHead"></div>
+    <div class="mbody" id="fyGuardBody"></div>
+    <div class="mfoot" id="fyGuardFoot"></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -1644,14 +1691,120 @@ Array.prototype.forEach.call(document.querySelectorAll("nav .tab"), function(b){
   b.addEventListener("click", function(){ showPage(b.dataset.page); });
 });
 
+
+/* =========================================================================
+   年度の取り違え防止
+   前年度のデータが残ったまま新しい名簿を読み込むと、年齢が前年度末で数えられ
+   全員1歳若く印刷されてしまうため、年度が替わっていたら止めて確かめます。
+   ========================================================================= */
+function currentFY(){ var n = new Date(); return n.getMonth() + 1 >= 4 ? n.getFullYear() : n.getFullYear() - 1; }
+var fyAck = false;              // 「前年度のまま続ける」を選んだら、開いている間は聞き直しません
+
+function setFiscalYear(fy){
+  state.fiscalYear = fy;
+  state.baseDate = new Date(fy + 1, 2, 31);
+  $("fiscalYear").value = fy;
+  $("baseDate").value = isoOf(state.baseDate);
+  renderFyBadge();
+}
+
+function renderFyBadge(){
+  var cur = currentFY(), old = state.fiscalYear < cur;
+  $("fyBadge").textContent = "対象 " + state.fiscalYear + "年度" + (old ? "（前年度）" : "");
+  $("fyBadge").className = "fybadge" + (old ? " old" : "");
+  var a = $("fyAlert");
+  if(old){
+    a.style.display = "";
+    a.innerHTML = "<div><b>対象年度が " + state.fiscalYear + "年度のままです。今日は " + cur + "年度です。</b><br>"
+      + "このまま今年度の名簿を読み込むと、年齢が前年度末で数えられ、<b>全員1歳若く印刷されます</b>。</div>"
+      + '<button class="btn primary" id="fyAlertGo">' + cur + "年度の作業を始める</button>";
+    $("fyAlertGo").onclick = function(){ openFyGuard("open", null); };
+  }else{
+    a.style.display = "none";
+  }
+}
+
+function fyFacts(){
+  var ks = KENSHIN.filter(function(k){ return state.nyuryoku[k.id]; }).map(function(k){ return k.name; });
+  return '<table class="fyfacts"><tr><td>保存されているデータ</td><td><b>' + state.fiscalYear + "年度</b></td></tr>"
+    + "<tr><td>職員名簿</td><td>" + state.employees.length + "名</td></tr>"
+    + "<tr><td>予約状況</td><td>" + (ks.length ? esc(ks.join("・")) : "なし") + "</td></tr>"
+    + "<tr><td>今日の年度</td><td><b>" + currentFY() + "年度</b></td></tr></table>";
+}
+
+function closeFyGuard(){ $("fyGuard").style.display = "none"; }
+
+function startNewYear(){
+  clearData();
+  setFiscalYear(currentFY());
+  fyAck = false;
+}
+
+/* kind: "open"＝開いたとき／"roster"＝名簿を読み込もうとしたとき／"nyu"＝予約状況を取り込もうとしたとき */
+function openFyGuard(kind, proceed){
+  var cur = currentFY(), old = state.fiscalYear;
+  var head, q, body, foot;
+  if(kind === "roster"){
+    head = "確認　対象年度が前年度のままです";
+    q = "このファイルを <em>" + cur + "年度</em> の名簿として読み込みますか？";
+    body = "<p>対象年度が <b>" + old + "年度</b> のままです。このまま読み込むと、年齢が " + (old + 1) + "年3月31日 現在で数えられ、"
+      + "<b>全員1歳若く印刷されます</b>。</p>"
+      + "<p>切り替えると、" + old + "年度の名簿・予約状況・手動の除外は消去し、選んだファイルを " + cur + "年度の名簿として読み込みます。</p>";
+    foot = '<button class="btn" id="fyCancel">やめる</button>'
+      + '<button class="btn" id="fyKeep">' + old + "年度のまま読み込む</button>"
+      + '<button class="btn primary" id="fyNew">' + cur + "年度に切り替えて読み込む</button>";
+  }else if(kind === "nyu"){
+    head = "確認　対象年度が前年度のままです";
+    q = "先に " + cur + "年度の名簿を読み込んでください。";
+    body = "<p>対象年度が <b>" + old + "年度</b> のままで、名簿も " + old + "年度のものです。"
+      + "今年度の予約状況を前年度の名簿と突き合わせると、異動・退職者の分がずれます。</p>"
+      + "<p>「" + cur + "年度の作業を始める」を押すと前年度のデータを消去します。そのあと名簿から読み込み直してください。</p>";
+    foot = '<button class="btn" id="fyCancel">やめる</button>'
+      + '<button class="btn" id="fyKeep">' + old + "年度のまま取り込む</button>"
+      + '<button class="btn primary" id="fyNew">' + cur + "年度の作業を始める</button>";
+  }else{
+    head = "年度が替わっています";
+    q = "<em>" + cur + "年度</em> の受検票を作りますか？";
+    body = fyFacts()
+      + "<p>今年度の受検票を作るときは、前年度のデータを消してから始めてください。"
+      + "前年度のまま今年度の名簿を読み込むと、年齢が前年度末で数えられ、<b>全員1歳若く印刷されます</b>。</p>";
+    foot = '<button class="btn" id="fyKeep">' + old + "年度の作業を続ける</button>"
+      + '<button class="btn primary" id="fyNew">' + cur + "年度の作業を始める（前年度のデータを消去）</button>";
+  }
+  $("fyGuardHead").textContent = head;
+  $("fyGuardBody").innerHTML = '<p class="mq">' + q + "</p>" + body;
+  $("fyGuardFoot").innerHTML = foot;
+  if($("fyCancel")) $("fyCancel").onclick = closeFyGuard;
+  $("fyKeep").onclick = function(){ fyAck = true; closeFyGuard(); renderFyBadge(); if(proceed) proceed(); };
+  $("fyNew").onclick = function(){
+    closeFyGuard();
+    startNewYear();
+    if(kind === "roster" && proceed) proceed();
+    else toast(cur + "年度の作業を始めました。名簿から読み込んでください。");
+  };
+  $("fyGuard").style.display = "flex";
+}
+
+/* 取り込みの前に年度を確かめる */
+function fyCheckThen(kind, proceed){
+  var cur = currentFY();
+  if(fyAck || state.fiscalYear >= cur){ proceed(); return; }
+  if(!state.employees.length && !Object.keys(state.nyuSrc).length){
+    setFiscalYear(cur);                 // 前年度のデータが何も残っていなければ、黙って今年度にします
+    proceed(); return;
+  }
+  openFyGuard(kind, proceed);
+}
+
 /* =========================================================================
    4. 名簿の読込
    ========================================================================= */
 
 $("btnPickFile").addEventListener("click", function(){ $("fileInput").click(); });
 $("fileInput").addEventListener("change", function(e){
-  if(e.target.files && e.target.files[0]) readRosterFile(e.target.files[0]);
+  var f = e.target.files && e.target.files[0];
   e.target.value = "";
+  if(f) fyCheckThen("roster", function(){ readRosterFile(f); });
 });
 
 var drop = $("drop");
@@ -1662,7 +1815,8 @@ var drop = $("drop");
   drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove("over"); });
 });
 drop.addEventListener("drop", function(e){
-  if(e.dataTransfer.files && e.dataTransfer.files[0]) readRosterFile(e.dataTransfer.files[0]);
+  var f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) fyCheckThen("roster", function(){ readRosterFile(f); });
 });
 
 /* Excel / CSV を読み、シート配列 [{name, rows}] にそろえて返す */
@@ -1842,6 +1996,7 @@ function cell(row, key){
 
 function buildEmployees(){
   readHeaderSettings();
+  var prevEmployees = state.employees.slice();     // 読み直しのときの比べる相手
   state.employees = [];
   state.loadErrors = [];
   state.inactive = [];
@@ -1890,12 +2045,18 @@ function buildEmployees(){
   });
 
   if(state.pending) state.rosterLabel = state.pending.label || "";
+  var diff = prevEmployees.length ? rosterDiff(prevEmployees, state.employees) : null;
+  refreshNotInRoster(diff ? diff.goneMap : null);
   computeTargets();
   renderLoaded();
+  renderRosterDiff(diff);
   renderDeptFilter();
+  renderNyuCards();
   saveData();
+  var changed = diff ? diff.added.length + diff.gone.length + diff.moved.length + diff.renamed.length : 0;
   toast("取込完了：" + state.employees.length + "名"
-    + (state.loadErrors.length ? "（" + state.loadErrors.length + "件のエラーを除外）" : ""));
+    + (state.loadErrors.length ? "（" + state.loadErrors.length + "件のエラーを除外）" : "")
+    + (changed ? "　前回の名簿との違いを確認してください" : ""));
 }
 
 function renderLoaded(){
@@ -2174,6 +2335,18 @@ function nyuLookup(ny, empNo){
 }
 
 /* 取込元から検診ごとの一覧を組み立て直す */
+/* 印刷する入力（空欄・印刷不要の文言以外）を、名簿にいる人といない人に分けて数える */
+function printSplit(map){
+  var known = {}, r = { inRoster:0, missing:0 };
+  state.employees.forEach(function(e){ known[empKey(e.empNo)] = 1; known[empKeyLoose(e.empNo)] = 1; });
+  Object.keys(map).forEach(function(no){
+    var k = map[no].kind;
+    if(k === "skip" || k === "blank") return;
+    if(known[no] || known[empKeyLoose(no)]) r.inRoster++; else r.missing++;
+  });
+  return r;
+}
+
 function countOf(map){
   var c = { total:0, print:0, skip:0, blank:0, unknown:0, lines:0 };
   Object.keys(map).forEach(function(no){
@@ -2289,10 +2462,11 @@ function renderNyuCard(sid){
   }
 
   if(s){
-    var cn = countOf(s.map);
+    var cn = countOf(s.map), pr = printSplit(s.map);
     h += '<div class="stat" style="margin-top:10px">'
        + statBox(cn.total, "ファイル掲載（実人数）")
-       + statBox(cn.print, "受検票を印刷")
+       + statBox(pr.inRoster, "受検票を印刷")
+       + (pr.missing ? statBox(pr.missing, "名簿にいない（印刷されない）") : "")
        + statBox(cn.skip, "印刷しない（該当文言）")
        + statBox(cn.blank, "印刷しない（空欄）")
        + "</div>";
@@ -2300,7 +2474,7 @@ function renderNyuCard(sid){
     if(src.kenshin.length > 1){
       h += '<div class="stat">' + src.kenshin.map(function(kid){
         var ny = state.nyuryoku[kid];
-        return statBox(ny ? ny.counts.print : 0, kenshinName(kid) + "へ");
+        return statBox(ny ? printSplit(ny.map).inRoster : 0, kenshinName(kid) + "へ");
       }).join("") + "</div>";
     }
     h += '<div class="hint">読込元：' + esc(s.label) + "（データ " + (s.lines || cn.total) + "行）</div>";
@@ -2419,7 +2593,7 @@ function bindNyuCards(){
       var f = e.target.files && e.target.files[0];
       e.target.value = "";
       if(!f) return;
-      readTableFile(f).then(function(sheets){
+      fyCheckThen("nyu", function(){ readTableFile(f).then(function(sheets){
         var pn = { label:f.name, sheets:sheets, sheetIndex:guessSheetIndex(sheets),
                    headerRow:0, colEmp:0, colInput:-1, colPlace:-1 };
         pn.headerRow = guessHeaderRow(sheets[pn.sheetIndex].rows);
@@ -2429,7 +2603,7 @@ function bindNyuCards(){
         toast(f.name + " を読み込みました。列の指定を確認して「取り込む」を押してください。");
       }).catch(function(err){
         toast("ファイルを読み込めませんでした: " + err.message, true);
-      });
+      }); });
     });
   });
 }
@@ -2457,6 +2631,112 @@ function guessNyuColumns(pn){
   pn.colEmp   = e >= 0 ? e : 0;
   pn.colInput = v >= 0 ? v : (hdr.length - 1);
   pn.colPlace = p;
+}
+
+/* 予約状況の職員番号のうち、いまの名簿にいない人
+   gone には、名簿を読み直したときに前回の名簿から消えた人を渡します（理由の表示に使います）。 */
+function findNotInRoster(map, gone){
+  var known = {}, inactive = {};
+  state.employees.forEach(function(e){ known[empKey(e.empNo)] = 1; known[empKeyLoose(e.empNo)] = 1; });
+  state.inactive.forEach(function(x){ inactive[empKey(x.empNo)] = x; inactive[empKeyLoose(x.empNo)] = x; });
+  var out = [];
+  Object.keys(map).forEach(function(no){
+    if(known[no] || known[empKeyLoose(no)]) return;
+    var ia = inactive[no] || inactive[empKeyLoose(no)];
+    var g = gone && (gone[no] || gone[empKeyLoose(no)]);
+    out.push({ empNo:no, raw:map[no].raw,
+      why: ia ? "「在職」欄が " + ia.value + " のため名簿から除外されています"
+         : g  ? "今回の名簿にいません（前回の名簿では " + g.name + "・" + g.deptName + "）。退職・休職・職員番号の変更をご確認ください"
+              : "名簿に該当する職員番号がありません" });
+  });
+  return out;
+}
+
+/* 名簿を読み直したら、取り込み済みの予約状況を新しい名簿と突き合わせ直す */
+function refreshNotInRoster(gone){
+  NYU_SOURCES.forEach(function(src){
+    var s = state.nyuSrc[src.id];
+    if(s && s.map) s.notInRoster = findNotInRoster(s.map, gone);
+  });
+  rebuildNyuryoku();
+}
+
+/* その人の受検票を刷る予定の検診（入力欄が空欄・印刷不要の文言でないもの） */
+function reservedKenshin(empNo){
+  return KENSHIN.filter(function(k){
+    var ny = state.nyuryoku[k.id];
+    if(!ny) return false;
+    var r = ny.map[empKey(empNo)] || ny.loose[empKeyLoose(empNo)];
+    return r && r.kind !== "skip" && r.kind !== "blank";
+  }).map(function(k){ return k.name; });
+}
+
+/* 前回の名簿と今回の名簿の違い */
+function rosterDiff(prev, cur){
+  var P = {}, C = {}, d = { prevCount:prev.length, added:[], gone:[], moved:[], renamed:[], goneMap:{} };
+  prev.forEach(function(e){ P[empKey(e.empNo)] = e; });
+  cur.forEach(function(e){ C[empKey(e.empNo)] = e; });
+  cur.forEach(function(e){
+    var p = P[empKey(e.empNo)];
+    if(!p){ d.added.push(e); return; }
+    if(p.deptCode !== e.deptCode || p.deptName !== e.deptName) d.moved.push({ e:e, p:p });
+    if(p.name !== e.name) d.renamed.push({ e:e, p:p });
+  });
+  prev.forEach(function(p){
+    if(C[empKey(p.empNo)]) return;
+    d.gone.push(p);
+    d.goneMap[empKey(p.empNo)] = p;
+    d.goneMap[empKeyLoose(p.empNo)] = p;
+  });
+  return d;
+}
+
+function renderRosterDiff(d){
+  var box = $("rosterDiff");
+  if(!box) return;
+  if(!d){ box.innerHTML = ""; return; }
+  var n = d.added.length + d.gone.length + d.moved.length + d.renamed.length;
+  if(!n){
+    box.innerHTML = '<div class="rdiff"><h3>前回の名簿（' + d.prevCount + "名）との違い</h3>"
+      + '<span class="hint">違いはありませんでした。予約状況と手動の除外はそのまま引き継いでいます。</span></div>';
+    return;
+  }
+  var goneRes = d.gone.map(function(p){ return { p:p, ks:reservedKenshin(p.empNo) }; });
+  var bad = goneRes.filter(function(x){ return x.ks.length; });
+  function chip(num, label, isBad){ return '<span class="chip' + (isBad ? " bad" : "") + '"><b>' + num + "</b> 名　" + label + "</span>"; }
+
+  var h = '<div class="rdiff"><h3>前回の名簿（' + d.prevCount + "名）との違い</h3>"
+    + '<div class="chips">'
+    + chip(d.added.length, "追加") + chip(d.gone.length, "いなくなった" + (bad.length ? "（うち予約あり " + bad.length + " 名）" : ""), bad.length > 0)
+    + chip(d.moved.length, "所属の変更") + chip(d.renamed.length, "氏名の変更")
+    + "</div>";
+
+  if(bad.length){
+    h += '<div class="note" style="margin:6px 0"><strong>予約のある人が名簿からいなくなりました。この人たちの受検票は印刷されません。</strong><br>'
+      + "退職・休職であればこのままで構いません。職員番号が変わっただけの場合は、人事システムで確かめてください。"
+      + '<table class="grid" style="margin-top:6px"><thead><tr><th>職員番号</th><th>氏名</th><th>前回の所属</th><th>予約している検診</th></tr></thead><tbody>'
+      + bad.map(function(x){ return "<tr><td>" + esc(x.p.empNo) + "</td><td>" + esc(x.p.name) + "</td><td>" + esc(x.p.deptName)
+          + "</td><td>" + esc(x.ks.join("・")) + "</td></tr>"; }).join("")
+      + "</tbody></table></div>";
+  }
+  function table(title, head, rows){
+    if(!rows.length) return "";
+    return "<details" + (rows.length <= 10 ? " open" : "") + "><summary>" + title + "（" + rows.length + "名）</summary>"
+      + '<table class="grid"><thead><tr>' + head.map(function(x){ return "<th>" + x + "</th>"; }).join("") + "</tr></thead><tbody>"
+      + rows.map(function(r){ return "<tr>" + r.map(function(c){ return "<td>" + esc(c) + "</td>"; }).join("") + "</tr>"; }).join("")
+      + "</tbody></table></details>";
+  }
+  h += table("所属が変わった人", ["職員番号","氏名","前回の所属","今回の所属","予約している検診"],
+         d.moved.map(function(x){ return [x.e.empNo, x.e.name, x.p.deptName, x.e.deptName, reservedKenshin(x.e.empNo).join("・") || "－"]; }));
+  h += table("氏名が変わった人", ["職員番号","前回の氏名","今回の氏名"],
+         d.renamed.map(function(x){ return [x.e.empNo, x.p.name, x.e.name]; }));
+  h += table("追加された人", ["職員番号","氏名","所属"],
+         d.added.map(function(e){ return [e.empNo, e.name, e.deptName]; }));
+  var plain = goneRes.filter(function(x){ return !x.ks.length; });
+  h += table("いなくなった人（予約なし）", ["職員番号","氏名","前回の所属"],
+         plain.map(function(x){ return [x.p.empNo, x.p.name, x.p.deptName]; }));
+  h += '<p class="hint" style="margin:8px 0 0">予約状況と手動の除外はそのまま引き継いでいます。受検票は今回の名簿の所属・氏名で印刷されます。</p></div>';
+  box.innerHTML = h;
 }
 
 function importNyuryoku(sid){
@@ -2492,16 +2772,7 @@ function importNyuryoku(sid){
     map[no] = rec;
   });
 
-  var known = {}, inactive = {};
-  state.employees.forEach(function(e){ known[empKey(e.empNo)] = 1; known[empKeyLoose(e.empNo)] = 1; });
-  state.inactive.forEach(function(x){ inactive[empKey(x.empNo)] = x; inactive[empKeyLoose(x.empNo)] = x; });
-  var notInRoster = [];
-  Object.keys(map).forEach(function(no){
-    if(known[no] || known[empKeyLoose(no)]) return;
-    var ia = inactive[no] || inactive[empKeyLoose(no)];
-    notInRoster.push({ empNo:no, raw:map[no].raw,
-      why: ia ? "「在職」欄が " + ia.value + " のため名簿から除外されています" : "名簿に該当する職員番号がありません" });
-  });
+  var notInRoster = findNotInRoster(map, null);
 
   state.nyuSrc[sid] = { label:pn.label, place:opt.place || "", raw:rawMap, map:map,
                         dup:dup, notInRoster:notInRoster, lines:lines };
@@ -2683,7 +2954,10 @@ function loadData(){
 }
 
 function clearData(){
+  if($("rosterDiff")) $("rosterDiff").innerHTML = "";
   try{ localStorage.removeItem(LS_DATA); }catch(err){ /* 消せなくても画面上は初期化します */ }
+  setFiscalYear(currentFY());            // 消したら今年度から始めます
+  fyAck = false;
   state.employees = [];
   state.loadErrors = [];
   state.inactive = [];
@@ -4491,6 +4765,8 @@ $("btnSample").addEventListener("click", function(){
 
   $("fiscalYear").addEventListener("change", function(){
     state.fiscalYear = parseInt($("fiscalYear").value, 10);
+    fyAck = state.fiscalYear < currentFY();   // 自分で前年度を選んだときは、確認画面を出しません
+    setTimeout(renderFyBadge, 0);
     $("baseDate").value = (state.fiscalYear + 1) + "-03-31";
     state.baseDate = new Date(state.fiscalYear + 1, 2, 31);
     if(state.employees.length){
@@ -4573,6 +4849,8 @@ $("btnSample").addEventListener("click", function(){
   }
   renderSaveInfo();
   renderTargets();
+  renderFyBadge();
+  if(restored && state.fiscalYear < currentFY()) setTimeout(function(){ openFyGuard("open", null); }, 400);
   syncNotes();
   renderSkipPhrases();
   bindSkipPhrases();
