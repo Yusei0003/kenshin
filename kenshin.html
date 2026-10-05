@@ -418,7 +418,8 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
       <label>年齢の基準日
         <input type="date" id="baseDate">
       </label>
-      <span class="hint">基準日時点の満年齢で対象者を判定します（通常は年度末＝翌年3月31日）。</span>
+      <span class="hint">画面・受検票・CSVの年齢は、すべてこの日の満年齢です（既定は年度末＝翌年3月31日）。
+        誕生日の前日に年を取る数え方なので、4月1日生まれの人も年度末の年齢に含まれます。</span>
     </div>
 
     <div class="info" style="margin-top:14px">
@@ -1596,11 +1597,17 @@ function fmtDateWithDow(iso){
   return (d.getMonth()+1) + "月" + d.getDate() + "日（" + dow + "）";
 }
 
+/* 満年齢
+   年齢は誕生日の前日が終わる時点で1つ加わる、という数え方にしています
+   （国の法律「年齢計算ニ関スル法律」と民法第143条による考え方）。
+   このため「3月31日現在」の年齢は、4月1日生まれの人も年を取った後の年齢になり、
+   翌日（4月1日）時点で単純に数えた年齢と同じになります。 */
 function ageAt(birth, base){
   if(!birth || !base) return null;
-  var a = base.getFullYear() - birth.getFullYear();
-  var m = base.getMonth() - birth.getMonth();
-  if(m < 0 || (m === 0 && base.getDate() < birth.getDate())) a--;
+  var d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + 1);
+  var a = d.getFullYear() - birth.getFullYear();
+  var m = d.getMonth() - birth.getMonth();
+  if(m < 0 || (m === 0 && d.getDate() < birth.getDate())) a--;
   return a;
 }
 
@@ -2977,31 +2984,6 @@ function warekiYear(y){
   return w.gengo + w.year;
 }
 
-/* 年齢の基準日 */
-function ageFor(emp, basis, assign){
-  if(!emp.birth) return null;
-  var fy = state.fiscalYear;
-  var d;
-  if(basis === "exam" && assign && assign.date){
-    var p = assign.date.split("-");
-    d = new Date(+p[0], +p[1] - 1, +p[2]);
-  }else if(basis === "fyEnd"){
-    d = new Date(fy + 1, 2, 31);
-  }else if(basis === "base"){
-    d = state.baseDate;
-  }else{
-    d = new Date(fy, 3, 1);                      // 年度初日（4月1日）現在
-  }
-  return ageAt(emp.birth, d);
-}
-
-var AGE_BASIS = [
-  ["fyStart", "年度初日（4月1日）現在"],
-  ["fyEnd",   "年度末（3月31日）現在"],
-  ["exam",    "受診日現在"],
-  ["base",    "「名簿の読込」で指定した基準日現在"]
-];
-
 /* --- 初期レイアウト（現行の印刷物から実測） --- */
 /* ○囲み。x,y は円の中心。フォントに依存しないよう図形として描きます。 */
 function E(label, cx, cy, w, h, showIf){
@@ -3021,7 +3003,7 @@ function defaultLayouts(){
 
     /* ---- 胃がん検診（受検票＋電算処理用紙） ---- */
     i: {
-      paper:"b4l", offsetX:0, offsetY:0, ageBasis:"fyStart",
+      paper:"b4l", offsetX:0, offsetY:0,
       font:'"MS ゴシック","MS Gothic","Yu Gothic",sans-serif',
       source:"胃がん検診の現行印刷物から実測（○の位置は協会の用紙から実測）",
       fields:[
@@ -3057,7 +3039,7 @@ function defaultLayouts(){
 
     /* ---- 乳がん検診 ---- */
     nyu: {
-      paper:"b4l", offsetX:0, offsetY:0, ageBasis:"fyStart",
+      paper:"b4l", offsetX:0, offsetY:0,
       font:'"MS ゴシック","MS Gothic","Yu Gothic",sans-serif',
       source:"乳がん検診の現行印刷物から実測",
       fields:[
@@ -3086,7 +3068,7 @@ function defaultLayouts(){
 
     /* ---- 子宮頸がん検診 ---- */
     shikyu: {
-      paper:"b4l", offsetX:0, offsetY:0, ageBasis:"fyStart",
+      paper:"b4l", offsetX:0, offsetY:0,
       font:'"MS ゴシック","MS Gothic","Yu Gothic",sans-serif',
       source:"子宮頸がん検診の現行印刷物から実測",
       fields:[
@@ -3119,7 +3101,7 @@ function defaultLayouts(){
 function personCtx(t, kid){
   var e = t.emp, a = t.assign, L = state.layouts[kid] || {};
   var w = toWareki(e.birth);
-  var age = ageFor(e, L.ageBasis, a);
+  var age = ageAt(e.birth, state.baseDate);          // 画面・CSVと同じ「年齢の基準日」で数えます
   var ed = assignDateLabel(a), em = "", edd = "";
   if(a && a.date){
     var p = a.date.split("-");
@@ -3331,9 +3313,6 @@ function renderLayoutEditor(){
         return '<option value="' + k + '"' + (L.paper === k ? " selected" : "") + ">" + esc(PAPER[k].name)
              + "（" + PAPER[k].w + "×" + PAPER[k].h + "mm）</option>"; }).join("")
     + "</select></label>"
-    + '<label>年齢の基準 <select id="lyAge">'
-    + AGE_BASIS.map(function(a){ return '<option value="' + a[0] + '"' + (L.ageBasis === a[0] ? " selected" : "") + ">" + esc(a[1]) + "</option>"; }).join("")
-    + "</select></label>"
     + '<label>全体のずれ補正　横 <input type="number" step="0.5" id="lyOffX" value="' + (L.offsetX || 0) + '" style="width:70px"> mm</label>'
     + '<label>縦 <input type="number" step="0.5" id="lyOffY" value="' + (L.offsetY || 0) + '" style="width:70px"> mm</label>'
     + "</div>"
@@ -3437,7 +3416,7 @@ function sampleCtx(){
   if(t) return personCtx(t, ly.kid);
   var birth = new Date(1984, 0, 16);
   var w = toWareki(birth);
-  var age = ageAt(birth, new Date(state.fiscalYear, 3, 1));
+  var age = ageAt(birth, state.baseDate);
   return {
     "団体名": state.orgName, "所属名": "総務部総務課", "所属コード":"1100", "係名":"職員係", "職員番号":"1007",
     "氏名": "見本　太郎", "カナ":"ミホン タロウ", "カナ半角":"ﾐﾎﾝ ﾀﾛｳ",
@@ -3515,7 +3494,6 @@ function renderFieldList(){
 
 function bindEditor(){
   $("lyPaper").addEventListener("change", function(){ state.layouts[ly.kid].paper = this.value; renderLayoutEditor(); });
-  $("lyAge").addEventListener("change", function(){ state.layouts[ly.kid].ageBasis = this.value; drawCanvas(); });
   $("lyScale").addEventListener("change", function(){ ly.scale = parseFloat(this.value); drawCanvas(); });
   $("lyOffX").addEventListener("input", function(){ state.layouts[ly.kid].offsetX = parseFloat(this.value) || 0; drawCanvas(); });
   $("lyOffY").addEventListener("input", function(){ state.layouts[ly.kid].offsetY = parseFloat(this.value) || 0; drawCanvas(); });
