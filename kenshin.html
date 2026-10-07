@@ -412,13 +412,30 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
 
 /* 日付・時刻は途中で折り返さない */
 table.grid td.nw{white-space:nowrap}
+
+/* ===== 貼り付け欄 ===== */
+.pastebox{width:100%;min-height:46px;resize:vertical;border:2px dashed var(--accent);border-radius:6px;
+  background:var(--accent-bg);padding:10px 12px;font:inherit;color:var(--text)}
+.pastebox::placeholder{color:var(--accent);font-weight:bold}
+.pastebox:focus{outline:none;border-style:solid;background:#fff}
+/* ===== 折りたたみの補足説明 ===== */
+details.more{margin-top:12px;border:1px solid var(--line);border-radius:6px;background:#fafbfc}
+details.more>summary{cursor:pointer;padding:9px 12px;font-size:13px;color:var(--text-sub);list-style-position:inside}
+details.more>summary:hover{color:var(--accent)}
+details.more.warn>summary strong{color:#a8410f}
+details.more .more-b{padding:0 14px 12px;font-size:13px;line-height:1.8}
+/* ===== タブの進み具合 ===== */
+nav button .tabmark{display:inline-block;margin-left:6px;padding:0 7px;border-radius:9px;font-size:11px;
+  font-weight:bold;line-height:18px;background:var(--accent-bg);color:var(--accent)}
+nav button.active .tabmark{background:rgba(255,255,255,.25);color:#fff}
+nav button .tabmark.warn{background:var(--warn);color:#fff}
 </style>
 </head>
 <body>
 
 <header>
   <h1>職員検診　受検票作成システム</h1>
-  <span class="sub">胃がん／乳がん／子宮頸がん／生活習慣病健診　― 外部通信なし・単一ファイル動作</span>
+  <span class="sub">胃がん／乳がん／子宮頸がん／生活習慣病健診　― インターネット不要・このパソコンの中だけで動きます</span>
   <span id="fyBadge" class="fybadge"></span>
 </header>
 
@@ -453,10 +470,13 @@ table.grid td.nw{white-space:nowrap}
     <div class="info" style="margin-top:14px">
       <strong>名簿ファイルの作り方</strong>　人事システムの画面左上で <strong>「在職」「写真無」「詳細」</strong> を選んで検索し、
       表示された一覧の上で <strong>Ctrl ＋ A</strong> を押してすべて選択・コピーします。
-      それを Excel に貼り付けて保存し、そのファイルをここで読み込みます。
+      そのまま下の点線の枠に <strong>Ctrl ＋ V</strong> で貼り付ければ読み込めます（Excel に貼って保存したファイルを選んでもかまいません）。
     </div>
 
-    <div class="row" style="margin-top:16px">
+    <textarea id="rosterPaste" class="pastebox" rows="2" style="margin-top:14px"
+      placeholder="ここをクリックして Ctrl＋V（人事システムの一覧をコピーしたら、そのまま貼り付けられます）"></textarea>
+
+    <div class="row" style="margin-top:12px">
       <button class="btn primary" id="btnPickFile">名簿ファイルを選択…（Excel／CSV）</button>
       <input type="file" id="fileInput" accept=".xlsx,.xlsm,.csv,.txt" style="display:none">
       <button class="btn" id="btnSample">サンプル名簿を読み込む（動作確認用）</button>
@@ -471,15 +491,17 @@ table.grid td.nw{white-space:nowrap}
       <span class="hint">Excelはそのまま読み込めます。CSVの文字コードは Shift_JIS と UTF-8 を自動判別します</span>
     </div>
 
-    <div class="info">
-      <strong>想定する列（順不同・名称は下で対応付けできます）</strong><br>
+    <details class="more">
+      <summary>名簿に必要な列と、読み取れる書き方</summary>
+      <div class="more-b">
       職員番号（番号） ／ 氏名 ／ カナ（フリガナ） ／ 生年月日 ／ 性別 ／ 所属コード（所属CD） ／ 所属名 ／
       雇用区分（区分名・身分） ／ 在職 ／ 組合員証記号番号（社保） ／ 係名<br>
       生年月日は <code>1985/4/1</code>／<code>19850401</code>／<code>昭和60年4月1日</code>／<code>S60.4.1</code> のほか、
       <strong>Excelの日付セル（和暦表示を含む）</strong>もそのまま読み取れます。<br>
       性別は <strong><code>1</code> が男性、<code>0</code> が女性</strong>です（<code>男</code>/<code>女</code>、<code>2</code>（女性）も判別します）。
       カナは半角（<code>ﾜﾀﾞ ﾕｳｾｲ</code>）でも全角に直して取り込みます。
-    </div>
+      </div>
+    </details>
 
     <div class="panel" style="margin:14px 0 0;background:#fafbfc">
       <div class="row" style="margin:0">
@@ -488,14 +510,17 @@ table.grid td.nw{white-space:nowrap}
       </div>
     </div>
 
-    <div class="note">
-      <strong>この端末にデータを保存します</strong>　読み込んだ職員名簿と予約状況は、
+    <details class="more warn">
+      <summary>この端末にデータを保存します ― <strong>共用のパソコンでは使わないでください</strong></summary>
+      <div class="more-b">
+      読み込んだ職員名簿と予約状況は、
       このパソコンのブラウザ内に保存され、<strong>次に開いたときそのまま復元されます</strong>。
       ファイルを読み直す必要はありません。<br>
       検診の情報は要配慮個人情報にあたります。<strong>共用のパソコンでは使わないでください。</strong>
       年度の作業が終わったら「保存データを消去」を押し、出力したCSV・PDFの保存場所とあわせて
       庁の情報セキュリティポリシーに従って管理してください。
-    </div>
+      </div>
+    </details>
   </div>
 
   <div class="panel" id="mapPanel" style="display:none">
@@ -529,7 +554,7 @@ table.grid td.nw{white-space:nowrap}
     <div class="info">
       <strong>予約状況ファイルの作り方</strong>　人事システムの <strong>「ヨ　予約管理」</strong> を開き、
       <strong>「入力結果○　その１」</strong> を選びます。表示された一覧の上で <strong>Ctrl ＋ A</strong> を押して
-      すべて選択・コピーし、Excel に貼り付けて保存します。そのファイルをここで読み込みます。
+      すべて選択・コピーし、各検診の点線の枠に <strong>Ctrl ＋ V</strong> で貼り付けます（Excel に貼って保存したファイルを選んでもかまいません）。
     </div>
     <div class="info">
       <strong>受検票を印刷する人は、このファイルだけで決まります。</strong><br>
@@ -711,8 +736,10 @@ table.grid td.nw{white-space:nowrap}
           <div class="howto-act">
             <button class="btn primary" id="btnPdfOverlay">受検票のPDFを作成（ダウンロード）</button>
             <label id="rowDpi">画質 <select id="pdfDpi"></select></label>
+            <button class="btn" id="btnPdfAll">全検診をまとめて作成</button>
           </div>
           <div class="howto-d" id="printHint2"></div>
+          <div class="howto-d" id="pdfAllHint"></div>
           <div id="pdfProgressRow" style="display:none;margin-top:6px">
             <div style="max-width:420px">
               <div style="height:10px;border:1px solid var(--line-strong);border-radius:5px;overflow:hidden;background:#fff">
@@ -1132,6 +1159,9 @@ var state = {
   onlyActive: true,      // 「在職」列がある場合、在職者のみを対象にする
   inactive:   [],        // 在職でないため除外した職員
   nyuSrc:     {},        // 取込元(srcId) -> 読み込んだ内容
+  nyuSig:     {},        // 取込元(srcId) -> 前回の列の並びと列の指定（同じ並びなら確認を省きます）
+  rosterSig:  "",        // 前回の名簿の列の並び
+  rosterMap:  null,      // 前回の名簿の列の対応付け
   nyuOpt:     {},        // 取込元(srcId) -> 会場の設定
   nyuryoku:   {},        // kenshinId -> 検診ごとに振り分けた結果（nyuSrc から組み立て）
   fujinRules: defaultFujinRules(),
@@ -1818,6 +1848,15 @@ $("fileInput").addEventListener("change", function(e){
   if(f) fyCheckThen("roster", function(){ readRosterFile(f); });
 });
 
+$("rosterPaste").addEventListener("paste", function(e){
+  var rows = rowsFromPaste(e);
+  e.preventDefault();
+  this.value = "";
+  if(!rows){ toast("貼り付けた内容から表を読み取れませんでした。人事システムの一覧で Ctrl＋A → Ctrl＋C をしてから貼り付けてください。", true); return; }
+  var label = pasteLabel();
+  fyCheckThen("roster", function(){ startRosterPending(label, [{ name:"貼り付け", rows:rows }]); });
+});
+
 var drop = $("drop");
 ["dragenter","dragover"].forEach(function(ev){
   drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add("over"); });
@@ -1871,14 +1910,83 @@ function guessSheetIndex(sheets){
 
 function readRosterFile(file){
   readTableFile(file).then(function(sheets){
-    state.pending = { label:file.name, sheets:sheets, sheetIndex:guessSheetIndex(sheets), headerRow:0 };
-    state.pending.headerRow = guessHeaderRow(sheets[state.pending.sheetIndex].rows);
-    applyPendingSheet(true);
-    $("mapPanel").style.display = "";
-    toast((file.name || "名簿") + " を読み込みました。シートと列の対応付けを確認してください。");
+    startRosterPending(file.name, sheets);
   }).catch(function(err){
     toast("ファイルを読み込めませんでした: " + err.message, true);
   });
+}
+
+/* -------------------------------------------------------------------------
+   人事システムの一覧を、Excel を経由せずに貼り付けて読み込む
+   ブラウザの表をコピーすると、HTML の表とタブ区切りの文字の両方がクリップボードに入ります。
+   表の形が崩れにくい HTML を優先し、なければタブ区切りを使います。
+   ------------------------------------------------------------------------- */
+function rowsFromTsv(text){
+  var lines = String(text || "").replace(/\r\n?/g, "\n").split("\n");
+  while(lines.length && lines[lines.length - 1].trim() === "") lines.pop();
+  return lines.map(function(l){
+    return l.split("\t").map(function(c){
+      c = c.trim();
+      if(c.length >= 2 && c.charAt(0) === '"' && c.charAt(c.length - 1) === '"') c = c.slice(1, -1).replace(/""/g, '"');
+      return c;
+    });
+  });
+}
+function rowsFromHtml(html){
+  try{
+    var doc = new DOMParser().parseFromString(html, "text/html");
+    var best = null;
+    Array.prototype.forEach.call(doc.querySelectorAll("table"), function(t){
+      if(!best || t.rows.length > best.rows.length) best = t;
+    });
+    if(!best || best.rows.length < 2) return null;
+    return Array.prototype.map.call(best.rows, function(tr){
+      var out = [];
+      Array.prototype.forEach.call(tr.cells, function(td){
+        out.push((td.textContent || "").replace(/[\s\u00a0]+/g, " ").trim());
+        for(var i = 1; i < (td.colSpan || 1); i++) out.push("");      // 結合セルの分だけ列をそろえます
+      });
+      return out;
+    });
+  }catch(err){ return null; }
+}
+function rowsFromPaste(e){
+  var cd = e.clipboardData || window.clipboardData;
+  if(!cd) return null;
+  var html = "", text = "";
+  try{ html = cd.getData("text/html"); }catch(err){ /* なければタブ区切りで読みます */ }
+  try{ text = cd.getData("text/plain") || cd.getData("Text"); }catch(err){ text = ""; }
+  var rows = html ? rowsFromHtml(html) : null;
+  if(!rows || rows.length < 2) rows = rowsFromTsv(text);
+  return rows && rows.length >= 2 ? rows : null;
+}
+function pasteLabel(){
+  var d = new Date(), p = function(n){ return (n < 10 ? "0" : "") + n; };
+  return "貼り付け（" + (d.getMonth() + 1) + "/" + d.getDate() + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + "）";
+}
+
+/* 列の並びが前回と同じかどうかを見分けるための見出しの並び */
+function headerSig(cells){
+  return (cells || []).map(function(h){ return normText(h instanceof Date ? fmtDateSlash(h) : h); }).join("\u0001");
+}
+
+/* 名簿の表を受け取って、列の対応付けへ進む（前回と同じ並びなら確認を省いてそのまま読み込む） */
+function startRosterPending(label, sheets){
+  state.pending = { label:label, sheets:sheets, sheetIndex:guessSheetIndex(sheets), headerRow:0 };
+  state.pending.headerRow = guessHeaderRow(sheets[state.pending.sheetIndex].rows);
+  applyPendingSheet(true);
+  $("mapPanel").style.display = "";
+  var sig = headerSig(state.rawHeader);
+  if(state.rosterSig && state.rosterSig === sig && state.rosterMap){
+    state.mapping = JSON.parse(JSON.stringify(state.rosterMap));
+    renderMapping();
+    $("mapMsg").innerHTML = '<span class="hint">前回と同じ列の並びだったので、確認を省いてそのまま読み込みました。'
+      + "列を直すときは、上で選び直して「この対応付けで取り込む」を押してください。</span>";
+    buildEmployees();
+    return;
+  }
+  $("mapMsg").textContent = "";
+  toast((label || "名簿") + " を読み込みました。列の対応付けを確認して「この対応付けで取り込む」を押してください。");
 }
 
 /* 選択中のシート・ヘッダ行から、取込対象の表を切り出す */
@@ -2060,6 +2168,9 @@ function buildEmployees(){
   });
 
   if(state.pending) state.rosterLabel = state.pending.label || "";
+  state.rosterSig = headerSig(state.rawHeader);
+  state.rosterMap = JSON.parse(JSON.stringify(state.mapping));
+  try{ saveSettings(); }catch(e){ /* 保存できなくても読み込みは続けます */ }
   var diff = prevEmployees.length ? rosterDiff(prevEmployees, state.employees) : null;
   refreshNotInRoster(diff ? diff.goneMap : null);
   computeTargets();
@@ -2446,7 +2557,9 @@ function renderNyuCard(sid){
      + '<label>会場 <input type="text" data-nyplace="' + sid + '" value="' + esc(s ? s.place : (opt.place || ""))
      + '" placeholder="例）市役所 3階 大会議室" style="width:210px"></label>';
   if(s) h += '<button class="btn" data-nyclear="' + sid + '">取込を解除</button>';
-  h += "</div>";
+  h += "</div>"
+     + '<textarea class="pastebox" rows="2" data-nypaste="' + sid + '" style="margin-top:8px"'
+     + ' placeholder="ここをクリックして Ctrl＋V（人事システムの「入力結果○ その1」をコピーしたら、そのまま貼り付けられます）"></textarea>';
 
   /* 婦人検診：年齢区分の振り分け */
   if(src.kenshin.length > 1){
@@ -2557,6 +2670,17 @@ function renderNyuCard(sid){
 function bindNyuCards(){
   var box = $("nyuCards");
 
+  box.addEventListener("paste", function(e){
+    var sid = e.target && e.target.dataset ? e.target.dataset.nypaste : "";
+    if(!sid) return;
+    var rows = rowsFromPaste(e);
+    e.preventDefault();
+    e.target.value = "";
+    if(!rows){ toast("貼り付けた内容から表を読み取れませんでした。一覧で Ctrl＋A → Ctrl＋C をしてから貼り付けてください。", true); return; }
+    var label = pasteLabel();
+    fyCheckThen("nyu", function(){ startNyuPending(sid, label, [{ name:"貼り付け", rows:rows }]); });
+  });
+
   box.addEventListener("click", function(e){
     var t = e.target;
     if(t.dataset.nypick){ $("nyfile_" + t.dataset.nypick).click(); return; }
@@ -2634,18 +2758,31 @@ function bindNyuCards(){
       e.target.value = "";
       if(!f) return;
       fyCheckThen("nyu", function(){ readTableFile(f).then(function(sheets){
-        var pn = { label:f.name, sheets:sheets, sheetIndex:guessSheetIndex(sheets),
-                   headerRow:0, colEmp:0, colInput:-1, colPlace:-1 };
-        pn.headerRow = guessHeaderRow(sheets[pn.sheetIndex].rows);
-        guessNyuColumns(pn);
-        nyuPending[src.id] = pn;
-        renderNyuCard(src.id);
-        toast(f.name + " を読み込みました。列の指定を確認して「取り込む」を押してください。");
+        startNyuPending(src.id, f.name, sheets);
       }).catch(function(err){
         toast("ファイルを読み込めませんでした: " + err.message, true);
       }); });
     });
   });
+}
+
+/* 予約状況の表を受け取って、列の指定へ進む（前回と同じ並びなら確認を省いてそのまま取り込む） */
+function startNyuPending(sid, label, sheets){
+  var pn = { label:label, sheets:sheets, sheetIndex:guessSheetIndex(sheets),
+             headerRow:0, colEmp:0, colInput:-1, colPlace:-1 };
+  pn.headerRow = guessHeaderRow(sheets[pn.sheetIndex].rows);
+  guessNyuColumns(pn);
+  nyuPending[sid] = pn;
+  var mem = state.nyuSig[sid];
+  var sig = headerSig(sheets[pn.sheetIndex].rows[pn.headerRow]);
+  if(mem && mem.sig === sig){
+    pn.colEmp = mem.colEmp; pn.colInput = mem.colInput; pn.colPlace = mem.colPlace;
+    importNyuryoku(sid);
+    toast(nyuSourceOf(sid).name + "：前回と同じ列の並びだったので、確認を省いて取り込みました");
+    return;
+  }
+  renderNyuCard(sid);
+  toast(label + " を読み込みました。列の指定を確認して「取り込む」を押してください。");
 }
 
 /* 振り分けルールを変更したときの再計算 */
@@ -2828,6 +2965,9 @@ function importNyuryoku(sid){
 
   var notInRoster = findNotInRoster(map, null);
 
+  state.nyuSig[sid] = { sig:headerSig(pn.sheets[pn.sheetIndex].rows[pn.headerRow]),
+                        colEmp:pn.colEmp, colInput:pn.colInput, colPlace:pn.colPlace };
+  try{ saveSettings(); }catch(e){ /* 保存できなくても取り込みは続けます */ }
   state.nyuSrc[sid] = { label:pn.label, place:opt.place || "", raw:rawMap, map:map,
                         dup:dup, notInRoster:notInRoster, lines:lines };
   delete nyuPending[sid];
@@ -2905,7 +3045,10 @@ function saveSettings(){
     orgName: state.orgName,
     layouts: state.layouts,
     fujinRules: state.fujinRules,
-    fujinFallback: state.fujinFallback
+    fujinFallback: state.fujinFallback,
+    rosterSig: state.rosterSig || "",
+    rosterMap: state.rosterMap || null,
+    nyuSig: state.nyuSig || {}
   }));
 }
 
@@ -3033,7 +3176,31 @@ function clearData(){
 }
 
 /* 保存状況の表示 */
+/* タブの横に、どこまで済んだか・要確認が何人いるかを小さく出す */
+function renderTabProgress(){
+  var mark = function(page, text, warn){
+    var b = document.querySelector('nav .tab[data-page="' + page + '"]');
+    if(!b) return;
+    var m = b.querySelector(".tabmark");
+    if(!text){ if(m) b.removeChild(m); return; }
+    if(!m){ m = document.createElement("span"); b.appendChild(m); }
+    m.className = "tabmark" + (warn ? " warn" : "");
+    m.textContent = text;
+  };
+  var ne = state.employees.length;
+  mark("p1", ne ? "✓ " + ne + "名" : "");
+  var nsrc = NYU_SOURCES.filter(function(x){ return state.nyuSrc[x.id]; }).length;
+  mark("p7", nsrc ? (nsrc === NYU_SOURCES.length ? "✓ " : "") + nsrc + "/" + NYU_SOURCES.length : "");
+  var nchk = 0, nprint = 0;
+  ticketKenshin().forEach(function(k){
+    activeTargets(k.id).forEach(function(t){ nprint++; if(t.needCheck) nchk++; });
+  });
+  mark("p4", nchk ? "要確認 " + nchk : (nprint ? "✓" : ""), nchk > 0);
+  renderPdfAllHint();
+}
+
 function renderSaveInfo(){
+  renderTabProgress();
   var box = $("saveInfo");
   if(!box) return;
   var n = state.employees.length;
@@ -3215,6 +3382,7 @@ function targetStatus(kid, t){
 
 function renderTargets(){
   if(!$("targetTable")) return;
+  renderTabProgress();
   renderTgTabs();
   renderTargetStat();
   var kid = tgKid || (ticketKenshin()[0] && ticketKenshin()[0].id);
@@ -4525,38 +4693,88 @@ $("btnPrintTickets").addEventListener("click", function(){
 var pdfBusy = false;
 
 function makeTicketPdfAndSave(list, kid){
+  makeTicketPdfsAndSave([{ list:list, kid:kid }]);
+}
+
+/* 印刷対象のいる検診（様式レイアウトがあるもの）を、印刷順に並べて返す */
+function pdfJobsAll(){
+  var jobs = [];
+  ticketKenshin().forEach(function(k){
+    if(!state.layouts[k.id]) return;
+    var list = sortForPrint(activeTargets(k.id), $("printOrder").value);
+    if(list.length) jobs.push({ list:list, kid:k.id });
+  });
+  return jobs;
+}
+
+/* 受検票PDFを検診ごとに1ファイルずつ作り、順番にダウンロードする */
+function makeTicketPdfsAndSave(jobs){
   if(pdfBusy){ toast("PDFを作成中です。しばらくお待ちください。", true); return; }
-  var L = state.layouts[kid];
-  var pg = PAPER[L.paper] || PAPER.b4l;
   var dpi = parseInt($("pdfDpi").value, 10) || 300;
+  var total = 0, base = 0, saved = [];
+  jobs.forEach(function(j){ total += j.list.length; });
 
   pdfBusy = true;
   $("btnPdfOverlay").disabled = true;
+  $("btnPdfAll").disabled = true;
   $("pdfProgressRow").style.display = "";
   $("pdfBar").style.width = "0%";
-  $("pdfProgress").textContent = "PDFを作成しています… 0 / " + list.length + " 枚";
+  $("pdfProgress").textContent = "PDFを作成しています… 0 / " + total + " 枚";
 
-  makeTicketPdf(list, kid, dpi, function(done, total){
-    $("pdfBar").style.width = Math.round(done / total * 100) + "%";
-    $("pdfProgress").textContent = "PDFを作成しています… " + done + " / " + total + " 枚";
-  }).then(function(blob){
-    var name = kenshinName(kid) + "_受検票_" + (state.fiscalYear || "") + "年度"
-             + "【Acrobatで開き実際のサイズで印刷】.pdf";
-    downloadBlob(blob, name);
-    var mb = Math.round(blob.size / 1024 / 1024 * 10) / 10;
-    $("pdfProgress").innerHTML = "保存しました：受検票 " + list.length + "枚（"
-      + (mb >= 0.1 ? mb + "MB" : Math.round(blob.size / 1024) + "KB") + "）"
-      + '　<strong style="color:#a8410f">つづけて下の手順2〜6を行ってください。</strong>';
+  var chain = Promise.resolve();
+  jobs.forEach(function(j, ji){
+    chain = chain.then(function(){
+      var head = jobs.length > 1 ? kenshinName(j.kid) + "（" + (ji + 1) + "/" + jobs.length + "ファイル目）" : "";
+      return makeTicketPdf(j.list, j.kid, dpi, function(done){
+        $("pdfBar").style.width = Math.round((base + done) / total * 100) + "%";
+        $("pdfProgress").textContent = "PDFを作成しています… " + head + " " + (base + done) + " / " + total + " 枚";
+      }).then(function(blob){
+        var name = kenshinName(j.kid) + "_受検票_" + (state.fiscalYear || "") + "年度"
+                 + "【Acrobatで開き実際のサイズで印刷】.pdf";
+        downloadBlob(blob, name);
+        base += j.list.length;
+        saved.push({ kid:j.kid, n:j.list.length, size:blob.size, name:name });
+        return new Promise(function(r){ setTimeout(r, 600); });   // 続けて保存するときは少し間をあけます
+      });
+    });
+  });
+
+  chain.then(function(){
+    var sz = function(b){ var mb = Math.round(b / 1024 / 1024 * 10) / 10; return mb >= 0.1 ? mb + "MB" : Math.round(b / 1024) + "KB"; };
+    $("pdfProgress").innerHTML = "保存しました："
+      + saved.map(function(x){ return esc(kenshinName(x.kid)) + " " + x.n + "枚（" + sz(x.size) + "）"; }).join("、")
+      + '　<strong style="color:#a8410f">つづけて下の手順2〜6を'
+      + (saved.length > 1 ? "ファイルごとに" : "") + "行ってください。</strong>";
     $("pdfBar").style.width = "100%";
-    toast(name + " を保存しました");
+    toast(saved.length > 1 ? saved.length + "つのPDFを保存しました" : saved[0].name + " を保存しました");
     flashHowto();
   }).catch(function(err){
-    $("pdfProgress").innerHTML = '<span style="color:#a8410f">PDFを作成できませんでした：' + esc(err.message) + "</span>";
+    $("pdfProgress").innerHTML = '<span style="color:#a8410f">PDFを作成できませんでした：' + esc(err.message)
+      + (saved.length ? "（保存済み：" + saved.map(function(x){ return esc(kenshinName(x.kid)); }).join("、") + "）" : "") + "</span>";
     toast("PDFを作成できませんでした: " + err.message, true);
   }).then(function(){
     pdfBusy = false;
     $("btnPdfOverlay").disabled = false;
+    $("btnPdfAll").disabled = false;
   });
+}
+
+$("btnPdfAll").addEventListener("click", function(){
+  var jobs = pdfJobsAll();
+  if(!jobs.length){ toast("印刷対象の方がいる検診がありません", true); return; }
+  makeTicketPdfsAndSave(jobs);
+});
+
+/* 「まとめて作成」で作られるファイルの案内 */
+function renderPdfAllHint(){
+  var box = $("pdfAllHint");
+  if(!box) return;
+  var jobs = pdfJobsAll();
+  $("btnPdfAll").style.display = jobs.length > 1 ? "" : "none";
+  box.innerHTML = jobs.length > 1
+    ? "「全検診をまとめて作成」：" + jobs.map(function(j){ return esc(kenshinName(j.kid)) + " " + j.list.length + "枚"; }).join("、")
+      + " を検診ごとに別のPDFで保存します。ブラウザに「複数のファイルのダウンロード」の許可を聞かれたら「許可」を押してください。"
+    : "";
 }
 
 /* PDFができたら、以降の手順に目が向くよう手順パネルを点滅させます */
@@ -4828,6 +5046,8 @@ $("btnSample").addEventListener("click", function(){
     if(saved && saved.orgName) state.orgName = saved.orgName;
     if(saved && Array.isArray(saved.fujinRules) && saved.fujinRules.length) state.fujinRules = saved.fujinRules;
     if(saved && saved.fujinFallback) state.fujinFallback = saved.fujinFallback;
+    if(saved && saved.rosterSig){ state.rosterSig = saved.rosterSig; state.rosterMap = saved.rosterMap || null; }
+    if(saved && saved.nyuSig) state.nyuSig = saved.nyuSig;
     if(saved && saved.layouts){
       ticketKenshin().forEach(function(k){
         if(saved.layouts[k.id] && Array.isArray(saved.layouts[k.id].fields)) state.layouts[k.id] = saved.layouts[k.id];
@@ -4879,6 +5099,7 @@ $("btnSample").addEventListener("click", function(){
     $("howtoPaper").textContent = nm[0];
     $("howtoOrient").textContent = nm[1] || "";
     state.printMode = $("printMode").value;
+    renderPdfAllHint();
   }
   $("printMode").addEventListener("change", syncPrintMode);
   $("printKenshin").addEventListener("change", syncPrintMode);
