@@ -858,8 +858,8 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           <td>
             <ol style="margin:0;padding-left:20px">
               <li>人事システムの画面左上で <strong>「在職」「写真無」「詳細」</strong> を選んで検索します。</li>
-              <li>表示された一覧の上で <strong>Ctrl ＋ A</strong> を押し、すべて選択してコピーします。</li>
-              <li>Excel に貼り付けて保存します。</li>
+              <li>表示された一覧の上で <strong>Ctrl ＋ A</strong> → <strong>Ctrl ＋ C</strong> で、すべて選択してコピーします。</li>
+              <li>このアプリの点線の枠をクリックして <strong>Ctrl ＋ V</strong> で貼り付けます（Excel に貼って保存したファイルを選んでも可）。</li>
             </ol>
           </td>
         </tr>
@@ -868,28 +868,32 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           <td>
             <ol style="margin:0;padding-left:20px">
               <li>人事システムの <strong>「ヨ　予約管理」</strong> を開き、<strong>「入力結果○　その１」</strong> を選びます。</li>
-              <li>表示された一覧の上で <strong>Ctrl ＋ A</strong> を押し、すべて選択してコピーします。</li>
-              <li>Excel に貼り付けて保存します。</li>
+              <li>表示された一覧の上で <strong>Ctrl ＋ A</strong> → <strong>Ctrl ＋ C</strong> で、すべて選択してコピーします。</li>
+              <li>このアプリの点線の枠をクリックして <strong>Ctrl ＋ V</strong> で貼り付けます（Excel に貼って保存したファイルを選んでも可）。</li>
             </ol>
           </td>
         </tr>
       </tbody>
     </table>
     <p class="hint">
-      貼り付けた Excel はそのまま読み込めます。列の並びや見出しが多少違っていても、読込後の画面で対応付けを直せます。
+      列の並びや見出しが多少違っていても、読込後の画面で対応付けを直せます。
+      <strong>2回目からは、前回と同じ列の並びなら確認を省いてそのまま読み込みます。</strong>
     </p>
 
     <h3>作業の流れ</h3>
     <ol>
-      <li><strong>名簿の読込</strong>　上で作った職員名簿の Excel を読み込み、列の対応付けを確認します。</li>
-      <li><strong>予約状況の取込</strong>　胃がん検診・婦人検診それぞれの Excel を読み込み、職員番号の列と入力の列を指定して取り込みます。<br>
+      <li><strong>名簿の読込</strong>　職員名簿を貼り付け（またはファイルを選び）、列の対応付けを確認します。</li>
+      <li><strong>予約状況の取込</strong>　胃がん検診・婦人検診それぞれを貼り付け（またはファイルを選び）、職員番号の列と入力の列を指定して取り込みます。<br>
           取り込むと、確認が必要な件があればこの画面に表示されます。</li>
       <li><strong>対象者一覧</strong>　検診を選んで、受検票が印刷される人を確認します。辞退者などはここで個別に外せます。</li>
       <li><strong>様式レイアウト</strong>　初回のみ、位置合わせ用のPDFを作って協会の用紙に1枚印刷し、位置を確認します。合っていればそのままで構いません。
           位置を動かそうとすると<strong>確認の画面が2回出ます</strong>。ずれて見える原因は印刷のしかたであることが多いためです。</li>
-      <li><strong>印刷・出力</strong>　並び順を選んで「受検票のPDFを作成」を押すと、PDFファイルがダウンロードされます。
+      <li><strong>印刷・出力</strong>　並び順を選んで「受検票のPDFを作成」を押すと、PDFファイルがダウンロードされます
+          （「全検診をまとめて作成」なら、検診ごとのPDFを続けて保存します）。
           そのPDFを <strong>Adobe Acrobat で開き、複合機を選び、「実際のサイズ」で</strong>協会の用紙に印刷してください。</li>
     </ol>
+    <p class="hint">タブの横には進み具合が出ます（<strong>✓ 24名</strong>・<strong>✓ 2/2</strong> など）。
+      オレンジの<strong>「要確認」</strong>が出ていたら、印刷前に「３. 対象者一覧」で中身を確かめてください。</p>
     <div class="info">
       <strong>誰の受検票を印刷するかは、予約状況ファイルだけで決まります。</strong><br>
       入力欄が<strong>空欄</strong>の人と、「印刷が不要になる入力値」に<strong>該当する</strong>人は印刷しません。
@@ -906,10 +910,12 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
         <tr><td><code>09:30〜09:45（35歳以上）</code><br><span class="hint">婦人検診</span></td>
             <td>印刷する</td>
             <td>受付時間「09:30〜09:45」<br>
-                <span class="hint">年齢区分で乳がん検診・子宮頸がん検診に振り分けます。</span></td></tr>
-        <tr><td><code>要相談</code> など日時として読めない内容</td><td><strong>印刷する</strong></td>
+                <span class="hint">年齢区分で乳がん検診・子宮頸がん検診に振り分けます。名簿で男性の人や、年齢区分と年度末の年齢が合わない人は要確認と表示します。</span></td></tr>
+        <tr><td><code>要相談</code> <code>未定</code> など日時として読めない内容</td><td><strong>印刷する</strong></td>
             <td>受診日は空欄／受付時間に内容をそのまま印字（一覧に<strong>要確認</strong>と表示）</td></tr>
-        <tr><td><code>受診しない</code> など該当文言</td><td>印刷しない</td><td>―</td></tr>
+        <tr><td><code>7:00〜7:15 キャンセル待ち</code> のように、印刷不要の文言と時刻の両方がある</td><td><strong>印刷する</strong></td>
+            <td>時刻があるので印刷し、<strong>要確認</strong>と表示</td></tr>
+        <tr><td><code>派遣元</code> <code>他の受診機関</code> <code>受診しない</code> <code>受診しません</code> <code>キャンセル</code> <code>辞退</code> などを含む</td><td>印刷しない</td><td>―</td></tr>
         <tr><td>空欄</td><td>印刷しない</td><td>―</td></tr>
       </tbody>
     </table>

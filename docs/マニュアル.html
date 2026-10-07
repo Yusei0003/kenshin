@@ -43,9 +43,10 @@
   .f-nav img  { max-height: 7mm; }
   .f-btn img  { max-height: 8mm; }
   .f-stat img { max-height: 12mm; }
-  .f-ny img   { max-height: 25mm; }
-  .f-tg img   { max-height: 15mm; }
-  .f-pr img   { max-height: 19mm; }
+  .f-paste img{ max-height: 8mm; }
+  .f-ny img   { max-height: 19mm; }
+  .f-tg img   { max-height: 13mm; }
+  .f-pr img   { max-height: 16mm; }
   .f-off img  { max-height: 7mm; }
   .f-acro img { max-height: 21mm; }
   .f-ruler img{ max-height: 17mm; }
@@ -103,7 +104,7 @@
   <h1>職員検診　受検票作成アプリ　操作マニュアル</h1>
   <p class="sub">
     対象：胃がん検診・乳がん検診・子宮頸がん検診（生活習慣病健診は受検票の印刷が不要です）　／
-    アプリ：<b>kenshin.html</b> をダブルクリックするとブラウザで開きます。
+    アプリ：<b>kenshin.html</b> をダブルクリックで開きます。
   </p>
 
   <div class="note" style="margin-top:0">
@@ -113,16 +114,16 @@
 
   <figure class="f-nav" style="margin-top:1.5mm">
     <img src="manual/m0_nav.png" alt="アプリ上部のタブ">
-    <figcaption>タブは左から順に。「4. 様式レイアウト」は、印字位置がずれたときだけ使います（→ 2ページ目）。</figcaption>
+    <figcaption>左から順に。済んだタブには <b>✓</b> が付き、<b>オレンジの「要確認」</b>が出たら印刷前に「3. 対象者一覧」を確かめます。「4. 様式レイアウト」はずれたときだけ。</figcaption>
   </figure>
 
   <h2>作業の全体像</h2>
   <div class="flow">
     <div class="box"><b>人事システム</b>名簿と予約状況を<br>画面に表示</div>
     <div class="arw">▶</div>
-    <div class="box"><b>Excel</b><span class="kbd">Ctrl</span>+<span class="kbd">A</span> で全選択<br>貼り付けて保存</div>
+    <div class="box"><b>コピー</b><span class="kbd">Ctrl</span>+<span class="kbd">A</span> → <span class="kbd">Ctrl</span>+<span class="kbd">C</span><br>（Excel は不要）</div>
     <div class="arw">▶</div>
-    <div class="box"><b>このアプリ</b>2つを読み込んで<br>対象者を確認</div>
+    <div class="box"><b>このアプリ</b>点線の枠に <span class="kbd">Ctrl</span>+<span class="kbd">V</span><br>対象者を確認</div>
     <div class="arw">▶</div>
     <div class="box"><b>PDF</b>ボタン1つで<br>受検票を作成</div>
     <div class="arw">▶</div>
@@ -134,10 +135,11 @@
     <div class="body">
       <ol>
         <li>人事システムの画面<b>左上</b>で <b>「在職」「写真無」「詳細」</b> を選んで検索します。</li>
-        <li>表示された一覧の上で <span class="kbd">Ctrl</span>+<span class="kbd">A</span> → <span class="kbd">Ctrl</span>+<span class="kbd">C</span>。Excel に貼り付けて保存します。</li>
-        <li>アプリの <b>「名簿ファイルを選択…」</b> で、その Excel を選びます（ドラッグ＆ドロップでも読み込めます）。</li>
-        <li>列の対応付けの画面が出ます。ふつうは直す必要がないので、そのまま <b>「この内容で読み込む」</b> を押します。</li>
+        <li>表示された一覧の上で <span class="kbd">Ctrl</span>+<span class="kbd">A</span> → <span class="kbd">Ctrl</span>+<span class="kbd">C</span> でコピーします。</li>
+        <li>アプリの<b>点線の枠</b>をクリックして <span class="kbd">Ctrl</span>+<span class="kbd">V</span>（Excel に保存したファイルを「名簿ファイルを選択…」で選んでも可）。</li>
+        <li>初回は列の対応付けの画面が出ます。ふつうは直さずに <b>「この対応付けで取り込む」</b>。<b>2回目からは自動で読み込みます</b>。</li>
       </ol>
+      <figure class="f-paste"><img src="manual/m1_paste.png" alt="貼り付けの枠"></figure>
       <figure class="f-stat"><img src="manual/m1_stat.png" alt="読込結果">
         <figcaption>人数が出れば成功です。<b>「エラー行」が 0 でないとき</b>は、画面の下に出る一覧でその行だけ確認してください。</figcaption>
       </figure>
@@ -149,15 +151,16 @@
     <div class="body">
       <ol>
         <li>人事システムの <b>「ヨ　予約管理」</b> を開き、<b>「入力結果○　その1」</b> を選びます。</li>
-        <li>一覧の上で <span class="kbd">Ctrl</span>+<span class="kbd">A</span> → Excel に貼り付けて保存。<b>胃がん検診用と婦人検診用の2ファイル</b>を作ります。</li>
-        <li>アプリのそれぞれの枠で <b>「予約状況ファイルを選択…」</b> → <b>「この内容で取り込む」</b> を押します。</li>
+        <li>一覧の上で <span class="kbd">Ctrl</span>+<span class="kbd">A</span> → <span class="kbd">Ctrl</span>+<span class="kbd">C</span>。<b>胃がん検診と婦人検診のそれぞれ</b>で行います。</li>
+        <li>アプリの<b>検診ごとの点線の枠</b>に <span class="kbd">Ctrl</span>+<span class="kbd">V</span> → <b>「この内容で取り込む」</b>（2回目からは自動）。ファイルを選んでも構いません。</li>
       </ol>
       <figure class="f-ny"><img src="manual/m2_pick.png" alt="予約状況ファイルの取込">
-        <figcaption>ファイルを選ぶと出てくる画面。シート・列はふつう自動で合っているので、そのまま「この内容で取り込む」。</figcaption>
+        <figcaption>貼り付ける（ファイルを選ぶ）と出てくる画面。列はふつう自動で合っているので、そのまま「この内容で取り込む」。</figcaption>
       </figure>
       <div class="note" style="margin-top:1.2mm">
         <b>受検票を印刷する人は、この予約状況ファイルの「入力」欄だけで決まります。</b>
-        入力欄が<b>空欄</b>の人と、<b>「受診しない」「派遣元自治体で受診」</b>などの文言が入っている人は印刷されません。それ以外は全員印刷されます。<br>
+        入力欄が<b>空欄</b>の人と、<b>「受診しない」「派遣元」「キャンセル」</b>などの文言が入っている人は印刷されません。それ以外は全員印刷されます
+        （時刻も書かれていれば印刷して<b>要確認</b>に）。<br>
         <b>婦人検診は1ファイルで2つの検診に自動で振り分けます。</b>
         入力欄に「35歳以上」とあれば乳がん・子宮頸がんの両方、「20歳以上」とあれば子宮頸がん検診だけが印刷されます。
       </div>
@@ -177,7 +180,7 @@
     <div class="head"><span class="n">STEP 4</span><span class="t">PDFを作る</span><span class="tab">タブ「5. 印刷・出力」</span></div>
     <div class="body">
       <ol>
-        <li><b>印刷する検診</b>を選びます（検診ごとに1回ずつ作ります）。</li>
+        <li><b>印刷する検診</b>を選びます。<b>「全検診をまとめて作成」</b>なら3検診分のPDFを一度に保存します（「複数ファイルのダウンロード」を聞かれたら「許可」）。</li>
         <li><b>並び順</b>を選びます。配布の仕分けをするなら <b>「所属コード順」</b> が便利です。</li>
         <li><b>「受検票のPDFを作成（ダウンロード）」</b> を押すと、PDFファイルが保存されます。</li>
       </ol>
@@ -239,7 +242,7 @@
     <tr><td>予約状況にいる職員が <b>名簿に見つからない</b> と出る</td>
         <td>タブ「2. 予約状況の取込」にその職員番号の一覧が出ます。<b>退職・休職で名簿から外れている</b>のか、<b>名簿を取り直す必要がある</b>のかを確認します。</td></tr>
     <tr><td>対象者一覧に <b>「要確認」</b> と出る人がいる</td>
-        <td>入力欄が読み取れなかった人です。<b>受検票は印刷されます</b>。受診日・受付時間を目で確かめてください。</td></tr>
+        <td>入力欄が読めない・男性の婦人検診・年齢区分の食い違いなど。<b>受検票は印刷されます</b>。理由を確認します。</td></tr>
     <tr><td><b>年度が替わった</b></td>
         <td>確認の画面で<b>「○年度の作業を始める」</b>を押すと、前年度のデータを消して今年度で始められます。</td></tr>
     <tr><td><b>次の検診</b>のために名簿を取り直す</td>
@@ -259,12 +262,10 @@
     <div>
       <h3>準備・取込</h3>
       <ul>
-        <li>人事システムから<b>名簿</b>を Excel に貼り付けて保存した</li>
-        <li><b>胃がん検診</b>の予約状況を Excel に保存した</li>
-        <li><b>婦人検診</b>の予約状況を Excel に保存した</li>
         <li>右上の年度表示が<b>今年度</b>になっている</li>
-        <li>名簿を読み込み、<b>エラー行が 0</b> だった</li>
-        <li>予約状況を <b>2ファイルとも</b> 取り込んだ</li>
+        <li>人事システムの<b>名簿</b>を貼り付け、<b>エラー行が 0</b> だった</li>
+        <li><b>胃がん検診</b>の予約状況を貼り付けた</li>
+        <li><b>婦人検診</b>の予約状況を貼り付けた（タブに <b>✓ 2/2</b>）</li>
         <li>対象者一覧で<b>人数</b>を確認し、辞退・休職の人の<b>チェックを外した</b></li>
       </ul>
     </div>
