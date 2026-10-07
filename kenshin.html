@@ -409,6 +409,9 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
 .rdiff table.grid{margin-top:4px}
 .rdiff details{margin-top:8px}
 .rdiff summary{cursor:pointer;font-weight:bold;font-size:13px;color:var(--text-sub)}
+
+/* 日付・時刻は途中で折り返さない */
+table.grid td.nw{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -551,7 +554,7 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
     <div class="info">
       ここに書いた文言に<strong>部分一致</strong>する人と、入力欄が<strong>空欄</strong>の人だけが印刷対象外です。
       それ以外は、日時として読み取れない書き方でも<strong>印刷されます</strong>
-      （日時として読み取れなかった場合は、入力欄の内容をそのまま受付時間欄に印字します）。
+      （日時として読み取れなかった人は、対象者一覧で「要確認」として示します）。
     </div>
   </div>
 </section>
@@ -1076,9 +1079,17 @@ function defaultSkipPhrases(){
     "派遣元で受診",
     "他受診機関で受診",
     "他の受診機関で受診予定",
-    "受診しない"
+    "受診しない",
+    /* 表記の違いで素通りしないよう、言い換えも入れています（部分一致） */
+    "派遣元",
+    "他受診機関",
+    "他の受診機関",
+    "受診しません",
+    "キャンセル",
+    "辞退"
   ];
 }
+var SKIP_VER = 2;     // 初期の文言を足したら上げる（保存済みの一覧に足りない文言を補います）
 
 /* 半角カナを全角カナに直す（名簿の「ﾜﾀﾞ ﾕｳｾｲ」→「ワダ ユウセイ」） */
 function toZenkakuKana(v){
@@ -1880,8 +1891,12 @@ function applyPendingSheet(remap){
     if(h instanceof Date) return fmtDateSlash(h);
     return String(h == null ? "" : h).trim().replace(/^\uFEFF/, "");
   });
-  state.rawRows = rows.slice(hr + 1).filter(function(r){
-    return r.some(function(v){ return String(v == null ? "" : v).trim() !== ""; });
+  state.rawRows = [];
+  state.rawLines = [];                     // それぞれの行が Excel の何行目か（エラー表示に使います）
+  rows.slice(hr + 1).forEach(function(r, i){
+    if(!r.some(function(v){ return String(v == null ? "" : v).trim() !== ""; })) return;
+    state.rawRows.push(r);
+    state.rawLines.push(hr + 2 + i);
   });
   if(remap) autoMap();
   renderMapping();
@@ -2003,7 +2018,7 @@ function buildEmployees(){
   var seen = {};
 
   state.rawRows.forEach(function(row, idx){
-    var lineNo = idx + 2;
+    var lineNo = (state.rawLines && state.rawLines[idx]) || idx + 2;
     var empNo  = cell(row, "empNo");
     var name   = cell(row, "name");
     var birth  = parseBirth(cellRaw(row, "birth"));
@@ -2038,7 +2053,7 @@ function buildEmployees(){
       birth: birth,
       sex: sex,
       deptCode: cell(row, "deptCode"),
-      deptName: cell(row, "deptName") || "（所属未設定）",
+      deptName: cell(row, "deptName") || NO_DEPT,
       empType: cell(row, "empType"),
       age: ageAt(birth, state.baseDate)
     });
@@ -2118,6 +2133,7 @@ $("baseDate").addEventListener("change", function(){
     renderLoaded();
     toast("基準日を変更したため、年齢と対象者を再計算しました");
   }
+  saveData();
 });
 
 /* =========================================================================
@@ -2196,10 +2212,16 @@ function parseNyuryoku(raw, srcId){
   if(!s) return { kind:"blank", raw:"", kenshinSet:src.kenshin.slice() };
 
   var n = normText(s);
+  /* 受付時間が書かれている人は、印刷不要の文言を含んでいても外さない（「キャンセル待ち」など）。
+     黙って外すと受検票が届かないため、印刷したうえで要確認にします。 */
+  var hasTimeRaw = /\d{1,2}\s*:\s*\d{2}/.test(n);
+  var skipHit = "";
   for(var i = 0; i < state.skipPhrases.length; i++){
     var ph = normText(state.skipPhrases[i]);
     if(ph && n.indexOf(ph) >= 0){
-      return { kind:"skip", reason:state.skipPhrases[i], raw:s, kenshinSet:src.kenshin.slice() };
+      if(!hasTimeRaw) return { kind:"skip", reason:state.skipPhrases[i], raw:s, kenshinSet:src.kenshin.slice() };
+      skipHit = state.skipPhrases[i];
+      break;
     }
   }
 
@@ -2271,6 +2293,15 @@ function parseNyuryoku(raw, srcId){
 
   rec.timeText = orig.replace(/[\s　]+/g, " ").replace(/^[\s・,、]+|[\s・,、]+$/g, "");
 
+  /* 受付時間らしい書き方（7:00、9時、9時30分）があるか。
+     日付も時刻もなく文字だけが残る入力（「要相談」「キャンセル」「未定」など）は、
+     日時として読めないものとして扱います（印刷はしますが、要確認にします）。 */
+  var restW = work.replace(/\s+/g, " ").trim();
+  var TIME_RE = /\d{1,2}\s*:\s*\d{2}|\d{1,2}\s*時(\s*\d{1,2}\s*分)?/;
+  var hasTime = TIME_RE.test(restW);
+  var extra = restW.replace(/\d{1,2}\s*:\s*\d{2}/g, "").replace(/\d{1,2}\s*時(\s*\d{1,2}\s*分)?/g, "")
+                   .replace(/[~〜～\-ー－・,、.。\s]|から|まで|頃|ごろ|午前|午後|AM|PM/gi, "");
+
   /* 受診日。入力欄に月まで書かれているときだけ日付として組み立てる。
      「6日（火）」のように日しかない場合は、書かれたまま文字として扱います。 */
   if(da != null){
@@ -2293,8 +2324,17 @@ function parseNyuryoku(raw, srcId){
     }
   }
 
+  if(skipHit) rec.warn = "印刷不要の文言「" + skipHit + "」がありますが、受付時間も書かれています";
+
   /* 日時として何も読み取れなかった場合 */
-  if(!rec.dateText && !rec.timeText) rec.kind = "unknown";
+  if(!rec.dateText && !hasTime){
+    rec.kind = "unknown";
+    rec.warn = rec.warn || (restW ? "受診日時として読み取れません（入力欄「" + s + "」）" : "受診日時が書かれていません");
+  }else if(extra){
+    rec.warn = (rec.warn ? rec.warn + " / " : "") + "入力欄に日時以外の文字があります（「" + orig.replace(/\s+/g, " ").trim() + "」）";
+  }else if(!hasTime){
+    rec.warn = (rec.warn ? rec.warn + " / " : "") + "受付時間が読み取れません";
+  }
 
   return finishRec(rec, src, opt);
 }
@@ -2366,7 +2406,7 @@ function rebuildNyuryoku(){
       Object.keys(s.map).forEach(function(no){
         var rec = s.map[no];
         var set = rec.kenshinSet || src.kenshin;
-        if(rec.kind === "time" && set.indexOf(kid) < 0) return;   // 対象外の検診には出さない
+        if((rec.kind === "time" || rec.kind === "unknown") && set.indexOf(kid) < 0) return;   // 対象外の検診には出さない
         map[no] = rec;
         loose[empKeyLoose(no)] = rec;
       });
@@ -2739,6 +2779,17 @@ function renderRosterDiff(d){
   box.innerHTML = h;
 }
 
+/* Excel の日付・時刻セルを、入力欄の書き方に近い文字へ直す。
+   Date のまま保存すると、開き直したときに別の文字列になってしまうためです。 */
+function cellToText(v){
+  if(!(v instanceof Date)) return v;
+  var hh = v.getHours(), mi = v.getMinutes();
+  var t = hh + ":" + (mi < 10 ? "0" : "") + mi;
+  if(v.getFullYear() < 1901) return t;                      // 時刻だけのセル（Excel では 1899/12/31 扱い）
+  var d = (v.getMonth() + 1) + "月" + v.getDate() + "日";
+  return (hh || mi) ? d + " " + t : d;
+}
+
 function importNyuryoku(sid){
   var pn = nyuPending[sid];
   if(!pn) return;
@@ -2752,10 +2803,13 @@ function importNyuryoku(sid){
   rows.forEach(function(r){
     var no = empKey(r[pn.colEmp]);
     if(!no) return;
-    var val = pn.colInput >= 0 ? r[pn.colInput] : "";
+    var val = cellToText(pn.colInput >= 0 ? r[pn.colInput] : "");
     var place = pn.colPlace >= 0 ? String(r[pn.colPlace] == null ? "" : r[pn.colPlace]).trim() : "";
     if(seen[no] && dup.indexOf(no) < 0) dup.push(no);
     seen[no] = 1;
+    /* 同じ職員番号が何行もあるときは最後の行を採用する。
+       ただし後ろの行が空欄なら、前の行の入力を残します（空欄で予約を消さないため）。 */
+    if(rawMap[no] && String(val == null ? "" : val).trim() === "") return;
     rawMap[no] = { val:val, place:place };
     lines++;
   });
@@ -2846,6 +2900,7 @@ function saveSettings(){
   localStorage.setItem(LS_KEY, JSON.stringify({
     rules: state.rules,
     skipPhrases: state.skipPhrases,
+    skipVer: SKIP_VER,
     onlyActive: !!state.onlyActive,
     orgName: state.orgName,
     layouts: state.layouts,
@@ -3035,13 +3090,13 @@ function computeTargets(){
         }else if(rec.kind === "blank"){
           item.skipReason = "入力欄が空欄";
         }else{
-          /* 印刷不要の文言でも空欄でもないので印刷する。
-             日時として読み取れなかった場合は、入力欄の内容をそのまま受付時間欄へ印字する。 */
+          /* 印刷不要の文言でも空欄でもないので印刷する（要確認）。 */
           item.print = true;
           item.needCheck = true;
           item.checkWhy = rec.warn || "受診日時として読み取れません";
           item.assign = { date:"", dateText:"", place: rec.place || ny.place || "", time: rec.raw };
         }
+        if(item.print) addPersonChecks(item, k.id, e, rec);
         list.push(item);
       });
     }
@@ -3051,6 +3106,18 @@ function computeTargets(){
     state.targets[k.id] = list;
   });
   renderTargetStat();
+}
+
+/* 名簿と照らして、受検票の中身がおかしくないかを確かめる */
+var NO_DEPT = "（所属未設定）";
+function addPersonChecks(item, kid, e, rec){
+  function add(msg){ item.needCheck = true; item.checkWhy = (item.checkWhy ? item.checkWhy + " / " : "") + msg; }
+  if((kid === "nyu" || kid === "shikyu") && e.sex === "M") add("名簿では男性ですが、婦人検診の予約があります");
+  var m = normText(rec.ageBand || "").match(/(\d+)歳以上/);
+  if(m && e.age != null && e.age < +m[1]){
+    add("年齢区分は「" + rec.ageBand + "」ですが、年齢の基準日の年齢は " + e.age + "歳です");
+  }
+  if(e.deptName === NO_DEPT) add("名簿の所属名が空です（受検票の所属欄は空欄になります）");
 }
 
 /* 数字だけの値は数値として並ぶようにキーを作る（職員番号 9 が 10 より前に来るように） */
@@ -3184,8 +3251,8 @@ function renderTargets(){
       + "<td>" + sexLabel(e.sex) + "</td>"
       + "<td>" + esc(e.deptName) + "</td>"
       + "<td" + (st.warn ? ' style="color:#a8410f"' : "") + ">" + esc(st.label) + "</td>"
-      + "<td>" + esc(assignDateLabel(a)) + "</td>"
-      + "<td>" + (a ? esc(a.time) : "") + "</td>"
+      + '<td class="nw">' + esc(assignDateLabel(a)) + "</td>"
+      + '<td class="nw">' + (a ? esc(a.time) : "") + "</td>"
       + "<td>" + (r.t.nyu ? esc(r.t.nyu.raw) : "") + "</td>"
       + "</tr>";
   });
@@ -3383,7 +3450,7 @@ function personCtx(t, kid){
   }
   return {
     "団体名": state.orgName,
-    "所属名": e.deptName, "所属コード": e.deptCode, "係名": e.section || "", "職員番号": e.empNo,
+    "所属名": e.deptName === NO_DEPT ? "" : e.deptName, "所属コード": e.deptCode, "係名": e.section || "", "職員番号": e.empNo,
     "氏名": e.name, "カナ": e.kana, "カナ半角": e.kanaRaw || e.kana,
     "組合員証記号番号": e.insNo || "",
     "性別": sexLabel(e.sex),
@@ -4751,7 +4818,12 @@ $("btnSample").addEventListener("click", function(){
         if(saved.rules[k.id]) state.rules[k.id] = Object.assign(state.rules[k.id], saved.rules[k.id]);
       });
     }
-    if(saved && Array.isArray(saved.skipPhrases) && saved.skipPhrases.length) state.skipPhrases = saved.skipPhrases;
+    if(saved && Array.isArray(saved.skipPhrases) && saved.skipPhrases.length){
+      state.skipPhrases = saved.skipPhrases;
+      if(saved.skipVer !== SKIP_VER){
+        defaultSkipPhrases().forEach(function(ph){ if(state.skipPhrases.indexOf(ph) < 0) state.skipPhrases.push(ph); });
+      }
+    }
     if(saved && typeof saved.onlyActive === "boolean") state.onlyActive = saved.onlyActive;
     if(saved && saved.orgName) state.orgName = saved.orgName;
     if(saved && Array.isArray(saved.fujinRules) && saved.fujinRules.length) state.fujinRules = saved.fujinRules;
@@ -4774,6 +4846,7 @@ $("btnSample").addEventListener("click", function(){
       computeTargets();
       renderLoaded();
     }
+    saveData();
   });
 
   ticketKenshin().forEach(function(k){
