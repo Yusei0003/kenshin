@@ -212,6 +212,24 @@ await tab('p9');
 await page.click(`button[data-uncancel="${k1203}"]`); await wait(400);
 ok(await ev(() => activeTargets('i').length) === nI, '６のタブからキャンセルを取り消すと印刷対象に戻る');
 
+section('判定と要精密検査確認調査');
+await tab('p4');
+await ev(() => { tgKid = 'i'; renderTargets(); });
+const jIds = await ev(() => activeTargets('i').slice(0, 3).map(t => t.emp.empNo));
+await page.selectOption(`select.tjud[data-k="i"][data-n="${jIds[0]}"]`, 'seimitsu'); await wait(300);
+await page.selectOption(`select.tjud[data-k="i"][data-n="${jIds[1]}"]`, 'kensa'); await wait(300);
+ok(await ev(() => Object.keys(JUDGE).map(k => JUDGE[k]).join()) === '要検査,要精密検査', '判定のプルダウンは「要検査」「要精密検査」');
+await tab('p10');
+const smr = await ev(() => seimitsuRows().map(r => r.key));
+ok(smr.join() === 'i:' + jIds[0], '要精密検査の人だけが「７. 要精密検査確認調査」に載る（要検査の人は載らない）', smr);
+ok(/^未送付 1$/.test(await ev(() => document.querySelector('nav .tab[data-page="p10"] .tabmark').textContent)), 'タブに「未送付 1」が出る');
+await page.click('#btnSmSent'); await wait(300);
+await page.selectOption(`select[data-smst="i:${jIds[0]}"]`, 'reported'); await wait(300);
+const smc = await ev((n) => ({ c: seimitsuCount(seimitsuRows()), r: state.seimitsu['i:' + n] }), jIds[0]);
+ok(smc.c.reported === 1 && smc.r.sentAt && smc.r.repAt, '送付済み→報告ありを日付つきで記録', smc);
+await page.reload(); await wait(900);
+ok(await ev((n) => state.judge.i[n] === 'seimitsu' && seimitsuCount(seimitsuRows()).reported === 1, jIds[0]), '開き直しても判定と報告の記録が残る');
+
 section('年度の取り違え防止');
 await page.clock.setFixedTime(new Date(2027, 3, 10, 10, 0));
 await page.reload(); await wait(1000);

@@ -60,13 +60,15 @@ nav{
   background:var(--bg);
   border-bottom:1px solid var(--line);
   padding:10px 14px;
-  overflow-x:auto;
+  flex-wrap:wrap;          /* 画面が狭いときは2段に折り返します */
+  row-gap:6px;
 }
 nav button{
   flex:0 0 auto;
-  padding:9px 16px;
+  padding:9px 10px;
+  font-size:14px;
   border:1px solid var(--line);
-  border-right:none;
+  margin-right:-1px;       /* 隣どうしの線を重ねます（折り返しても右端に線が残るように） */
   background:var(--panel);
   font:inherit;
   color:var(--text-sub);
@@ -432,8 +434,11 @@ table.grid td.c{text-align:center}
 .svk.decline{background:#fdf0cf;color:#7a5600}
 .svk.blank{background:#eceff2;color:#55636f}
 .svk.unlisted{background:#eceff2;color:#55636f;border:1px dashed #9aa7b4}
-#svTable select{font:inherit;padding:3px 4px}
-#svTable select.todo{border-color:#a8410f;color:#a8410f;font-weight:bold}
+#svTable select, #smTable select{font:inherit;padding:3px 4px}
+#svTable select.todo, #smTable select.todo{border-color:#a8410f;color:#a8410f;font-weight:bold}
+select.tjud{font:inherit;padding:2px 4px}
+select.tjud.on-kensa{border-color:#b7791f;background:#fdf6e3;font-weight:bold}
+select.tjud.on-seimitsu{border-color:#a8410f;background:#fde4d8;color:#a8410f;font-weight:bold}
 #svTable input[type=text]{font:inherit;padding:3px 6px;width:100%;min-width:160px;box-sizing:border-box;margin-top:4px}
 #svTable label.svx{display:inline-flex;align-items:center;gap:4px;margin-right:12px;white-space:nowrap;cursor:pointer}
 #svTable .svst-ex{color:#55636f;font-weight:bold;white-space:nowrap}
@@ -460,7 +465,8 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
   <button class="tab" data-page="p8">４. 様式レイアウト</button>
   <button class="tab" data-page="p5">５. 印刷・出力</button>
   <button class="tab" data-page="p9">６. 未受診状況調査</button>
-  <button class="tab" data-page="p6">使い方・注意</button>
+  <button class="tab" data-page="p10">７. 要精密検査確認調査</button>
+  <button class="tab" data-page="p6">使い方</button>
 </nav>
 
 <main>
@@ -893,6 +899,36 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
   </div>
 </section>
 
+<!-- ================= 7. 要精密検査確認調査 ================= -->
+<section class="page" id="p10">
+  <div class="panel">
+    <h2>要精密検査確認調査</h2>
+    <p class="hint">
+      「３. 対象者一覧」の<strong>「判定」で「要精密検査」</strong>を選んだ人が、検診ごとに自動で並びます。
+      病院で精密検査を受けて、その結果を<strong>フォームで報告</strong>してもらいます。<br>
+      報告のお願い（フォーム）を送ったら「送付済み」、報告が届いたら「報告あり」にします。この記録もこの端末に保存されます。
+    </p>
+    <div class="row">
+      <label>検診 <select id="smKid"></select></label>
+      <label>状況
+        <select id="smState">
+          <option value="">（すべて）</option>
+          <option value="todo">未送付</option>
+          <option value="sent">送付済み（報告待ち）</option>
+          <option value="reported">報告あり</option>
+        </select>
+      </label>
+      <label>所属 <select id="smDept"><option value="">（すべて）</option></select></label>
+    </div>
+    <div class="stat" id="smStat"></div>
+    <div class="row">
+      <button class="btn" id="btnSmSent">表示中の「未送付」をまとめて送付済みにする</button>
+      <button class="btn" id="btnSmCsv">表示中の一覧をCSVで出力</button>
+    </div>
+    <div class="scroll"><table class="grid" id="smTable"></table></div>
+  </div>
+</section>
+
 <section class="page" id="p6">
   <div class="panel">
     <h2>使い方</h2>
@@ -945,6 +981,9 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <li><strong>未受診状況調査</strong>　予約状況で「受診しない」などと入力した人、予約していない人（予約状況ファイルに載っていない人を含む）、キャンセルにした人が自動で並びます
           （派遣元・他の受診機関で受診する人は載りません）。調査票（フォーム）を送ったら「送付済み」にします。
           <strong>産休・育休</strong>の人や<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。一覧はCSVで出せます。</li>
+      <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>で「要検査」「要精密検査」を選びます。
+          <strong>要精密検査</strong>の人は「７. 要精密検査確認調査」に自動で並びます。病院で受けた精密検査の結果をフォームで報告してもらい、
+          フォームを送ったら「送付済み」、報告が届いたら「報告あり」にします。一覧はCSVで出せます。</li>
     </ol>
     <p class="hint">タブの横には進み具合が出ます（<strong>✓ 24名</strong>・<strong>✓ 2/2</strong> など）。
       オレンジの<strong>「要確認」</strong>が出ていたら、印刷前に「３. 対象者一覧」で中身を確かめてください。</p>
@@ -990,7 +1029,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <table class="grid">
       <thead><tr><th>保存されるもの</th><th>消し方</th></tr></thead>
       <tbody>
-        <tr><td>職員名簿・予約状況・個別の除外・キャンセル・未受診状況調査の記録</td><td>「１. 名簿の読込」画面の「保存データを消去」</td></tr>
+        <tr><td>職員名簿・予約状況・個別の除外・キャンセル・判定・未受診状況調査・要精密検査確認調査の記録</td><td>「１. 名簿の読込」画面の「保存データを消去」</td></tr>
         <tr><td>様式レイアウト・団体名</td><td>「４. 様式レイアウト」画面の「この検診を初期値に戻す」</td></tr>
         <tr><td>印刷が不要になる入力値・注意事項</td><td>それぞれの画面の「初期値に戻す」</td></tr>
       </tbody>
@@ -1218,6 +1257,8 @@ var state = {
   cancelled:  {},        // kenshinId -> { 職員番号: キャンセルした日(YYYY-MM-DD) }  直前キャンセル
   survey:     {},        // "取込元:職員番号" -> 未受診状況調査の記録 { st, sentAt, ansAt, reason, memo }
   svExempt:   {},        // 職員番号 -> 未受診状況調査の免除 { leave:産休・育休, other:その他, text:その他の内容 }
+  judge:      {},        // kenshinId -> { 職員番号: "kensa"（要検査）| "seimitsu"（要精密検査） }
+  seimitsu:   {},        // "検診:職員番号" -> 要精密検査確認調査の記録 { st, sentAt, repAt }
 
   onlyActive: true,      // 「在職」列がある場合、在職者のみを対象にする
   inactive:   [],        // 在職でないため除外した職員
@@ -1239,7 +1280,7 @@ var state = {
   printMode:  "overlay"  // overlay = 対がん協会の用紙へ重ね刷り／a4 = A4自前様式
 };
 
-KENSHIN.forEach(function(k){ state.excluded[k.id] = new Set(); state.cancelled[k.id] = {}; });
+KENSHIN.forEach(function(k){ state.excluded[k.id] = new Set(); state.cancelled[k.id] = {}; state.judge[k.id] = {}; });
 
 var LS_KEY = "kenshin.settings.v1";
 
@@ -1788,6 +1829,7 @@ function showPage(id){
   });
   if(id === "p4"){ renderTgTabs(); renderTargets(); }
   if(id === "p9") renderSurvey();
+  if(id === "p10") renderSeimitsu();
   if(id === "p7") NYU_SOURCES.forEach(function(x){ renderNyuCard(x.id); });
   if(id === "p8"){ ly.unlocked = false; renderLayoutTab(); }   // 開くたびに確認からやり直します
 }
@@ -1876,9 +1918,11 @@ function openFyGuard(kind, proceed){
     foot = '<button class="btn" id="fyKeep">' + old + "年度の作業を続ける</button>"
       + '<button class="btn primary" id="fyNew">' + cur + "年度の作業を始める（前年度のデータを消去）</button>";
   }
-  var nsv = surveyRows().length;
-  if(nsv) body += '<p style="color:#a8410f"><b>未受診状況調査の記録（' + nsv + "名分）も消えます。</b>"
-    + "残す必要があるときは、先に「" + old + "年度」のまま開いて、「６. 未受診状況調査」から CSV を出力してください。</p>";
+  var nsv = surveyRows().length, nsm = seimitsuRows().length;
+  if(nsv || nsm) body += '<p style="color:#a8410f"><b>'
+    + [nsv ? "未受診状況調査の記録（" + nsv + "名分）" : "", nsm ? "要精密検査確認調査の記録（" + nsm + "名分）" : ""].filter(Boolean).join("と")
+    + "も消えます。</b>残す必要があるときは、先に「" + old + "年度」のまま開いて、"
+    + "「６」「７」のタブから CSV を出力してください。</p>";
   $("fyGuardHead").textContent = head;
   $("fyGuardBody").innerHTML = '<p class="mq">' + q + "</p>" + body;
   $("fyGuardFoot").innerHTML = foot;
@@ -3143,7 +3187,9 @@ function saveData(){
     excluded: {},
     cancelled: state.cancelled,
     survey: state.survey,
-    svExempt: state.svExempt
+    svExempt: state.svExempt,
+    judge: state.judge,
+    seimitsu: state.seimitsu
   };
   NYU_SOURCES.forEach(function(src){
     var s0 = state.nyuSrc[src.id];
@@ -3202,9 +3248,11 @@ function loadData(){
       d.excluded[k.id].forEach(function(no){ state.excluded[k.id].add(no); });
     }
     state.cancelled[k.id] = (d.cancelled && d.cancelled[k.id]) || {};
+    state.judge[k.id] = (d.judge && d.judge[k.id]) || {};
   });
   state.survey = d.survey || {};
   state.svExempt = d.svExempt || {};
+  state.seimitsu = d.seimitsu || {};
 
   if(d.nyuOpt) state.nyuOpt = d.nyuOpt;
   state.nyuSrc = {};
@@ -3239,9 +3287,10 @@ function clearData(){
   state.rawHeader = [];
   state.rosterLabel = "";
   state.savedAt = "";
-  KENSHIN.forEach(function(k){ state.excluded[k.id] = new Set(); state.cancelled[k.id] = {}; });
+  KENSHIN.forEach(function(k){ state.excluded[k.id] = new Set(); state.cancelled[k.id] = {}; state.judge[k.id] = {}; });
   state.survey = {};
   state.svExempt = {};
+  state.seimitsu = {};
   computeTargets();
   $("mapPanel").style.display = "none";
   $("loadedPanel").style.display = "none";
@@ -3273,6 +3322,8 @@ function renderTabProgress(){
   mark("p4", nchk ? "要確認 " + nchk : (nprint ? "✓" : ""), nchk > 0);
   var sv = surveyCount(surveyRows());
   mark("p9", sv.todo ? "未送付 " + sv.todo : sv.sent ? "回答待ち " + sv.sent : (sv.all ? "✓ " + sv.all + "名" : ""), sv.todo > 0);
+  var sm = seimitsuCount(seimitsuRows());
+  mark("p10", sm.todo ? "未送付 " + sm.todo : sm.sent ? "報告待ち " + sm.sent : (sm.all ? "✓ " + sm.all + "名" : ""), sm.todo > 0);
   renderPdfAllHint();
 }
 
@@ -3430,6 +3481,9 @@ function renderTargetStat(){
         + statBox(c.skip, "印刷しない（文言・空欄）")
         + statBox(c.cancel, "キャンセル")
         + statBox(c.manual, "手動で除外");
+  var nk = 0, ns = 0;
+  activeTargets(kid).forEach(function(t){ var j = state.judge[kid][t.emp.empNo]; if(j === "kensa") nk++; if(j === "seimitsu") ns++; });
+  if(nk || ns) h += statBox(nk, "判定：要検査") + statBox(ns, "判定：要精密検査");
   if(c.check) h += '<div style="border-color:#a8410f"><div class="n" style="color:#a8410f">' + c.check
                  + '</div><div class="l">印刷するが要確認</div></div>';
   box.innerHTML = h;
@@ -3488,9 +3542,9 @@ function renderTargets(){
   });
 
   var h = "<thead><tr><th>対象</th><th>キャンセル</th><th>職員番号</th><th>所属コード</th><th>氏名</th><th>年齢</th><th>性別</th>"
-        + "<th>所属名</th><th>状態</th><th>受診日</th><th>受付時間</th><th>入力欄の内容</th></tr></thead><tbody>";
+        + "<th>所属名</th><th>状態</th><th>判定</th><th>受診日</th><th>受付時間</th><th>入力欄の内容</th></tr></thead><tbody>";
   if(!rows.length){
-    h += '<tr><td colspan="12" class="hint">該当する方がいません。'
+    h += '<tr><td colspan="13" class="hint">該当する方がいません。'
        + (state.nyuryoku[kid] ? "絞り込みの条件をご確認ください。" : "「２. 予約状況の取込」でこの検診のファイルを読み込んでください。")
        + "</td></tr>";
   }
@@ -3513,6 +3567,7 @@ function renderTargets(){
       + "<td>" + sexLabel(e.sex) + "</td>"
       + "<td>" + esc(e.deptName) + "</td>"
       + "<td" + (st.warn ? ' style="color:#a8410f"' : "") + ">" + esc(st.label) + "</td>"
+      + "<td>" + judgeCell(r.kid, r.t, st) + "</td>"
       + '<td class="nw">' + esc(assignDateLabel(a)) + "</td>"
       + '<td class="nw">' + (a ? esc(a.time) : "") + "</td>"
       + "<td>" + (r.t.nyu ? esc(r.t.nyu.raw) : "") + "</td>"
@@ -3535,10 +3590,26 @@ $("targetTable").addEventListener("change", function(e){
       delete state.cancelled[kid][no];
       toast((emp ? emp.name : no) + " さんのキャンセルを取り消しました");
     }
+  }else if(e.target.classList.contains("tjud")){
+    var em = empByNo(no);
+    if(e.target.value) state.judge[kid][no] = e.target.value;
+    else delete state.judge[kid][no];
+    if(e.target.value === "seimitsu") toast((em ? em.name : no) + " さんを " + kenshinName(kid) + " の要精密検査にしました。「７. 要精密検査確認調査」に載ります。");
   }else return;
   renderTargets();
   saveData();
 });
+
+/* 検診の判定（受診した人だけ選べます）。要精密検査にすると「７. 要精密検査確認調査」に載ります */
+var JUDGE = { kensa:"要検査", seimitsu:"要精密検査" };
+function judgeCell(kid, t, st){
+  if(!t.print || st.key === "cancel" || st.key === "manual") return "";
+  var v = state.judge[kid][t.emp.empNo] || "";
+  return '<select class="tjud' + (v ? " on-" + v : "") + '" data-k="' + kid + '" data-n="' + esc(t.emp.empNo) + '">'
+    + '<option value="">―</option>'
+    + Object.keys(JUDGE).map(function(k){ return '<option value="' + k + '"' + (v === k ? " selected" : "") + ">" + JUDGE[k] + "</option>"; }).join("")
+    + "</select>";
+}
 
 function empByNo(no){
   for(var i = 0; i < state.employees.length; i++) if(String(state.employees[i].empNo) === String(no)) return state.employees[i];
@@ -3774,6 +3845,133 @@ $("btnSvCsv").addEventListener("click", function(){
               r.ex ? "" : r.rec.sentAt || "", r.ex ? "" : r.rec.ansAt || "", svExemptLabel(r.ex)]);
   });
   downloadCSV("未受診状況調査_" + (state.fiscalYear || "") + "年度.csv", out);
+});
+
+/* =========================================================================
+   要精密検査確認調査
+   「３. 対象者一覧」で要精密検査にした人に、病院での精密検査の結果をフォームで報告してもらいます。
+   ここでは依頼（フォーム）の送付と報告の有無を記録します。
+   ========================================================================= */
+
+var SM_ST = { todo:"未送付", sent:"送付済み", reported:"報告あり" };
+
+function seimitsuRows(){
+  var rows = [];
+  ticketKenshin().forEach(function(k){
+    activeTargets(k.id).forEach(function(t){
+      if(state.judge[k.id][t.emp.empNo] !== "seimitsu") return;
+      var key = k.id + ":" + t.emp.empNo, rec = state.seimitsu[key] || {};
+      rows.push({ key:key, kid:k.id, emp:t.emp, t:t, rec:rec,
+                  st: rec.st === "sent" || rec.st === "reported" ? rec.st : "todo" });
+    });
+  });
+  rows.sort(cmpDeptKana);
+  return rows;
+}
+
+function seimitsuCount(rows){
+  var c = { all:rows.length, todo:0, sent:0, reported:0 };
+  rows.forEach(function(r){ c[r.st]++; });
+  return c;
+}
+
+function seimitsuVisible(){
+  var fk = $("smKid").value, fst = $("smState").value, fd = $("smDept").value;
+  return seimitsuRows().filter(function(r){
+    if(fk && r.kid !== fk) return false;
+    if(fst && r.st !== fst) return false;
+    if(fd && r.emp.deptName !== fd) return false;
+    return true;
+  });
+}
+
+function renderSeimitsu(){
+  var box = $("smTable");
+  if(!box) return;
+  var kSel = $("smKid"), keep = kSel.value;
+  kSel.innerHTML = '<option value="">（すべて）</option>' + ticketKenshin().map(function(k){
+    return '<option value="' + k.id + '">' + esc(k.name) + "</option>";
+  }).join("");
+  kSel.value = keep;
+  var all = seimitsuRows();
+  var dSel = $("smDept"), keepD = dSel.value, depts = {};
+  all.forEach(function(r){ depts[r.emp.deptName] = 1; });
+  dSel.innerHTML = '<option value="">（すべて）</option>' + Object.keys(depts).sort().map(function(d){
+    return '<option value="' + esc(d) + '">' + esc(d) + "</option>";
+  }).join("");
+  dSel.value = depts[keepD] ? keepD : "";
+
+  var c = seimitsuCount(all);
+  $("smStat").innerHTML = statBox(c.all, "要精密検査の人")
+    + (c.todo ? '<div style="border-color:#a8410f"><div class="n" style="color:#a8410f">' + c.todo + '</div><div class="l">未送付</div></div>'
+              : statBox(0, "未送付"))
+    + statBox(c.sent, "送付済み（報告待ち）")
+    + statBox(c.reported, "報告あり");
+
+  var rows = seimitsuVisible();
+  var h = "<thead><tr><th>状況</th><th>検診</th><th>所属名</th><th>職員番号</th><th>氏名</th><th>年齢</th><th>性別</th>"
+        + "<th>受診日</th><th>送付・報告</th></tr></thead><tbody>";
+  if(!rows.length){
+    h += '<tr><td colspan="9" class="hint">'
+       + (all.length ? "絞り込みの条件に当てはまる人がいません。"
+                     : "要精密検査の人はいません。「３. 対象者一覧」の「判定」で「要精密検査」を選ぶと、ここに並びます。")
+       + "</td></tr>";
+  }
+  rows.forEach(function(r){
+    var e = r.emp, k = esc(r.key);
+    h += "<tr>"
+      + '<td><select data-smst="' + k + '"' + (r.st === "todo" ? ' class="todo"' : "") + ">"
+        + Object.keys(SM_ST).map(function(v){ return '<option value="' + v + '"' + (r.st === v ? " selected" : "") + ">" + SM_ST[v] + "</option>"; }).join("")
+        + "</select></td>"
+      + '<td class="nw">' + esc(kenshinName(r.kid)) + "</td>"
+      + '<td class="nw">' + esc(e.deptName) + "</td>"
+      + "<td>" + esc(e.empNo) + "</td>"
+      + '<td class="nw">' + esc(e.name) + "</td>"
+      + '<td class="num">' + e.age + "</td>"
+      + "<td>" + sexLabel(e.sex) + "</td>"
+      + '<td class="nw">' + esc(assignDateLabel(r.t.assign)) + "</td>"
+      + '<td class="nw">' + (r.rec.sentAt ? "送付 " + mdOf(r.rec.sentAt) : "") + (r.rec.sentAt && r.rec.repAt ? "<br>" : "")
+        + (r.rec.repAt ? "報告 " + mdOf(r.rec.repAt) : "") + "</td>"
+      + "</tr>";
+  });
+  box.innerHTML = h + "</tbody>";
+  renderTabProgress();
+}
+
+function setSeimitsuState(key, st){
+  var rec = state.seimitsu[key] || (state.seimitsu[key] = {}), today = isoOf(new Date());
+  rec.st = st;
+  if(st === "todo"){ delete rec.sentAt; delete rec.repAt; }
+  if(st === "sent"){ if(!rec.sentAt) rec.sentAt = today; delete rec.repAt; }
+  if(st === "reported" && !rec.repAt) rec.repAt = today;
+}
+
+$("smTable").addEventListener("change", function(e){
+  var key = e.target.dataset ? e.target.dataset.smst : "";
+  if(!key) return;
+  setSeimitsuState(key, e.target.value);
+  saveData(); renderSeimitsu();
+});
+["smKid","smState","smDept"].forEach(function(id){ $(id).addEventListener("change", renderSeimitsu); });
+$("btnSmSent").addEventListener("click", function(){
+  var rows = seimitsuVisible().filter(function(r){ return r.st === "todo"; });
+  if(!rows.length){ toast("表示中に「未送付」の人はいません", true); return; }
+  if(!confirm("表示中の「未送付」" + rows.length + "名を、今日の日付で「送付済み」にします。よろしいですか？")) return;
+  rows.forEach(function(r){ setSeimitsuState(r.key, "sent"); });
+  saveData(); renderSeimitsu();
+  toast(rows.length + "名を送付済みにしました");
+});
+$("btnSmCsv").addEventListener("click", function(){
+  var rows = seimitsuVisible();
+  if(!rows.length){ toast("出力する人がいません", true); return; }
+  var out = [["年度","検診","所属コード","所属名","職員番号","氏名","カナ","性別","年齢","受診日","判定","状況","送付日","報告日"]];
+  rows.forEach(function(r){
+    var e = r.emp;
+    out.push([state.fiscalYear || "", kenshinName(r.kid), e.deptCode, e.deptName, e.empNo, e.name, e.kana,
+              sexLabel(e.sex), e.age, assignDateLabel(r.t.assign), "要精密検査", SM_ST[r.st],
+              r.rec.sentAt || "", r.rec.repAt || ""]);
+  });
+  downloadCSV("要精密検査確認調査_" + (state.fiscalYear || "") + "年度.csv", out);
 });
 
 /* =========================================================================
@@ -5246,13 +5444,14 @@ function bindLayoutTab(){
    ========================================================================= */
 
 $("btnCsvTargets").addEventListener("click", function(){
-  var rows = [["検診","職員番号","氏名","カナ","生年月日","年齢","性別","所属コード","所属名","雇用区分","受診日","受付時間","会場","入力欄の内容"]];
+  var rows = [["検診","職員番号","氏名","カナ","生年月日","年齢","性別","所属コード","所属名","雇用区分","受診日","受付時間","会場","入力欄の内容","判定"]];
   KENSHIN.forEach(function(k){
     sortForPrint(activeTargets(k.id), "dept").forEach(function(t){
       var e = t.emp, a = t.assign;
       rows.push([k.name, e.empNo, e.name, e.kana, fmtDateSlash(e.birth), e.age, sexLabel(e.sex),
         e.deptCode, e.deptName, e.empType,
-        a ? a.date : "", a ? a.time : "", a ? a.place : "", t.nyu ? t.nyu.raw : ""]);
+        a ? a.date : "", a ? a.time : "", a ? a.place : "", t.nyu ? t.nyu.raw : "",
+        JUDGE[state.judge[k.id][e.empNo]] || ""]);
     });
   });
   if(rows.length === 1){ toast("出力対象がありません", true); return; }
@@ -5452,9 +5651,10 @@ $("btnSample").addEventListener("click", function(){
   bindLayoutTab();
 
   $("btnClearData").addEventListener("click", function(){
-    var nsv = surveyRows().length;
-    if(!confirm("この端末に保存されている職員名簿・予約状況・キャンセル・未受診状況調査の記録をすべて消去します。よろしいですか？\n（様式レイアウトなどの設定は残ります）"
-      + (nsv ? "\n\n未受診状況調査の記録（" + nsv + "名分）も消えます。必要なら先に「６. 未受診状況調査」から CSV を出力してください。" : ""))) return;
+    var nsv = surveyRows().length, nsm = seimitsuRows().length;
+    if(!confirm("この端末に保存されている職員名簿・予約状況・キャンセル・判定・未受診状況調査・要精密検査確認調査の記録をすべて消去します。よろしいですか？\n（様式レイアウトなどの設定は残ります）"
+      + (nsv ? "\n\n未受診状況調査の記録（" + nsv + "名分）も消えます。必要なら先に「６. 未受診状況調査」から CSV を出力してください。" : "")
+      + (nsm ? "\n\n要精密検査確認調査の記録（" + nsm + "名分）も消えます。必要なら先に「７. 要精密検査確認調査」から CSV を出力してください。" : ""))) return;
     clearData();
     toast("保存データを消去しました");
   });
