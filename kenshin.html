@@ -75,6 +75,7 @@ nav button{
   cursor:pointer;
   white-space:nowrap;
 }
+@media (max-width:1380px){ nav button{padding:8px 7px;font-size:13px} nav button .tabmark{margin-left:4px;padding:0 5px} }
 nav button:first-child{border-radius:6px 0 0 6px}
 nav button:last-child{border-radius:0 6px 6px 0;border-right:1px solid var(--line)}
 nav button:hover{background:var(--accent-bg)}
@@ -443,6 +444,14 @@ select.tjud.on-seimitsu{border-color:#a8410f;background:#fde4d8;color:#a8410f;fo
 #svTable label.svx{display:inline-flex;align-items:center;gap:4px;margin-right:12px;white-space:nowrap;cursor:pointer}
 #svTable .svst-ex{color:#55636f;font-weight:bold;white-space:nowrap}
 #svTable tr.exempt td{background:#f3f5f7;color:#6a7580}
+/* ===== 回答・報告の取込 ===== */
+.ansimp{margin:12px 0;padding:12px 14px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-bg)}
+.ansimp h3{margin:0 0 8px;font-size:14px;color:var(--accent)}
+.ansimp .miss{margin-top:8px;font-size:13px;color:#a8410f}
+details.ans summary{cursor:pointer;color:var(--accent);font-size:12px;white-space:nowrap}
+details.ans dl{margin:6px 0 0;font-size:12px;max-width:340px}
+details.ans dt{font-weight:bold;color:var(--text-sub)}
+details.ans dd{margin:0 0 4px 0;white-space:pre-wrap}
 /* ===== タブの進み具合 ===== */
 nav button .tabmark{display:inline-block;margin-left:6px;padding:0 7px;border-radius:9px;font-size:11px;
   font-weight:bold;line-height:18px;background:var(--accent-bg);color:var(--accent)}
@@ -864,6 +873,18 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <button class="btn" id="btnCsvUnassigned">要確認・対象外一覧CSV</button>
     </div>
   </div>
+
+  <div class="panel">
+    <h2>年度のまとめ（受診状況・判定・調査結果）</h2>
+    <p class="hint">
+      胃がん・乳がん・子宮頸がんの<strong>検診ごとに1シート</strong>で、予約状況から受診状況・判定・未受診状況調査・要精密検査確認調査の結果までを1人1行にまとめます。
+      CSV にはシートを持たせられないため、<strong>Excel（3シート）</strong>で出力します。CSV が必要なときは検診ごとに3つのファイルで出せます。
+    </p>
+    <div class="row">
+      <button class="btn primary" id="btnYearXlsx">年度のまとめ（Excel・検診ごとのシート）</button>
+      <button class="btn" id="btnYearCsv">年度のまとめ（CSV・検診ごとに3ファイル）</button>
+    </div>
+  </div>
 </section>
 
 <!-- ================= 6. 使い方 ================= -->
@@ -874,7 +895,8 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <p class="hint">
       予約状況で<strong>「受診しない」などと入力した人</strong>、<strong>予約していない人</strong>（入力欄が空欄の人・予約状況ファイルに載っていない人）、
       「３. 対象者一覧」で<strong>キャンセルにした人</strong>が自動で並びます（派遣元・他の受診機関で受診する人は載りません）。<br>
-      調査票（フォーム）を送ったら「送付済み」にします。<strong>産休・育休</strong>の人と、<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。
+      調査票（フォーム）を送ったら「送付済み」にします。<strong>産休・育休</strong>の人と、<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。<br>
+      フォームの回答をCSV（またはExcel）で書き出したら<strong>「回答CSVを取り込む」</strong>で読み込むと、回答した人が「回答あり」になり、回答内容を見られます。
       この記録もこの端末に保存されます。
     </p>
     <div class="row">
@@ -893,8 +915,11 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <div class="stat" id="svStat"></div>
     <div class="row">
       <button class="btn" id="btnSvSent">表示中の「未送付」をまとめて送付済みにする</button>
+      <button class="btn primary" id="btnSvAns">回答CSVを取り込む…</button>
+      <input type="file" id="svAnsFile" accept=".csv,.txt,.xlsx,.xlsm" style="display:none">
       <button class="btn" id="btnSvCsv">表示中の一覧をCSVで出力</button>
     </div>
+    <div id="svImport" class="ansimp" style="display:none"></div>
     <div class="scroll"><table class="grid" id="svTable"></table></div>
   </div>
 </section>
@@ -906,7 +931,8 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <p class="hint">
       「３. 対象者一覧」の<strong>「判定」で「要精密検査」</strong>を選んだ人が、検診ごとに自動で並びます。
       病院で精密検査を受けて、その結果を<strong>フォームで報告</strong>してもらいます。<br>
-      報告のお願い（フォーム）を送ったら「送付済み」、報告が届いたら「報告あり」にします。この記録もこの端末に保存されます。
+      報告のお願い（フォーム）を送ったら「送付済み」にします。フォームの回答を<strong>「報告CSVを取り込む」</strong>で読み込むと、報告した人が「報告あり」になり、報告内容を見られます。
+      この記録もこの端末に保存されます。
     </p>
     <div class="row">
       <label>検診 <select id="smKid"></select></label>
@@ -923,8 +949,11 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <div class="stat" id="smStat"></div>
     <div class="row">
       <button class="btn" id="btnSmSent">表示中の「未送付」をまとめて送付済みにする</button>
+      <button class="btn primary" id="btnSmAns">報告CSVを取り込む…</button>
+      <input type="file" id="smAnsFile" accept=".csv,.txt,.xlsx,.xlsm" style="display:none">
       <button class="btn" id="btnSmCsv">表示中の一覧をCSVで出力</button>
     </div>
+    <div id="smImport" class="ansimp" style="display:none"></div>
     <div class="scroll"><table class="grid" id="smTable"></table></div>
   </div>
 </section>
@@ -980,10 +1009,13 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           そのPDFを <strong>Adobe Acrobat で開き、複合機を選び、「実際のサイズ」で</strong>協会の用紙に印刷してください。</li>
       <li><strong>未受診状況調査</strong>　予約状況で「受診しない」などと入力した人、予約していない人（予約状況ファイルに載っていない人を含む）、キャンセルにした人が自動で並びます
           （派遣元・他の受診機関で受診する人は載りません）。調査票（フォーム）を送ったら「送付済み」にします。
-          <strong>産休・育休</strong>の人や<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。一覧はCSVで出せます。</li>
+          <strong>産休・育休</strong>の人や<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。
+          フォームの回答を書き出したCSV（Excelも可）を<strong>「回答CSVを取り込む」</strong>で読み込むと、回答した人が「回答あり」になります。一覧はCSVで出せます。</li>
       <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>で「要検査」「要精密検査」を選びます。
           <strong>要精密検査</strong>の人は「７. 要精密検査確認調査」に自動で並びます。病院で受けた精密検査の結果をフォームで報告してもらい、
-          フォームを送ったら「送付済み」、報告が届いたら「報告あり」にします。一覧はCSVで出せます。</li>
+          フォームを送ったら「送付済み」にし、報告のCSVを<strong>「報告CSVを取り込む」</strong>で読み込むと「報告あり」になります。一覧はCSVで出せます。</li>
+      <li><strong>年度のまとめ</strong>　「５. 印刷・出力」の<strong>「年度のまとめ（Excel・検診ごとのシート）」</strong>で、
+          胃がん・乳がん・子宮頸がんの検診ごとに1シートずつ、予約状況から受診状況・判定・調査の結果までを1人1行で出力します。</li>
     </ol>
     <p class="hint">タブの横には進み具合が出ます（<strong>✓ 24名</strong>・<strong>✓ 2/2</strong> など）。
       オレンジの<strong>「要確認」</strong>が出ていたら、印刷前に「３. 対象者一覧」で中身を確かめてください。</p>
@@ -3746,9 +3778,9 @@ function renderSurvey(){
 
   var rows = surveyVisible();
   var h = "<thead><tr><th>状況</th><th>区分</th><th>検診</th><th>所属名</th><th>職員番号</th><th>氏名</th>"
-        + "<th>予約状況の入力欄／キャンセル日</th><th>送付・回答</th><th>調査免除</th></tr></thead><tbody>";
+        + "<th>予約状況の入力欄／キャンセル日</th><th>送付・回答</th><th>回答内容</th><th>調査免除</th></tr></thead><tbody>";
   if(!rows.length){
-    h += '<tr><td colspan="9" class="hint">'
+    h += '<tr><td colspan="10" class="hint">'
        + (Object.keys(state.nyuSrc).length
           ? (all.length ? "絞り込みの条件に当てはまる人がいません。" : "調査の対象になる人はいません（受診しない・予約なし・キャンセルの人がいません）。")
           : "「２. 予約状況の取込」で予約状況を読み込むと、ここに調査の対象者が並びます。")
@@ -3772,6 +3804,7 @@ function renderSurvey(){
       + "<td>" + esc(surveyDetail(r)) + "</td>"
       + '<td class="nw">' + (r.rec.sentAt ? "送付 " + mdOf(r.rec.sentAt) : "") + (r.rec.sentAt && r.rec.ansAt ? "<br>" : "")
         + (r.rec.ansAt ? "回答 " + mdOf(r.rec.ansAt) : "") + "</td>"
+      + "<td>" + answersCell(r.rec.answers, "回答を見る") + "</td>"
       + "<td>"
         + '<label class="svx"><input type="checkbox" data-svx="leave" data-no="' + no + '"' + (x.leave ? " checked" : "") + "> 産休・育休</label>"
         + '<label class="svx"><input type="checkbox" data-svx="other" data-no="' + no + '"' + (x.other ? " checked" : "") + "> その他</label>"
@@ -3837,12 +3870,12 @@ $("btnSvCsv").addEventListener("click", function(){
   var rows = surveyVisible();
   if(!rows.length){ toast("出力する人がいません", true); return; }
   var out = [["年度","検診","区分","所属コード","所属名","職員番号","氏名","カナ","性別","年齢",
-              "予約状況の入力欄","キャンセル日","状況","送付日","回答日","調査免除の理由"]];
+              "予約状況の入力欄","キャンセル日","状況","送付日","回答日","調査免除の理由","回答内容"]];
   rows.forEach(function(r){
     var e = r.emp;
     out.push([state.fiscalYear || "", r.kname, SV_CAT[r.cat], e.deptCode, e.deptName, e.empNo, e.name, e.kana,
               sexLabel(e.sex), e.age, r.nyu && r.nyu.raw ? r.nyu.raw : "", r.cancelAt || "", SV_ST[r.st],
-              r.ex ? "" : r.rec.sentAt || "", r.ex ? "" : r.rec.ansAt || "", svExemptLabel(r.ex)]);
+              r.rec.sentAt || "", r.rec.ansAt || "", svExemptLabel(r.ex), answersText(r.rec.answers)]);
   });
   downloadCSV("未受診状況調査_" + (state.fiscalYear || "") + "年度.csv", out);
 });
@@ -3910,9 +3943,9 @@ function renderSeimitsu(){
 
   var rows = seimitsuVisible();
   var h = "<thead><tr><th>状況</th><th>検診</th><th>所属名</th><th>職員番号</th><th>氏名</th><th>年齢</th><th>性別</th>"
-        + "<th>受診日</th><th>送付・報告</th></tr></thead><tbody>";
+        + "<th>受診日</th><th>送付・報告</th><th>報告内容</th></tr></thead><tbody>";
   if(!rows.length){
-    h += '<tr><td colspan="9" class="hint">'
+    h += '<tr><td colspan="10" class="hint">'
        + (all.length ? "絞り込みの条件に当てはまる人がいません。"
                      : "要精密検査の人はいません。「３. 対象者一覧」の「判定」で「要精密検査」を選ぶと、ここに並びます。")
        + "</td></tr>";
@@ -3932,6 +3965,7 @@ function renderSeimitsu(){
       + '<td class="nw">' + esc(assignDateLabel(r.t.assign)) + "</td>"
       + '<td class="nw">' + (r.rec.sentAt ? "送付 " + mdOf(r.rec.sentAt) : "") + (r.rec.sentAt && r.rec.repAt ? "<br>" : "")
         + (r.rec.repAt ? "報告 " + mdOf(r.rec.repAt) : "") + "</td>"
+      + "<td>" + answersCell(r.rec.answers, "報告を見る") + "</td>"
       + "</tr>";
   });
   box.innerHTML = h + "</tbody>";
@@ -3964,15 +3998,384 @@ $("btnSmSent").addEventListener("click", function(){
 $("btnSmCsv").addEventListener("click", function(){
   var rows = seimitsuVisible();
   if(!rows.length){ toast("出力する人がいません", true); return; }
-  var out = [["年度","検診","所属コード","所属名","職員番号","氏名","カナ","性別","年齢","受診日","判定","状況","送付日","報告日"]];
+  var out = [["年度","検診","所属コード","所属名","職員番号","氏名","カナ","性別","年齢","受診日","判定","状況","送付日","報告日","報告内容"]];
   rows.forEach(function(r){
     var e = r.emp;
     out.push([state.fiscalYear || "", kenshinName(r.kid), e.deptCode, e.deptName, e.empNo, e.name, e.kana,
               sexLabel(e.sex), e.age, assignDateLabel(r.t.assign), "要精密検査", SM_ST[r.st],
-              r.rec.sentAt || "", r.rec.repAt || ""]);
+              r.rec.sentAt || "", r.rec.repAt || "", answersText(r.rec.answers)]);
   });
   downloadCSV("要精密検査確認調査_" + (state.fiscalYear || "") + "年度.csv", out);
 });
+
+/* =========================================================================
+   フォームの回答（未受診状況調査）・報告（要精密検査確認調査）の取込
+   Microsoft Forms・Google フォームなどから書き出した CSV／Excel を読み、
+   職員番号（なければ氏名）で一覧の人と突き合わせて「回答あり／報告あり」にします。
+   ========================================================================= */
+
+var ansPending = {};          // "sv" | "sm" -> 読込中の回答ファイル
+var ANS_META = /^(ID|開始時刻|完了時刻|最終変更時刻|メール|電子メール|メールアドレス|タイムスタンプ|ポイント.*|フィードバック.*|クイズ.*)$/;
+
+function answersText(ans){
+  if(!ans) return "";
+  return Object.keys(ans).map(function(q){ return q + "：" + ans[q]; }).join(" ／ ");
+}
+function answersCell(ans, label){
+  if(!ans || !Object.keys(ans).length) return "";
+  return '<details class="ans"><summary>' + label + "</summary><dl>"
+    + Object.keys(ans).map(function(q){ return "<dt>" + esc(q) + "</dt><dd>" + esc(ans[q]) + "</dd>"; }).join("")
+    + "</dl></details>";
+}
+
+/* 回答日時のセルを YYYY-MM-DD にする（読めなければ空） */
+function ansDateOf(v){
+  if(v instanceof Date && !isNaN(v)) return isoOf(v);
+  var m = String(v == null ? "" : v).normalize("NFKC").match(/(\d{4})\s*[\/\-年.]\s*(\d{1,2})\s*[\/\-月.]\s*(\d{1,2})/);
+  if(!m) return "";
+  return isoOf(new Date(+m[1], +m[2] - 1, +m[3]));
+}
+function ansCellText(v){
+  if(v instanceof Date) return isNaN(v) ? "" : isoOf(v) + (v.getHours() || v.getMinutes() ? " " + v.getHours() + ":" + ("0" + v.getMinutes()).slice(-2) : "");
+  return String(v == null ? "" : v).trim();
+}
+
+function ansConf(kind){
+  return kind === "sv"
+    ? { rows: surveyRows, box:"svImport", word:"回答", st:"answered", at:"ansAt", render: renderSurvey,
+        kenOf: function(r){ return [r.src.id]; },
+        kenFilter: function(txt){ txt = normText(txt); var a = [];
+          if(/胃/.test(txt)) a.push("i"); if(/乳|子宮|婦人/.test(txt)) a.push("fujin"); return a; } }
+    : { rows: seimitsuRows, box:"smImport", word:"報告", st:"reported", at:"repAt", render: renderSeimitsu,
+        kenOf: function(r){ return [r.kid]; },
+        kenFilter: function(txt){ txt = normText(txt); var a = [];
+          if(/胃/.test(txt)) a.push("i"); if(/乳/.test(txt)) a.push("nyu"); if(/子宮/.test(txt)) a.push("shikyu");
+          if(/婦人/.test(txt) && !a.length) a.push("nyu", "shikyu"); return a; } };
+}
+
+function startAnswerImport(kind, file){
+  readTableFile(file).then(function(sheets){
+    var sh = sheets[0];
+    sheets.forEach(function(x){ if(x.rows.length > sh.rows.length) sh = x; });
+    var rows = sh.rows.filter(function(r){ return r.some(function(v){ return String(v == null ? "" : v).trim() !== ""; }); });
+    if(rows.length < 2) throw new Error("回答の行が見つかりませんでした");
+    var hdr = rows[0].map(function(h){ return String(h == null ? "" : h).trim(); });
+    var find = function(re){ for(var i = 0; i < hdr.length; i++) if(re.test(normText(hdr[i]))) return i; return -1; };
+    var pn = { label:file.name, header:hdr, rows:rows.slice(1),
+               colNo:   find(/職員番号|職員No|職員コード|^番号$/i),
+               colName: find(/^(氏名|お名前|名前を入力|職員氏名)/),
+               colTime: find(/^完了時刻/) >= 0 ? find(/^完了時刻/) : find(/タイムスタンプ|回答日|送信日|報告日|^開始時刻/),
+               colKen:  find(/検診/) };
+    if(pn.colName < 0 && pn.colNo < 0) pn.colName = find(/^名前$/);
+    ansPending[kind] = pn;
+    renderAnswerImport(kind);
+  }).catch(function(err){ toast("読み込めませんでした: " + err.message, true); });
+}
+
+/* 1行ずつ一覧の人と突き合わせる */
+function matchAnswers(kind){
+  var pn = ansPending[kind], cf = ansConf(kind), list = cf.rows();
+  var byNo = {}, byName = {}, nameCount = {};
+  state.employees.forEach(function(e){ var n = normText(e.name); nameCount[n] = (nameCount[n] || 0) + 1; });
+  list.forEach(function(r){
+    var k = empKeyLoose(r.emp.empNo), n = normText(r.emp.name);
+    (byNo[k] = byNo[k] || []).push(r);
+    (byName[n] = byName[n] || []).push(r);
+  });
+  var hits = [], miss = [];
+  pn.rows.forEach(function(row, i){
+    var line = i + 2;
+    var no = pn.colNo >= 0 ? empKeyLoose(String(row[pn.colNo] == null ? "" : row[pn.colNo]).normalize("NFKC").trim()) : "";
+    var nm = pn.colName >= 0 ? normText(row[pn.colName]) : "";
+    var cand = null, label = no || (pn.colName >= 0 ? String(row[pn.colName] || "") : "");
+    if(no) cand = byNo[no] || null;
+    else if(nm){
+      if(nameCount[nm] > 1){ miss.push({ line:line, who:label, why:"同じ氏名の職員が複数います（職員番号の列で照合してください）" }); return; }
+      cand = byName[nm] || null;
+    }else{ miss.push({ line:line, who:"", why:"職員番号・氏名が空です" }); return; }
+    if(!cand){ miss.push({ line:line, who:label, why:"この一覧にいません" }); return; }
+    if(pn.colKen >= 0 && String(row[pn.colKen] || "").trim()){
+      var ks = cf.kenFilter(row[pn.colKen]);
+      var c2 = cand.filter(function(r){ return cf.kenOf(r).some(function(k){ return ks.indexOf(k) >= 0; }); });
+      if(!c2.length){ miss.push({ line:line, who:label, why:"検診「" + row[pn.colKen] + "」の行がこの一覧にありません" }); return; }
+      cand = c2;
+    }
+    var ans = {};
+    pn.header.forEach(function(h, j){
+      if(j === pn.colNo || j === pn.colName || j === pn.colTime || j === pn.colKen) return;
+      if(!h || ANS_META.test(h)) return;
+      var v = ansCellText(row[j]);
+      if(v !== "") ans[h] = v;
+    });
+    hits.push({ line:line, rows:cand, at: pn.colTime >= 0 ? ansDateOf(row[pn.colTime]) : "", answers:ans });
+  });
+  return { hits:hits, miss:miss };
+}
+
+function renderAnswerImport(kind){
+  var pn = ansPending[kind], cf = ansConf(kind), box = $(cf.box);
+  if(!pn){ box.style.display = "none"; box.innerHTML = ""; return; }
+  var sel = function(name, cur, none){
+    return '<select data-anscol="' + name + '"><option value="-1">' + none + "</option>"
+      + pn.header.map(function(h, i){ return '<option value="' + i + '"' + (cur === i ? " selected" : "") + ">" + esc(h || "（" + (i + 1) + "列目）") + "</option>"; }).join("")
+      + "</select>";
+  };
+  var m = matchAnswers(kind), n = 0;
+  m.hits.forEach(function(x){ n += x.rows.length; });
+  box.innerHTML = "<h3>" + cf.word + "の取込：" + esc(pn.label) + "（" + pn.rows.length + "件）</h3>"
+    + '<div class="row">'
+    + "<label>職員番号の列 " + sel("colNo", pn.colNo, "（なし・氏名で照合）") + "</label>"
+    + "<label>氏名の列 " + sel("colName", pn.colName, "（なし）") + "</label>"
+    + "<label>" + cf.word + "日時の列 " + sel("colTime", pn.colTime, "（なし・今日の日付）") + "</label>"
+    + "<label>検診の列 " + sel("colKen", pn.colKen, "（なし）") + "</label>"
+    + "</div>"
+    + '<div class="row"><span><strong>' + m.hits.length + "件</strong>が一覧の人と一致しました（" + n + "行が「" + cf.word + "あり」になります）。"
+    + (m.miss.length ? '<strong style="color:#a8410f">' + m.miss.length + "件は一致しません。</strong>" : "") + "</span></div>"
+    + (m.miss.length ? '<div class="miss">' + m.miss.slice(0, 30).map(function(x){
+        return x.line + "行目　" + esc(x.who) + "：" + esc(x.why); }).join("<br>") + (m.miss.length > 30 ? "<br>…ほか" + (m.miss.length - 30) + "件" : "") + "</div>" : "")
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="btn primary" data-ansgo="' + kind + '"' + (m.hits.length ? "" : " disabled") + ">この内容で取り込む</button>"
+    + '<button class="btn" data-anscancel="' + kind + '">やめる</button>'
+    + '<span class="hint">同じ人を取り込み直すと、' + cf.word + "内容は新しいもので置き換わります。</span></div>";
+  box.style.display = "";
+}
+
+function applyAnswers(kind){
+  var cf = ansConf(kind), m = matchAnswers(kind), today = isoOf(new Date()), n = 0;
+  var store = kind === "sv" ? state.survey : state.seimitsu;
+  m.hits.forEach(function(x){
+    x.rows.forEach(function(r){
+      var rec = store[r.key] || (store[r.key] = {});
+      rec.st = cf.st;
+      rec[cf.at] = x.at || today;
+      rec.answers = x.answers;
+      n++;
+    });
+  });
+  var miss = m.miss.length;
+  delete ansPending[kind];
+  saveData();
+  cf.render();
+  var box = $(cf.box);
+  if(miss){
+    box.innerHTML = "<h3>" + n + "行を「" + cf.word + "あり」にしました。一致しなかった" + cf.word + "が " + miss + "件あります</h3>"
+      + '<div class="miss">' + m.miss.slice(0, 30).map(function(x){ return x.line + "行目　" + esc(x.who) + "：" + esc(x.why); }).join("<br>") + "</div>"
+      + '<div class="row" style="margin-top:8px"><button class="btn" data-anscancel="' + kind + '">閉じる</button></div>';
+    box.style.display = "";
+  }
+  toast(n + "行を「" + cf.word + "あり」にしました" + (miss ? "（一致しない" + cf.word + " " + miss + "件）" : ""));
+}
+
+["sv","sm"].forEach(function(kind){
+  var cf = ansConf(kind), file = $(kind + "AnsFile"), box = $(cf.box);
+  $(kind === "sv" ? "btnSvAns" : "btnSmAns").addEventListener("click", function(){ file.click(); });
+  file.addEventListener("change", function(e){
+    var f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if(f) startAnswerImport(kind, f);
+  });
+  box.addEventListener("change", function(e){
+    var c = e.target.dataset ? e.target.dataset.anscol : "";
+    if(!c || !ansPending[kind]) return;
+    ansPending[kind][c] = parseInt(e.target.value, 10);
+    renderAnswerImport(kind);
+  });
+  box.addEventListener("click", function(e){
+    if(e.target.dataset.ansgo) applyAnswers(kind);
+    else if(e.target.dataset.anscancel){ delete ansPending[kind]; box.style.display = "none"; box.innerHTML = ""; }
+  });
+});
+
+/* =========================================================================
+   年度のまとめ（検診ごとに1シート）
+   予約状況・受診状況・判定・未受診状況調査・要精密検査確認調査を1人1行にまとめます。
+   ========================================================================= */
+
+/* 婦人検診で、年齢区分の書かれていない人（受診しない・予約なしなど）がどの検診に当たるかを年齢で決める */
+function fujinKidsByAge(age){
+  var best = null, bestN = -1, parsed = false;
+  (state.fujinRules || []).forEach(function(r){
+    var m = normText(r.text).match(/(\d+)歳以上/);
+    if(!m) return;
+    parsed = true;
+    var n = +m[1];
+    if(age >= n && n > bestN){ best = r; bestN = n; }
+  });
+  if(!parsed) return ["nyu", "shikyu"];
+  return best ? best.kenshin : [];
+}
+
+var YEAR_COLS = ["所属コード","所属名","職員番号","氏名","カナ","性別","年齢",
+  "予約状況（入力欄）","受診日","受付時間","会場","受診状況","受検票","判定",
+  "未受診状況調査","調査票送付日","回答日","調査免除","回答内容",
+  "要精密検査確認調査","依頼送付日","報告日","報告内容"];
+
+function yearSheet(k){
+  var svMap = {}, smMap = {};
+  surveyRows().forEach(function(r){ svMap[r.key] = r; });
+  seimitsuRows().forEach(function(r){ smMap[r.key] = r; });
+  var src = null;
+  NYU_SOURCES.forEach(function(x){ if(x.kenshin.indexOf(k.id) >= 0) src = x; });
+  var fujin = src && src.kenshin.length > 1;
+  var items = [];
+  (state.targets[k.id] || []).forEach(function(t){
+    if(fujin && !t.print && t.emp.age != null && fujinKidsByAge(t.emp.age).indexOf(k.id) < 0) return;
+    items.push({ emp:t.emp, t:t });
+  });
+  if(src){
+    surveyRows().forEach(function(r){
+      if(r.cat !== "unlisted" || r.src.id !== src.id) return;
+      if(fujin && fujinKidsByAge(r.emp.age).indexOf(k.id) < 0) return;
+      items.push({ emp:r.emp, t:null });
+    });
+  }
+  items.sort(cmpDeptKana);
+  var out = [YEAR_COLS.slice()];
+  items.forEach(function(it){
+    var e = it.emp, t = it.t, a = t ? t.assign : null, no = e.empNo;
+    var jud = t && t.print ? (state.judge[k.id][no] || "") : "";
+    var jyushin, ticket = "印刷しない";
+    if(!t) jyushin = "予約なし（ファイルに未掲載）";
+    else if(t.print){
+      if(isCancelled(k.id, no)) jyushin = "キャンセル（" + mdOf(state.cancelled[k.id][no]) + "）";
+      else if(state.excluded[k.id].has(no)) jyushin = "対象外（手動で除外）";
+      else { jyushin = jud ? "受診（判定あり）" : "予約あり"; ticket = "印刷する"; }
+    }
+    else if(t.nyu && t.nyu.kind === "skip") jyushin = isElsewhere(t.skipReason) ? "派遣元・他の受診機関で受診" : "受診しない";
+    else jyushin = "予約なし";
+    var sv = src ? svMap[src.id + ":" + no] : null;
+    var sm = smMap[k.id + ":" + no];
+    out.push([e.deptCode, e.deptName, no, e.name, e.kana, sexLabel(e.sex), e.age,
+      t && t.nyu ? t.nyu.raw : "", a ? assignDateLabel(a) : "", a ? a.time : "", a ? a.place : "",
+      jyushin, ticket, JUDGE[jud] || "",
+      sv ? SV_ST[sv.st] : "", sv ? sv.rec.sentAt || "" : "", sv ? sv.rec.ansAt || "" : "",
+      sv ? svExemptLabel(sv.ex) : "", sv ? answersText(sv.rec.answers) : "",
+      sm ? SM_ST[sm.st] : "", sm ? sm.rec.sentAt || "" : "", sm ? sm.rec.repAt || "" : "", sm ? answersText(sm.rec.answers) : ""]);
+  });
+  return { name:k.name, rows:out };
+}
+
+function yearSheets(){ return ticketKenshin().map(yearSheet); }
+
+$("btnYearXlsx").addEventListener("click", function(){
+  if(!state.employees.length){ toast("先に名簿と予約状況を読み込んでください", true); return; }
+  var name = "検診まとめ_" + (state.fiscalYear || "") + "年度.xlsx";
+  downloadBlob(makeXlsx(yearSheets()), name);
+  toast(name + " を出力しました");
+});
+$("btnYearCsv").addEventListener("click", function(){
+  if(!state.employees.length){ toast("先に名簿と予約状況を読み込んでください", true); return; }
+  var sh = yearSheets(), i = 0;
+  (function next(){
+    if(i >= sh.length) return;
+    var x = sh[i++];
+    downloadCSV("検診まとめ_" + x.name + "_" + (state.fiscalYear || "") + "年度.csv", x.rows);
+    setTimeout(next, 500);
+  })();
+});
+
+/* --- Excel（.xlsx）を書き出す：ZIP（無圧縮）に XML を詰めるだけの最小限の実装 --- */
+var CRC_TABLE = null;
+function crc32(bytes){
+  if(!CRC_TABLE){
+    CRC_TABLE = [];
+    for(var n = 0; n < 256; n++){ var c = n; for(var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; CRC_TABLE[n] = c >>> 0; }
+  }
+  var crc = 0xFFFFFFFF;
+  for(var i = 0; i < bytes.length; i++) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+function zipStore(files){
+  var enc = new TextEncoder(), parts = [], central = [], offset = 0;
+  var u16 = function(v){ return [v & 255, (v >>> 8) & 255]; };
+  var u32 = function(v){ return [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]; };
+  files.forEach(function(f){
+    var name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data);
+    var head = [].concat(u32(0x04034b50), u16(20), u16(0x0800), u16(0), u16(0), u16(0x21),
+                         u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0));
+    parts.push(new Uint8Array(head), name, data);
+    central.push([[].concat(u32(0x02014b50), u16(20), u16(20), u16(0x0800), u16(0), u16(0), u16(0x21),
+                            u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0), u16(0), u16(0), u16(0),
+                            u32(0), u32(offset)), name]);
+    offset += head.length + name.length + data.length;
+  });
+  var cdSize = 0;
+  central.forEach(function(c){ parts.push(new Uint8Array(c[0]), c[1]); cdSize += c[0].length + c[1].length; });
+  parts.push(new Uint8Array([].concat(u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+                                      u32(cdSize), u32(offset), u16(0))));
+  return new Blob(parts, { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+function xmlEsc(v){
+  return String(v == null ? "" : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function colName(i){ var s = ""; i++; while(i > 0){ var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+function makeXlsx(sheets){
+  var files = [];
+  var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    + '<Default Extension="xml" ContentType="application/xml"/>'
+    + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+    + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>';
+  var wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>';
+  var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+  sheets.forEach(function(sh, si){
+    var n = si + 1;
+    ct += '<Override PartName="/xl/worksheets/sheet' + n + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+    wb += '<sheet name="' + xmlEsc(String(sh.name).replace(/[\\\/\?\*\[\]:]/g, "").slice(0, 31)) + '" sheetId="' + n + '" r:id="rId' + n + '"/>';
+    rels += '<Relationship Id="rId' + n + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + n + '.xml"/>';
+    var ncol = sh.rows[0].length, widths = [];
+    for(var c = 0; c < ncol; c++){
+      var w = 6;
+      sh.rows.forEach(function(r){ var len = String(r[c] == null ? "" : r[c]).length * 2; if(len > w) w = len; });
+      widths.push(Math.min(w + 2, 60));
+    }
+    var x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      + '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+      + "<cols>" + widths.map(function(w, i){ return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join("") + "</cols>"
+      + "<sheetData>";
+    sh.rows.forEach(function(r, ri){
+      x += '<row r="' + (ri + 1) + '">';
+      r.forEach(function(v, ci){
+        var ref = colName(ci) + (ri + 1), st = ri === 0 ? ' s="1"' : "";
+        if(typeof v === "number" && isFinite(v)) x += '<c r="' + ref + '"' + st + "><v>" + v + "</v></c>";
+        else if(v != null && v !== "") x += '<c r="' + ref + '" t="inlineStr"' + st + '><is><t xml:space="preserve">' + xmlEsc(v) + "</t></is></c>";
+      });
+      x += "</row>";
+    });
+    x += "</sheetData>"
+      + (sh.rows.length > 1 ? '<autoFilter ref="A1:' + colName(ncol - 1) + sh.rows.length + '"/>' : "")
+      + "</worksheet>";
+    files.push({ name:"xl/worksheets/sheet" + n + ".xml", text:x });
+  });
+  ct += "</Types>";
+  wb += "</sheets></workbook>";
+  rels += '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    + '<fonts count="2"><font><sz val="11"/><name val="游ゴシック"/></font><font><b/><sz val="11"/><name val="游ゴシック"/></font></fonts>'
+    + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+    + '<fill><patternFill patternType="solid"><fgColor rgb="FFE3F1F3"/><bgColor indexed="64"/></patternFill></fill></fills>'
+    + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+    + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    + '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+    + '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>'
+    + '<cellStyles count="1"><cellStyle name="標準" xfId="0" builtinId="0"/></cellStyles>'
+    + "</styleSheet>";
+  return zipStore([
+    { name:"[Content_Types].xml", text:ct },
+    { name:"_rels/.rels", text:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+    { name:"xl/workbook.xml", text:wb },
+    { name:"xl/_rels/workbook.xml.rels", text:rels },
+    { name:"xl/styles.xml", text:styles }
+  ].concat(files));
+}
 
 /* =========================================================================
    様式レイアウト（対がん協会の用紙への重ね刷り）

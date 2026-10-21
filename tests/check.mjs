@@ -230,6 +230,42 @@ ok(smc.c.reported === 1 && smc.r.sentAt && smc.r.repAt, '送付済み→報告�
 await page.reload(); await wait(900);
 ok(await ev((n) => state.judge.i[n] === 'seimitsu' && seimitsuCount(seimitsuRows()).reported === 1, jIds[0]), '開き直しても判定と報告の記録が残る');
 
+section('フォームの回答・報告の取込');
+const csvFile = (p) => ({ name: 'x.csv', mimeType: 'text/csv', buffer: readFileSync(p) });
+await tab('p9');
+await page.setInputFiles('#svAnsFile', csvFile(path.join(FIX, 'kaitou_mijushin.csv'))); await wait(800);
+const svImp = await ev(() => document.querySelector('#svImport .row:nth-of-type(2)').textContent + ' ' + (document.querySelector('#svImport .miss') || {}).textContent);
+ok(/2件が一覧の人と一致/.test(svImp) && /1件は一致しません/.test(svImp) && /9999/.test(svImp), '回答CSV：2件一致・1件不一致（職員番号が全角でも一致）', svImp.slice(0, 120));
+await page.click('#svImport button[data-ansgo]'); await wait(500);
+const svAns = await ev(() => ({ a: state.survey['i:1003'], b: state.survey['i:1502'] }));
+ok(svAns.a.st === 'answered' && svAns.a.ansAt === '2026-11-02' && svAns.a.answers['受診しなかった理由（自由記入）'] === '仕事の都合で日程が合わなかった'
+   && !('ID' in svAns.a.answers) && !('完了時刻' in svAns.a.answers), '  回答あり・回答日（完了時刻）・回答内容を記録（ID・時刻の列は入れない）', svAns.a);
+ok(await ev(() => !!document.querySelector('#svTable details.ans')), '  一覧で「回答を見る」から回答内容を確認できる');
+await tab('p10');
+await page.setInputFiles('#smAnsFile', csvFile(path.join(FIX, 'houkoku_seimitsu.csv'))); await wait(800);
+const smImp = await ev(() => document.querySelector('#smImport .row:nth-of-type(2)').textContent + ' ' + (document.querySelector('#smImport .miss') || {}).textContent);
+ok(/1件が一覧の人と一致/.test(smImp) && /乳がん検診」の行がこの一覧にありません/.test(smImp), '報告CSV：検診の列で突き合わせる（要精密検査でない検診の報告は一致させない）', smImp.slice(0, 160));
+await page.click('#smImport button[data-ansgo]'); await wait(500);
+const smAns = await ev(() => state.seimitsu['i:1001']);
+ok(smAns.st === 'reported' && smAns.repAt === '2026-11-20' && smAns.answers['結果'] === '異常なし', '  報告あり・報告日・報告内容を記録', smAns);
+
+section('年度のまとめ（Excel・検診ごとのシート）');
+await tab('p5');
+await ev(() => { window.__blob = null; const o = window.downloadBlob; window.downloadBlob = function (b, n) { window.__blob = { b, n }; }; });
+await page.click('#btnYearXlsx'); await wait(500);
+const yx = await ev(async () => {
+  const x = window.__blob; if (!x) return null;
+  const sheets = await readXlsxFile(new File([x.b], 'a.xlsx'));
+  const s0 = sheets[0], h = s0.rows[0];
+  const row = (no) => { const r = s0.rows.find(r => String(r[2]) === no); return r ? Object.fromEntries(h.map((k, i) => [k, r[i]])) : null; };
+  return { n: x.n, names: sheets.map(s => s.name), lens: sheets.map(s => s.rows.length - 1), r1003: row('1003'), r1001: row('1001'), r1101: row('1101') };
+});
+ok(yx && yx.names.join() === '胃がん検診,乳がん検診,子宮頸がん検診', 'Excel に検診ごとの3シート', yx && yx.names);
+ok(yx && yx.n === '検診まとめ_2026年度.xlsx' && yx.lens[0] === 24, '  胃がん検診のシートに予約状況の24名', yx && [yx.n, yx.lens]);
+ok(yx && yx.r1003['受診状況'] === '受診しない' && yx.r1003['回答日'] === '2026-11-02' && /仕事の都合/.test(yx.r1003['回答内容']), '  受診しない人：未受診状況調査の回答まで1行で見える', yx && yx.r1003);
+ok(yx && yx.r1001['判定'] === '要精密検査' && yx.r1001['要精密検査確認調査'] === '報告あり' && /異常なし/.test(yx.r1001['報告内容']), '  要精密検査の人：判定と報告内容まで1行で見える', yx && yx.r1001);
+ok(yx && yx.r1101['受診状況'] === '派遣元・他の受診機関で受診' && !yx.r1101['未受診状況調査'], '  派遣元で受診する人は調査なしで載る', yx && yx.r1101);
+
 section('年度の取り違え防止');
 await page.clock.setFixedTime(new Date(2027, 3, 10, 10, 0));
 await page.reload(); await wait(1000);
