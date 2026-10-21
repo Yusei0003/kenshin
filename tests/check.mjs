@@ -95,6 +95,8 @@ await loadNyu('i', path.join(SAMPLE, '予約状況_胃がん検診_サンプル.
 await loadNyu('fujin', path.join(SAMPLE, '予約状況_婦人検診_サンプル.xlsx'));
 const counts = await ev(() => ['i', 'nyu', 'shikyu'].map(k => activeTargets(k).length));
 ok(counts.join() === '20,7,11', '印刷対象 胃がん20・乳がん7・子宮頸がん11', counts);
+const blanks = await ev(() => surveyRows().filter(r => r.cat === 'blank').map(r => r.emp.empNo));
+ok(blanks.length >= 1, '予約していない（入力欄が空欄の）人は未受診状況調査に載る', blanks);
 
 section('年齢（年度末現在・法律どおりの数え方）');
 const ages = await ev(() => {
@@ -180,21 +182,22 @@ ok(await ev(() => targetStatus('i', state.targets.i.find(t => t.emp.empNo == '12
 await tab('p9');
 const sv = await ev(() => surveyRows().map(r => r.emp.empNo + ':' + r.cat));
 ok(sv.includes('1203:cancel') && sv.includes('1003:decline') && sv.includes('1502:decline'), '調査の対象：キャンセルした人と「受診しない」人', sv);
-ok(!sv.some(x => /:other$/.test(x)), '  派遣元・他の受診機関で受診する人は、既定では載らない', sv);
-await page.check('#svOther'); await wait(300);
-ok(await ev(() => surveyRows().some(r => r.cat === 'other')), '  「含める」にすると載る');
-await page.uncheck('#svOther'); await wait(300);
+ok(!sv.some(x => /^(1101|1103|1201|1302):/.test(x)), '  派遣元・他の受診機関で受診する人は載らない', sv);
 ok(/^未送付 \d+$/.test(await ev(() => document.querySelector('nav .tab[data-page="p9"] .tabmark').textContent)), 'タブに「未送付 N」が出る');
+await page.check('#svTable input[data-svx="leave"][data-no="1003"]'); await wait(300);
+ok(await ev(() => surveyRows().find(r => r.emp.empNo == '1003').st) === 'exempt', '「産休・育休」にチェックすると調査免除');
+await page.check('#svTable input[data-svx="other"][data-no="1502"]'); await wait(300);
+await page.fill('#svTable input[data-svx="text"][data-no="1502"]', '長期療養中');
+await page.dispatchEvent('#svTable input[data-svx="text"][data-no="1502"]', 'change');
+ok(await ev(() => svExemptLabel(surveyRows().find(r => r.emp.empNo == '1502').ex)) === 'その他：長期療養中', '「その他」にチェックして内容を記入すると調査免除');
 const k1203 = 'i:1203';
 await page.selectOption(`select[data-svst="${k1203}"]`, 'answered'); await wait(300);
-await page.fill(`input[data-svf="reason"][data-svk="${k1203}"]`, '当日の体調不良');
-await page.dispatchEvent(`input[data-svf="reason"][data-svk="${k1203}"]`, 'change');
 await page.click('#btnSvSent'); await wait(400);
 const cnt = await ev(() => surveyCount(surveyRows()));
-ok(cnt.todo === 0 && cnt.answered === 1 && cnt.sent === cnt.all - 1, '「まとめて送付済み」と回答の記録', cnt);
+ok(cnt.todo === 0 && cnt.answered === 1 && cnt.exempt === 2 && cnt.sent === cnt.all - 3, '「まとめて送付済み」は調査免除の人を除いて記録', cnt);
 await page.reload(); await wait(900);
-const kept = await ev(() => ({ c: !!state.cancelled.i['1203'], r: state.survey['i:1203'] }));
-ok(kept.c && kept.r.st === 'answered' && kept.r.reason === '当日の体調不良', '開き直してもキャンセルと調査の記録が残る', kept);
+const kept = await ev(() => ({ c: !!state.cancelled.i['1203'], r: state.survey['i:1203'], x: state.svExempt['1502'] }));
+ok(kept.c && kept.r.st === 'answered' && kept.x.text === '長期療養中', '開き直してもキャンセル・調査・免除の記録が残る', kept);
 await tab('p9');
 await page.click(`button[data-uncancel="${k1203}"]`); await wait(400);
 ok(await ev(() => activeTargets('i').length) === nI, '６のタブからキャンセルを取り消すと印刷対象に戻る');

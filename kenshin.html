@@ -430,12 +430,13 @@ table.grid td.c{text-align:center}
 .svk{display:inline-block;padding:1px 8px;border-radius:9px;font-size:12px;font-weight:bold;white-space:nowrap}
 .svk.cancel{background:#fde4d8;color:#a8410f}
 .svk.decline{background:#fdf0cf;color:#7a5600}
-.svk.other{background:#e3eef9;color:#1c4e80}
 .svk.blank{background:#eceff2;color:#55636f}
 #svTable select{font:inherit;padding:3px 4px}
 #svTable select.todo{border-color:#a8410f;color:#a8410f;font-weight:bold}
-#svTable input[type=text]{font:inherit;padding:3px 6px;width:100%;min-width:120px;box-sizing:border-box}
-#svTable input[data-svf=memo]{min-width:90px}
+#svTable input[type=text]{font:inherit;padding:3px 6px;width:100%;min-width:160px;box-sizing:border-box;margin-top:4px}
+#svTable label.svx{display:inline-flex;align-items:center;gap:4px;margin-right:12px;white-space:nowrap;cursor:pointer}
+#svTable .svst-ex{color:#55636f;font-weight:bold;white-space:nowrap}
+#svTable tr.exempt td{background:#f3f5f7;color:#6a7580}
 /* ===== タブの進み具合 ===== */
 nav button .tabmark{display:inline-block;margin-left:6px;padding:0 7px;border-radius:9px;font-size:11px;
   font-weight:bold;line-height:18px;background:var(--accent-bg);color:var(--accent)}
@@ -864,8 +865,10 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
   <div class="panel">
     <h2>未受診状況調査</h2>
     <p class="hint">
-      予約状況で<strong>「受診しない」「キャンセル」などと入力した人</strong>と、「３. 対象者一覧」で<strong>キャンセルにした人</strong>が自動で並びます。
-      調査票を送ったら「送付済み」、回答が届いたら「回答あり」にして、未受診の理由を記録してください。この記録もこの端末に保存されます。
+      予約状況で<strong>「受診しない」などと入力した人</strong>、<strong>予約していない人</strong>（入力欄が空欄）、
+      「３. 対象者一覧」で<strong>キャンセルにした人</strong>が自動で並びます（派遣元・他の受診機関で受診する人は載りません）。<br>
+      調査票（フォーム）を送ったら「送付済み」にします。<strong>産休・育休</strong>の人と、<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。
+      この記録もこの端末に保存されます。
     </p>
     <div class="row">
       <label>検診 <select id="svSrc"></select></label>
@@ -875,14 +878,10 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           <option value="todo">未送付</option>
           <option value="sent">送付済み（回答待ち）</option>
           <option value="answered">回答あり</option>
-          <option value="none">調査不要</option>
+          <option value="exempt">調査免除</option>
         </select>
       </label>
       <label>所属 <select id="svDept"><option value="">（すべて）</option></select></label>
-    </div>
-    <div class="row">
-      <label><input type="checkbox" id="svOther"> 派遣元・他の受診機関で受診する人も含める</label>
-      <label><input type="checkbox" id="svBlank"> 予約が空欄（予約していない）人も含める</label>
     </div>
     <div class="stat" id="svStat"></div>
     <div class="row">
@@ -890,15 +889,6 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <button class="btn" id="btnSvCsv">表示中の一覧をCSVで出力</button>
     </div>
     <div class="scroll"><table class="grid" id="svTable"></table></div>
-    <datalist id="svReasons">
-      <option value="他の医療機関・人間ドックで受診した">
-      <option value="治療中・経過観察中">
-      <option value="妊娠中・授乳中">
-      <option value="仕事の都合がつかなかった">
-      <option value="当日の体調不良">
-      <option value="受診の必要を感じない">
-      <option value="その他">
-    </datalist>
   </div>
 </section>
 
@@ -951,9 +941,9 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <li><strong>印刷・出力</strong>　並び順を選んで「受検票のPDFを作成」を押すと、PDFファイルがダウンロードされます
           （「全検診をまとめて作成」なら、検診ごとのPDFを続けて保存します）。
           そのPDFを <strong>Adobe Acrobat で開き、複合機を選び、「実際のサイズ」で</strong>協会の用紙に印刷してください。</li>
-      <li><strong>未受診状況調査</strong>　予約状況で「受診しない」などと入力した人と、キャンセルにした人が自動で並びます。
-          調査票を送ったら「送付済み」、回答が届いたら「回答あり」にして、理由を記録します。一覧はCSVで出せます。
-          派遣元・他の受診機関で受診する人や、予約していない人も、チェックを入れれば一覧に含められます。</li>
+      <li><strong>未受診状況調査</strong>　予約状況で「受診しない」などと入力した人、予約していない人、キャンセルにした人が自動で並びます
+          （派遣元・他の受診機関で受診する人は載りません）。調査票（フォーム）を送ったら「送付済み」にします。
+          <strong>産休・育休</strong>の人や<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。一覧はCSVで出せます。</li>
     </ol>
     <p class="hint">タブの横には進み具合が出ます（<strong>✓ 24名</strong>・<strong>✓ 2/2</strong> など）。
       オレンジの<strong>「要確認」</strong>が出ていたら、印刷前に「３. 対象者一覧」で中身を確かめてください。</p>
@@ -1226,7 +1216,7 @@ var state = {
   excluded:   {},        // kenshinId -> Set(職員番号)  手動で除外した人
   cancelled:  {},        // kenshinId -> { 職員番号: キャンセルした日(YYYY-MM-DD) }  直前キャンセル
   survey:     {},        // "取込元:職員番号" -> 未受診状況調査の記録 { st, sentAt, ansAt, reason, memo }
-  surveyOpt:  { other:false, blank:false },   // 未受診状況調査に「他の機関で受診」「予約なし」も含めるか
+  svExempt:   {},        // 職員番号 -> 未受診状況調査の免除 { leave:産休・育休, other:その他, text:その他の内容 }
 
   onlyActive: true,      // 「在職」列がある場合、在職者のみを対象にする
   inactive:   [],        // 在職でないため除外した職員
@@ -3124,8 +3114,7 @@ function saveSettings(){
     fujinFallback: state.fujinFallback,
     rosterSig: state.rosterSig || "",
     rosterMap: state.rosterMap || null,
-    nyuSig: state.nyuSig || {},
-    surveyOpt: state.surveyOpt
+    nyuSig: state.nyuSig || {}
   }));
 }
 
@@ -3152,7 +3141,8 @@ function saveData(){
     nyuOpt: state.nyuOpt,   // 会場のみ
     excluded: {},
     cancelled: state.cancelled,
-    survey: state.survey
+    survey: state.survey,
+    svExempt: state.svExempt
   };
   NYU_SOURCES.forEach(function(src){
     var s0 = state.nyuSrc[src.id];
@@ -3213,6 +3203,7 @@ function loadData(){
     state.cancelled[k.id] = (d.cancelled && d.cancelled[k.id]) || {};
   });
   state.survey = d.survey || {};
+  state.svExempt = d.svExempt || {};
 
   if(d.nyuOpt) state.nyuOpt = d.nyuOpt;
   state.nyuSrc = {};
@@ -3249,6 +3240,7 @@ function clearData(){
   state.savedAt = "";
   KENSHIN.forEach(function(k){ state.excluded[k.id] = new Set(); state.cancelled[k.id] = {}; });
   state.survey = {};
+  state.svExempt = {};
   computeTargets();
   $("mapPanel").style.display = "none";
   $("loadedPanel").style.display = "none";
@@ -3561,12 +3553,24 @@ function empByNo(no){
 var SV_CAT = {
   cancel:  "キャンセル",
   decline: "受診しない",
-  other:   "他の機関で受診",
-  blank:   "予約なし（空欄）"
+  blank:   "予約なし"
 };
-var SV_ST = { todo:"未送付", sent:"送付済み", answered:"回答あり", none:"調査不要" };
+var SV_ST = { todo:"未送付", sent:"送付済み", answered:"回答あり", exempt:"調査免除" };
 
-/* 「派遣元で受診」「他の受診機関で受診」などは、受診はするので調査の対象から外します（含めることもできます） */
+/* 調査を免除する人（産休・育休、その他）。人ごとに持つので、胃がん・婦人検診の両方の行に効きます */
+function svExemptOf(no){
+  var x = state.svExempt[no];
+  return x && (x.leave || x.other) ? x : null;
+}
+function svExemptLabel(x){
+  if(!x) return "";
+  var a = [];
+  if(x.leave) a.push("産休・育休");
+  if(x.other) a.push("その他" + (x.text ? "：" + x.text : ""));
+  return a.join("／");
+}
+
+/* 「派遣元で受診」「他の受診機関で受診」などは、受診はするので調査の対象から外します */
 function isElsewhere(reason){
   return /派遣元|他の?受診機関|他の?医療機関|他機関|人間ドック/.test(normText(reason || ""));
 }
@@ -3580,7 +3584,7 @@ function surveyRows(){
       (state.targets[kid] || []).forEach(function(t){
         var no = t.emp.empNo, cat = null;
         if(t.print){ if(isCancelled(kid, no)) cat = "cancel"; }
-        else if(t.nyu && t.nyu.kind === "skip") cat = isElsewhere(t.skipReason) ? "other" : "decline";
+        else if(t.nyu && t.nyu.kind === "skip") cat = isElsewhere(t.skipReason) ? null : "decline";
         else if(t.nyu && t.nyu.kind === "blank") cat = "blank";
         if(!cat) return;
         var r = by[no];
@@ -3595,11 +3599,10 @@ function surveyRows(){
     });
     order.forEach(function(no){
       var r = by[no];
-      r.cat = r.cats.cancel ? "cancel" : r.cats.decline ? "decline" : r.cats.other ? "other" : "blank";
-      if(r.cat === "other" && !state.surveyOpt.other) return;
-      if(r.cat === "blank" && !state.surveyOpt.blank) return;
+      r.cat = r.cats.cancel ? "cancel" : r.cats.decline ? "decline" : "blank";
       r.rec = state.survey[r.key] || {};
-      r.st = r.rec.st || "todo";
+      r.ex = svExemptOf(no);
+      r.st = r.ex ? "exempt" : (r.rec.st === "sent" || r.rec.st === "answered" ? r.rec.st : "todo");
       r.kname = r.cat === "cancel"
         ? r.cancelKids.map(kenshinName).join("・")
         : src.name.replace(/（.*）/, "");
@@ -3611,7 +3614,7 @@ function surveyRows(){
 }
 
 function surveyCount(rows){
-  var c = { all:rows.length, todo:0, sent:0, answered:0, none:0 };
+  var c = { all:rows.length, todo:0, sent:0, answered:0, exempt:0 };
   rows.forEach(function(r){ c[r.st]++; });
   return c;
 }
@@ -3648,8 +3651,6 @@ function renderSurvey(){
     return '<option value="' + esc(d) + '">' + esc(d) + "</option>";
   }).join("");
   deptSel.value = depts[keepD] ? keepD : "";
-  $("svOther").checked = !!state.surveyOpt.other;
-  $("svBlank").checked = !!state.surveyOpt.blank;
 
   var c = surveyCount(all);
   $("svStat").innerHTML = statBox(c.all, "調査の対象")
@@ -3657,24 +3658,26 @@ function renderSurvey(){
               : statBox(0, "未送付"))
     + statBox(c.sent, "送付済み（回答待ち）")
     + statBox(c.answered, "回答あり")
-    + statBox(c.none, "調査不要");
+    + statBox(c.exempt, "調査免除");
 
   var rows = surveyVisible();
   var h = "<thead><tr><th>状況</th><th>区分</th><th>検診</th><th>所属名</th><th>職員番号</th><th>氏名</th>"
-        + "<th>予約状況の入力欄／キャンセル日</th><th>送付・回答</th><th>未受診の理由</th><th>メモ</th></tr></thead><tbody>";
+        + "<th>予約状況の入力欄／キャンセル日</th><th>送付・回答</th><th>調査免除</th></tr></thead><tbody>";
   if(!rows.length){
-    h += '<tr><td colspan="10" class="hint">'
+    h += '<tr><td colspan="9" class="hint">'
        + (Object.keys(state.nyuSrc).length
-          ? (all.length ? "絞り込みの条件に当てはまる人がいません。" : "調査の対象になる人はいません（受診しない・キャンセルの人がいません）。")
+          ? (all.length ? "絞り込みの条件に当てはまる人がいません。" : "調査の対象になる人はいません（受診しない・予約なし・キャンセルの人がいません）。")
           : "「２. 予約状況の取込」で予約状況を読み込むと、ここに調査の対象者が並びます。")
        + "</td></tr>";
   }
   rows.forEach(function(r){
-    var e = r.emp, k = esc(r.key);
-    h += "<tr>"
-      + '<td><select data-svst="' + k + '"' + (r.st === "todo" ? ' class="todo"' : "") + ">"
-        + Object.keys(SV_ST).map(function(v){ return '<option value="' + v + '"' + (r.st === v ? " selected" : "") + ">" + SV_ST[v] + "</option>"; }).join("")
-        + "</select></td>"
+    var e = r.emp, k = esc(r.key), no = esc(e.empNo), x = state.svExempt[e.empNo] || {};
+    h += "<tr" + (r.ex ? ' class="exempt"' : "") + ">"
+      + "<td>" + (r.ex
+          ? '<span class="svst-ex">調査免除</span>'
+          : '<select data-svst="' + k + '"' + (r.st === "todo" ? ' class="todo"' : "") + ">"
+            + ["todo","sent","answered"].map(function(v){ return '<option value="' + v + '"' + (r.st === v ? " selected" : "") + ">" + SV_ST[v] + "</option>"; }).join("")
+            + "</select>") + "</td>"
       + '<td class="nw"><span class="svk ' + r.cat + '">' + SV_CAT[r.cat] + "</span>"
         + (r.cat === "cancel" ? '<br><button class="btn" style="padding:0 6px;font-size:11px;margin-top:3px" data-uncancel="' + k + '" title="キャンセルを取り消して、受検票の印刷対象に戻します">取り消す</button>' : "")
         + "</td>"
@@ -3685,8 +3688,11 @@ function renderSurvey(){
       + "<td>" + esc(surveyDetail(r)) + "</td>"
       + '<td class="nw">' + (r.rec.sentAt ? "送付 " + mdOf(r.rec.sentAt) : "") + (r.rec.sentAt && r.rec.ansAt ? "<br>" : "")
         + (r.rec.ansAt ? "回答 " + mdOf(r.rec.ansAt) : "") + "</td>"
-      + '<td><input type="text" list="svReasons" data-svf="reason" data-svk="' + k + '" value="' + esc(r.rec.reason || "") + '" placeholder="選ぶか入力"></td>'
-      + '<td><input type="text" data-svf="memo" data-svk="' + k + '" value="' + esc(r.rec.memo || "") + '"></td>'
+      + "<td>"
+        + '<label class="svx"><input type="checkbox" data-svx="leave" data-no="' + no + '"' + (x.leave ? " checked" : "") + "> 産休・育休</label>"
+        + '<label class="svx"><input type="checkbox" data-svx="other" data-no="' + no + '"' + (x.other ? " checked" : "") + "> その他</label>"
+        + (x.other ? '<br><input type="text" data-svx="text" data-no="' + no + '" value="' + esc(x.text || "") + '" placeholder="その他の内容（例：長期療養中）">' : "")
+        + "</td>"
       + "</tr>";
   });
   box.innerHTML = h + "</tbody>";
@@ -3712,9 +3718,16 @@ $("svTable").addEventListener("change", function(e){
     saveData(); renderSurvey();
     return;
   }
-  if(t.dataset.svf){
-    surveyRec(t.dataset.svk)[t.dataset.svf] = t.value.trim();
-    saveData();
+  if(t.dataset.svx){
+    var no = t.dataset.no, x = state.svExempt[no] || (state.svExempt[no] = {});
+    if(t.dataset.svx === "text"){ x.text = t.value.trim(); saveData(); return; }
+    x[t.dataset.svx] = t.checked;
+    if(!x.leave && !x.other) delete state.svExempt[no];
+    saveData(); renderSurvey();
+    if(t.dataset.svx === "other" && t.checked){
+      var inp = document.querySelector('#svTable input[data-svx="text"][data-no="' + no + '"]');
+      if(inp) inp.focus();
+    }
   }
 });
 $("svTable").addEventListener("click", function(e){
@@ -3728,12 +3741,6 @@ $("svTable").addEventListener("click", function(e){
   toast(r.emp.name + " さんのキャンセルを取り消しました");
 });
 ["svSrc","svState","svDept"].forEach(function(id){ $(id).addEventListener("change", renderSurvey); });
-["svOther","svBlank"].forEach(function(id){
-  $(id).addEventListener("change", function(){
-    state.surveyOpt[id === "svOther" ? "other" : "blank"] = $(id).checked;
-    saveSettings(); renderSurvey();
-  });
-});
 $("btnSvSent").addEventListener("click", function(){
   var rows = surveyVisible().filter(function(r){ return r.st === "todo"; });
   if(!rows.length){ toast("表示中に「未送付」の人はいません", true); return; }
@@ -3746,12 +3753,12 @@ $("btnSvCsv").addEventListener("click", function(){
   var rows = surveyVisible();
   if(!rows.length){ toast("出力する人がいません", true); return; }
   var out = [["年度","検診","区分","所属コード","所属名","職員番号","氏名","カナ","性別","年齢",
-              "予約状況の入力欄","キャンセル日","状況","送付日","回答日","未受診の理由","メモ"]];
+              "予約状況の入力欄","キャンセル日","状況","送付日","回答日","調査免除の理由"]];
   rows.forEach(function(r){
     var e = r.emp;
     out.push([state.fiscalYear || "", r.kname, SV_CAT[r.cat], e.deptCode, e.deptName, e.empNo, e.name, e.kana,
               sexLabel(e.sex), e.age, r.nyu && r.nyu.raw ? r.nyu.raw : "", r.cancelAt || "", SV_ST[r.st],
-              r.rec.sentAt || "", r.rec.ansAt || "", r.rec.reason || "", r.rec.memo || ""]);
+              r.ex ? "" : r.rec.sentAt || "", r.ex ? "" : r.rec.ansAt || "", svExemptLabel(r.ex)]);
   });
   downloadCSV("未受診状況調査_" + (state.fiscalYear || "") + "年度.csv", out);
 });
@@ -5370,7 +5377,6 @@ $("btnSample").addEventListener("click", function(){
     if(saved && saved.fujinFallback) state.fujinFallback = saved.fujinFallback;
     if(saved && saved.rosterSig){ state.rosterSig = saved.rosterSig; state.rosterMap = saved.rosterMap || null; }
     if(saved && saved.nyuSig) state.nyuSig = saved.nyuSig;
-    if(saved && saved.surveyOpt) state.surveyOpt = { other:!!saved.surveyOpt.other, blank:!!saved.surveyOpt.blank };
     if(saved && saved.layouts){
       ticketKenshin().forEach(function(k){
         if(saved.layouts[k.id] && Array.isArray(saved.layouts[k.id].fields)) state.layouts[k.id] = saved.layouts[k.id];
