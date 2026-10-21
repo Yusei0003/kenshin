@@ -97,6 +97,16 @@ const counts = await ev(() => ['i', 'nyu', 'shikyu'].map(k => activeTargets(k).l
 ok(counts.join() === '20,7,11', '印刷対象 胃がん20・乳がん7・子宮頸がん11', counts);
 const blanks = await ev(() => surveyRows().filter(r => r.cat === 'blank').map(r => r.emp.empNo));
 ok(blanks.length >= 1, '予約していない（入力欄が空欄の）人は未受診状況調査に載る', blanks);
+const unl0 = await ev(() => surveyRows().filter(r => r.cat === 'unlisted').map(r => r.key));
+ok(unl0.length === 0, '  全員がファイルに載っていれば「ファイルに未掲載」は出ない（婦人検診では男性を数えない）', unl0);
+const unl = await ev(() => {
+  const m = state.nyuSrc.i.map; const k = Object.keys(m).find(x => String(x) === '1101'); const keep = m[k];
+  delete m[k]; rebuildNyuryoku(); computeTargets();
+  const r = surveyRows().filter(x => x.cat === 'unlisted').map(x => x.key);
+  m[k] = keep; rebuildNyuryoku(); computeTargets();
+  return r;
+});
+ok(unl.join() === 'i:1101', '  予約状況ファイルに載っていない人も「ファイルに未掲載」として載る', unl);
 
 section('年齢（年度末現在・法律どおりの数え方）');
 const ages = await ev(() => {

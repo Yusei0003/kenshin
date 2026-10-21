@@ -431,6 +431,7 @@ table.grid td.c{text-align:center}
 .svk.cancel{background:#fde4d8;color:#a8410f}
 .svk.decline{background:#fdf0cf;color:#7a5600}
 .svk.blank{background:#eceff2;color:#55636f}
+.svk.unlisted{background:#eceff2;color:#55636f;border:1px dashed #9aa7b4}
 #svTable select{font:inherit;padding:3px 4px}
 #svTable select.todo{border-color:#a8410f;color:#a8410f;font-weight:bold}
 #svTable input[type=text]{font:inherit;padding:3px 6px;width:100%;min-width:160px;box-sizing:border-box;margin-top:4px}
@@ -865,7 +866,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
   <div class="panel">
     <h2>未受診状況調査</h2>
     <p class="hint">
-      予約状況で<strong>「受診しない」などと入力した人</strong>、<strong>予約していない人</strong>（入力欄が空欄）、
+      予約状況で<strong>「受診しない」などと入力した人</strong>、<strong>予約していない人</strong>（入力欄が空欄の人・予約状況ファイルに載っていない人）、
       「３. 対象者一覧」で<strong>キャンセルにした人</strong>が自動で並びます（派遣元・他の受診機関で受診する人は載りません）。<br>
       調査票（フォーム）を送ったら「送付済み」にします。<strong>産休・育休</strong>の人と、<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。
       この記録もこの端末に保存されます。
@@ -941,7 +942,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <li><strong>印刷・出力</strong>　並び順を選んで「受検票のPDFを作成」を押すと、PDFファイルがダウンロードされます
           （「全検診をまとめて作成」なら、検診ごとのPDFを続けて保存します）。
           そのPDFを <strong>Adobe Acrobat で開き、複合機を選び、「実際のサイズ」で</strong>協会の用紙に印刷してください。</li>
-      <li><strong>未受診状況調査</strong>　予約状況で「受診しない」などと入力した人、予約していない人、キャンセルにした人が自動で並びます
+      <li><strong>未受診状況調査</strong>　予約状況で「受診しない」などと入力した人、予約していない人（予約状況ファイルに載っていない人を含む）、キャンセルにした人が自動で並びます
           （派遣元・他の受診機関で受診する人は載りません）。調査票（フォーム）を送ったら「送付済み」にします。
           <strong>産休・育休</strong>の人や<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。一覧はCSVで出せます。</li>
     </ol>
@@ -3553,7 +3554,8 @@ function empByNo(no){
 var SV_CAT = {
   cancel:  "キャンセル",
   decline: "受診しない",
-  blank:   "予約なし"
+  blank:   "予約なし",
+  unlisted:"ファイルに未掲載"
 };
 var SV_ST = { todo:"未送付", sent:"送付済み", answered:"回答あり", exempt:"調査免除" };
 
@@ -3597,9 +3599,19 @@ function surveyRows(){
         }
       });
     });
+    /* 名簿にいるのに予約状況ファイルに載っていない人も、予約していない（未受診）として扱います。
+       婦人検診のファイルは女性だけが載るので、婦人検診では男性を除きます */
+    var s0 = state.nyuSrc[src.id], loose = {};
+    Object.keys(s0.map).forEach(function(k){ loose[empKeyLoose(k)] = 1; });
+    state.employees.forEach(function(e){
+      if(s0.map[empKey(e.empNo)] || loose[empKeyLoose(e.empNo)] || by[e.empNo]) return;
+      if(src.kenshin.indexOf("i") < 0 && e.sex === "M") return;
+      by[e.empNo] = { key:src.id + ":" + e.empNo, src:src, emp:e, nyu:null, cats:{ unlisted:1 }, cancelKids:[], cancelAt:"" };
+      order.push(e.empNo);
+    });
     order.forEach(function(no){
       var r = by[no];
-      r.cat = r.cats.cancel ? "cancel" : r.cats.decline ? "decline" : "blank";
+      r.cat = r.cats.cancel ? "cancel" : r.cats.decline ? "decline" : r.cats.unlisted ? "unlisted" : "blank";
       r.rec = state.survey[r.key] || {};
       r.ex = svExemptOf(no);
       r.st = r.ex ? "exempt" : (r.rec.st === "sent" || r.rec.st === "answered" ? r.rec.st : "todo");
@@ -3630,6 +3642,7 @@ function surveyVisible(){
 }
 
 function surveyDetail(r){
+  if(r.cat === "unlisted") return "予約状況ファイルに載っていません";
   var raw = r.nyu && r.nyu.raw ? r.nyu.raw : "（空欄）";
   if(r.cat === "cancel") return mdOf(r.cancelAt) + " にキャンセル（予約：" + raw + "）";
   return raw;
