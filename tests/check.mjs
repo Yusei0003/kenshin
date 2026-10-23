@@ -294,12 +294,13 @@ ok(yx && yx.r1001['判定'] === '要精密検査' && yx.r1001['要精密検査�
 ok(yx && yx.r1101['受診状況'] === '派遣元・他の受診機関で受診' && !yx.r1101['未受診状況調査'], '  派遣元で受診する人は調査なしで載る', yx && yx.r1101);
 
 section('生活習慣病健診');
-await ev(() => { state.employees.find(e => e.empNo == '1004').empType = 'パート時間額'; state.employees.find(e => e.empNo == '1503').empType = 'パート日額'; computeTargets(); });
+await ev(() => { const E = (n) => state.employees.find(e => e.empNo == n);
+  E('1004').empType = '会計年度任用職員（パート・時間額）'; E('1503').empType = 'パート（日額）'; E('1101').empType = '会計年度任用職員（フルタイム・日額）'; computeTargets(); });
 await tab('p4');
 await page.click('#tgKenshinTabs button[data-tgk="seikatsu"]'); await wait(300);
 const sk = await ev(() => ({ all: state.targets.seikatsu.length, act: activeTargets('seikatsu').length,
   ex: state.targets.seikatsu.filter(t => !t.print).map(t => t.emp.empNo).sort().join() }));
-ok(sk.all === 24 && sk.act === 22 && sk.ex === '1004,1503', '名簿の全員が対象、パート時間額・パート日額は対象外', sk);
+ok(sk.all === 24 && sk.act === 22 && sk.ex === '1004,1503', '名簿の全員が対象、身分に「パート」と「時間額／日額」を含む人は対象外（かっこ入りでも判定、フルタイム・日額は対象）', sk);
 ok(await page.isVisible('#seikatsuOpt'), '  対象外にする雇用区分を画面で変えられる');
 await page.check('#targetTable input.tcan[data-k="seikatsu"][data-n="1101"]'); await wait(300);
 await page.selectOption('select.tjud[data-k="seikatsu"][data-n="1002"]', 'seimitsu'); await wait(300);
@@ -320,7 +321,7 @@ await page.click('#btnYearXlsx'); await wait(500);
 const ys = await ev(async () => { const sh = await readXlsxFile(new File([window.__blob.b], 'a.xlsx')); const s = sh[3], h = s.rows[0];
   const row = (no) => Object.fromEntries(h.map((k, i) => [k, s.rows.find(r => String(r[2]) === no)[i]]));
   return { n: s.rows.length - 1, a: row('1004')['受診状況'], b: row('1101')['受診状況'], c: row('1002')['報告内容'] }; });
-ok(ys.n === 24 && ys.a === '対象外（パート時間額）' && /^未受診/.test(ys.b) && /検査結果：経過観察/.test(ys.c), '  年度のまとめの「生活習慣病健診」シートに受診状況・報告内容', ys);
+ok(ys.n === 24 && ys.a === '対象外（会計年度任用職員（パート・時間額））' && /^未受診/.test(ys.b) && /検査結果：経過観察/.test(ys.c), '  年度のまとめの「生活習慣病健診」シートに受診状況・報告内容', ys);
 await tab('p7');
 await page.setInputFiles('#nyfile_seikatsu', xlsx(path.join(SAMPLE, '予約状況_胃がん検診_サンプル.xlsx'))); await wait(1000);
 if (await page.$('#ny_seikatsu button[data-nyimport="seikatsu"]')) { await page.click('#ny_seikatsu button[data-nyimport="seikatsu"]'); await wait(500); }
@@ -328,7 +329,9 @@ ok(await ev(() => /予約あり/.test(document.getElementById('ny_seikatsu').inn
 const sres = await ev(() => ({ n: state.targets.seikatsu.length, act: activeTargets('seikatsu').length,
   sv: surveyRows().filter(r => r.src.id === 'seikatsu').map(r => r.emp.empNo + ':' + r.cat) }));
 ok(sres.n === 24 && sres.sv.length >= 1 && sres.sv.every(x => /:(decline|blank|unlisted|absent)$/.test(x)), '生活習慣病健診の予約状況を取り込むと、受診しない・予約なしの人が未受診状況調査に載る', sres);
-ok(!sres.sv.some(x => /^(1004|1503):/.test(x)), '  パート時間額・パート日額の人は未受診状況調査に載らない', sres.sv);
+ok(!sres.sv.some(x => /^(1004|1503):/.test(x)), '  パート（時間額・日額）の人は未受診状況調査に載らない', sres.sv);
+const pf = await ev(() => ['10月6日(男)　8:30', '11月12日（女）　9：00～9：15'].map(v => { const r = parseNyuryoku(v, 'seikatsu'); return [r.kind, isoOf(r.date), r.sexMark, r.timeText, r.warn || ''].join('|'); }));
+ok(pf[0] === 'time|2026-10-06|男|8:30|' && pf[1] === 'time|2026-11-12|女|9：00～9：15|', '生活習慣病健診の「○月○日(性別)　時間」を読み取る（日付・性別・受付時間）', pf);
 
 section('年度の取り違え防止');
 await page.clock.setFixedTime(new Date(2027, 3, 10, 10, 0));

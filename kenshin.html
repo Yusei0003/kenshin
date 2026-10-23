@@ -655,7 +655,8 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     </div>
     <div class="row" id="seikatsuOpt" style="display:none">
       <label>対象外にする雇用区分
-        <input type="text" id="seikatsuExclude" style="width:280px" placeholder="例）パート時間額、パート日額">
+        <input type="text" id="seikatsuExclude" style="width:280px" placeholder="例）パート+時間額、パート+日額"
+          title="「+」でつなぐと、その文字を全部含む身分を対象外にします。「、」で区切って複数書けます。">
       </label>
       <span class="hint" id="seikatsuExcludeHint"></span>
     </div>
@@ -1021,7 +1022,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           （派遣元・他の受診機関で受診する人は載りません）。調査票（フォーム）を送ったら「送付済み」にします。
           <strong>産休・育休</strong>・<strong>他受診機関で受診</strong>・<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。
           フォームの回答を書き出したCSV（Excelも可）を<strong>「回答CSVを取り込む」</strong>で読み込むと、回答した人が「回答あり」になります。一覧はCSVで出せます。</li>
-      <li><strong>生活習慣病健診</strong>　「３. 対象者一覧」で生活習慣病健診を選ぶと、名簿の全員（雇用区分が<strong>パート時間額・パート日額</strong>の人を除く）が並びます。
+      <li><strong>生活習慣病健診</strong>　「３. 対象者一覧」で生活習慣病健診を選ぶと、名簿の全員（身分に<strong>「パート」と「時間額」または「日額」</strong>を含む人を除く）が並びます。
           予約状況（「２. 予約状況の取込」の生活習慣病健診）を読み込むと、受診しない人・予約していない人は自動で６の未受診状況調査に載ります。
           予約していたのに受診しなかった人は<strong>「未受診」</strong>にチェックします。雇用区分は名簿のE列「身分」で判定します。</li>
       <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>で「要検査」「要精密検査」を選びます。
@@ -1168,7 +1169,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     </table>
     <div class="note">
       <strong>生活習慣病健診は受検票を印刷しません。</strong>
-      名簿の全員（雇用区分がパート時間額・パート日額の人を除く）が対象で、「３. 対象者一覧」で未受診のチェックと判定を付け、
+      名簿の全員（身分に「パート」と「時間額」または「日額」を含む人を除く）が対象で、「３. 対象者一覧」で未受診のチェックと判定を付け、
       未受診状況調査・要精密検査確認調査・年度のまとめに使えます。
       印刷が必要になった場合は、A4 の自前様式が利用できます（「印刷する検診」の一覧に戻すには設定の変更が必要です）。
     </div>
@@ -1229,14 +1230,20 @@ function ticketKenshin(){
 function mgmtKenshin(){
   return ticketKenshin().concat(KENSHIN.filter(function(k){ return k.noTicket; }));
 }
-/* 生活習慣病健診で対象外にする雇用区分（部分一致・全角半角や空白の違いは無視） */
-function defaultSeikatsuExclude(){ return ["パート時間額", "パート日額"]; }
+/* 生活習慣病健診で対象外にする雇用区分（身分）。
+   「パート+時間額」のように「+」でつなぐと、その文字を全部含むときに対象外にします
+   （「パート（時間額）」「会計年度任用職員（パート・日額）」など、かっこや並びが違っても判定できます）。
+   全角半角・空白・かっこの違いは無視します。 */
+function defaultSeikatsuExclude(){ return ["パート+時間額", "パート+日額"]; }
+function exclTokens(rule){
+  return String(rule || "").split(/[+＋]/).map(function(x){ return normText(x).replace(/[()（）［］\[\]【】〔〕「」]/g, ""); }).filter(Boolean);
+}
 function seikatsuExcludedBy(e){
-  var t = normText(e.empType);
+  var t = normText(e.empType).replace(/[()（）［］\[\]【】〔〕「」]/g, "");
   if(!t) return "";
   for(var i = 0; i < state.seikatsuExclude.length; i++){
-    var p = normText(state.seikatsuExclude[i]);
-    if(p && t.indexOf(p) >= 0) return e.empType;
+    var tk = exclTokens(state.seikatsuExclude[i]);
+    if(tk.length && tk.every(function(x){ return t.indexOf(x) >= 0; })) return e.empType;
   }
   return "";
 }
@@ -2446,8 +2453,8 @@ var NYU_SOURCES = [
     sample:"09:30〜09:45（35歳以上）",
     note:"受付時間帯と年齢区分を読み取り、年齢区分で対象の検診が決まります。" },
   { id:"seikatsu", name:"生活習慣病健診", kenshin:["seikatsu"],
-    sample:"6日（火）　8：30〜8：45",
-    note:"日・受付時間帯を読み取ります。読み込まない場合は、名簿の全員（パート時間額・パート日額を除く）を対象にします。" }
+    sample:"10月6日(男)　8：30",
+    note:"日付・性別・受付時間を読み取ります。読み込まない場合は、名簿の全員（パートで時間額・日額の人を除く）を対象にします。" }
 ];
 
 function nyuSourceOf(id){
@@ -3620,7 +3627,7 @@ function renderSeikatsuOpt(){
     : !any ? '<span style="color:#a8410f">名簿に雇用区分の列がないため、全員を対象にしています。「１. 名簿の読込」で雇用区分（E列の「身分」）の列を指定してください。</span>'
     : "名簿の雇用区分：" + Object.keys(types).map(function(t){
         return (seikatsuExcludedBy({ empType:t }) ? "<s>" + esc(t) + "</s>" : esc(t)) + " " + types[t] + "名"; }).join("、")
-      + "（取り消し線が対象外）";
+      + "（取り消し線が対象外。「パート+時間額」は「パート」と「時間額」の両方を含む身分）";
 }
 $("seikatsuExclude").addEventListener("change", function(){
   state.seikatsuExclude = this.value.split(/[、,，\n]/).map(function(x){ return x.trim(); }).filter(Boolean);
@@ -6176,7 +6183,10 @@ $("btnSample").addEventListener("click", function(){
     /* 列の対応付けの決まりを変えたとき（MAP_VER）は、前回の対応付けを使わず一度確認してもらいます */
     if(saved && saved.rosterSig && saved.mapVer === MAP_VER){ state.rosterSig = saved.rosterSig; state.rosterMap = saved.rosterMap || null; }
     if(saved && saved.nyuSig) state.nyuSig = saved.nyuSig;
-    if(saved && Array.isArray(saved.seikatsuExclude)) state.seikatsuExclude = saved.seikatsuExclude;
+    if(saved && Array.isArray(saved.seikatsuExclude)){
+      /* 以前の初期値（「パート時間額」「パート日額」の完全な並び）は、新しい判定（パート＋時間額／日額）に置き換えます */
+      state.seikatsuExclude = saved.seikatsuExclude.join("、") === "パート時間額、パート日額" ? defaultSeikatsuExclude() : saved.seikatsuExclude;
+    }
     if(saved && saved.layouts){
       ticketKenshin().forEach(function(k){
         if(saved.layouts[k.id] && Array.isArray(saved.layouts[k.id].fields)) state.layouts[k.id] = saved.layouts[k.id];
