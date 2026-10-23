@@ -44,12 +44,19 @@
   .f-btn img  { max-height: 8mm; }
   .f-stat img { max-height: 12mm; }
   .f-paste img{ max-height: 8mm; }
-  .f-ny img   { max-height: 19mm; }
+  .f-ny img   { max-height: 16mm; }
   .f-tg img   { max-height: 13mm; }
-  .f-pr img   { max-height: 16mm; }
+  .f-pr img   { max-height: 15mm; }
   .f-off img  { max-height: 7mm; }
   .f-acro img { max-height: 17mm; }
   .f-ruler img{ max-height: 14mm; }
+  .f-judge img{ max-height: 23mm; }
+  .f-sv img   { max-height: 33mm; }
+  .f-imp img  { max-height: 26mm; }
+  .cols { display:flex; gap:4mm; }
+  .cols > div { flex:1; min-width:0; }
+  table.mini { font-size:7.6pt; margin:1mm 0 1.5mm; }
+  table.mini th, table.mini td { padding:.7mm 1.5mm; }
   figcaption { font-size:7.2pt; color:#5a6672; margin-top:.6mm; }
 
   /* --- 流れ図 --- */
@@ -103,13 +110,14 @@
 
   <h1>職員検診　受検票作成アプリ　操作マニュアル</h1>
   <p class="sub">
-    対象：胃がん検診・乳がん検診・子宮頸がん検診（生活習慣病健診は受検票の印刷が不要です）　／
-    アプリ：<b>kenshin.html</b> をダブルクリックで開きます。
+    受検票づくり：胃がん・乳がん・子宮頸がん検診 ／ 受診の管理（未受診・要精密検査の調査）：生活習慣病健診を含む4検診 ／
+    <b>kenshin.html</b> をダブルクリックで開きます。
   </p>
 
   <div class="note" style="margin-top:0">
     <b>はじめに</b>　インターネットにはつながらず、名簿はこの端末の中だけで処理されます。読み込んだデータは
     <b>この端末に保存され、次に開いたときそのまま出てきます</b>。作業は下のタブを<b>左から順に進めるだけ</b>です。
+    受診のあとの作業（判定・調査・年度のまとめ）は<b>3ページ目</b>です。
   </div>
 
   <figure class="f-nav" style="margin-top:1.5mm">
@@ -162,7 +170,8 @@
         入力欄が<b>空欄</b>の人と、<b>「受診しない」「派遣元」「キャンセル」</b>などの文言が入っている人は印刷されません。それ以外は全員印刷されます
         （時刻も書かれていれば印刷して<b>要確認</b>に）。<br>
         <b>婦人検診は1ファイルで2つの検診に自動で振り分けます。</b>
-        入力欄に「35歳以上」とあれば乳がん・子宮頸がんの両方、「20歳以上」とあれば子宮頸がん検診だけが印刷されます。
+        入力欄に「35歳以上」とあれば乳がん・子宮頸がんの両方、「20歳以上」とあれば子宮頸がん検診だけが印刷されます。<br>
+        <b>生活習慣病健診は受検票がありません。</b>予約状況（「10月6日(男)　8:30」の形）は、受診しない人・予約なしの人を見つけるのに使います。
       </div>
     </div>
   </div>
@@ -191,7 +200,7 @@
     </div>
   </div>
 
-  <div class="foot"><span>職員検診 受検票作成アプリ 操作マニュアル</span><span>1 / 2</span></div>
+  <div class="foot"><span>職員検診 受検票作成アプリ 操作マニュアル</span><span>1 / 3</span></div>
 </section>
 
 <!-- ============================ 2ページ目 ============================ -->
@@ -245,8 +254,6 @@
         <td>入力欄が読めない・男性の婦人検診・年齢区分の食い違いなど。<b>受検票は印刷されます</b>。理由を確認します。</td></tr>
     <tr><td><b>年度が替わった</b></td>
         <td>確認の画面で<b>「○年度の作業を始める」</b>を押すと、前年度のデータを消して今年度で始められます。</td></tr>
-    <tr><td><b>未受診・要精密検査</b>の調査</td>
-        <td>「6」「7」に対象者が並びます。フォームの回答は<b>CSVを取り込む</b>。年度末は「5」の<b>年度のまとめ</b>。</td></tr>
     <tr><td><b>次の検診</b>のために名簿を取り直す</td>
         <td>そのまま読み込めば、予約と除外は残ります。<b>前回との違い</b>の赤枠（予約者の退職等）を確かめます。</td></tr>
   </table>
@@ -269,8 +276,7 @@
         <li><b>胃がん検診</b>の予約状況を貼り付けた</li>
         <li><b>婦人検診・生活習慣病健診</b>の予約状況を貼り付けた（タブに <b>✓ 3/3</b>）</li>
         <li>対象者一覧で<b>人数</b>を確認し、休職などの人の<b>チェックを外した</b></li>
-        <li>直前キャンセルに<b>「キャンセル」</b>、生活習慣病の未受診に<b>「未受診」</b></li>
-        <li>6・7 の<b>未送付が 0</b>／年度末に<b>年度のまとめ</b>を保存</li>
+        <li>直前キャンセルの人に<b>「キャンセル」</b>のチェックを付けた</li>
       </ul>
     </div>
     <div>
@@ -288,7 +294,110 @@
     </div>
   </div>
 
-  <div class="foot"><span>職員検診 受検票作成アプリ 操作マニュアル</span><span>2 / 2</span></div>
+  <div class="foot"><span>職員検診 受検票作成アプリ 操作マニュアル</span><span>2 / 3</span></div>
+</section>
+
+<!-- ============================ 3ページ目 ============================ -->
+<section class="page">
+
+  <h1 style="font-size:13pt">受診のあとの作業　― 判定・未受診状況調査・要精密検査確認調査・年度のまとめ</h1>
+  <div class="flow" style="margin-top:1.5mm">
+    <div class="box"><b>判定を付ける</b>キャンセル・未受診<br>（タブ3）</div>
+    <div class="arw">▶</div>
+    <div class="box"><b>未受診状況調査</b>調査票を送る<br>（タブ6）</div>
+    <div class="arw">▶</div>
+    <div class="box"><b>要精密検査確認調査</b>結果報告を頼む<br>（タブ7）</div>
+    <div class="arw">▶</div>
+    <div class="box"><b>回答を取り込む</b>フォームのCSV<br>（タブ6・7）</div>
+    <div class="arw">▶</div>
+    <div class="box"><b>年度のまとめ</b>Excelで保存<br>（タブ5）</div>
+  </div>
+
+  <div class="step">
+    <div class="head"><span class="n">STEP 5</span><span class="t">判定・キャンセル・未受診を付ける</span><span class="tab">タブ「3. 対象者一覧」</span></div>
+    <div class="body">
+      <div class="cols">
+        <div>
+          <ul>
+            <li>検診の結果が届いたら、<b>「判定」</b>で <b>要検査</b>／<b>要精密検査</b> を選びます。<b>要精密検査の人はタブ7に載ります</b>（要検査は記録だけ）。</li>
+            <li>直前に受診をやめた人は<b>「キャンセル」</b>にチェック（印刷されず、タブ6に載ります）。</li>
+            <li>生活習慣病健診で、予約していたのに受けなかった人は<b>「未受診」</b>にチェック。</li>
+          </ul>
+        </div>
+        <div><figure class="f-judge" style="margin-top:0"><img src="manual/m7_judge.png" alt="判定とキャンセル"></figure></div>
+      </div>
+      <div class="note" style="margin-top:1.2mm">
+        <b>生活習慣病健診</b>　受検票はなく、<b>名簿の全員が対象</b>です。ただし身分（名簿のE列）に<b>「パート」と「時間額」または「日額」</b>を含む人は対象外です。
+        対象者一覧で生活習慣病健診を開くと、身分ごとの人数が出て、対象外の身分に取り消し線が付きます。
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="head"><span class="n">STEP 6</span><span class="t">未受診状況調査</span><span class="tab">タブ「6. 未受診状況調査」</span></div>
+    <div class="body">
+      <table class="mini">
+        <tr><th style="width:26mm">一覧に載る人</th><td><b>キャンセル・未受診</b>にした人／入力欄が「受診しない」「キャンセル」「辞退」などの人／<b>予約していない人</b>（空欄・ファイルに載っていない）</td></tr>
+        <tr><th>載らない人</th><td>派遣元・他の受診機関で受診する人／生活習慣病健診の対象外（パートで時間額・日額）の人</td></tr>
+      </table>
+      <ol>
+        <li>調査票（フォーム）を送ったら、<b>「表示中の『未送付』をまとめて送付済みにする」</b>。今日の日付が入ります。</li>
+        <li><b>産休・育休</b>／<b>他受診機関で受診</b>／<b>その他</b>（内容を記入）の人はチェックすると<b>調査免除</b>になります。</li>
+        <li>回答が集まったら、下の手順で<b>回答CSVを取り込みます</b>。回答した人は「回答あり」になり、「回答を見る」で中身を見られます。</li>
+      </ol>
+      <figure class="f-sv"><img src="manual/m8_survey.png" alt="未受診状況調査の一覧"></figure>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="head"><span class="n">STEP 7</span><span class="t">要精密検査確認調査</span><span class="tab">タブ「7. 要精密検査確認調査」</span></div>
+    <div class="body">
+      タブ3で<b>要精密検査</b>にした人が検診ごとに並びます。結果報告のフォームを送ったら<b>「まとめて送付済み」</b>、報告が集まったら<b>報告CSVを取り込みます</b>（「報告を見る」で中身を確認）。
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="head"><span class="n">共通</span><span class="t">フォームの回答・報告CSVを取り込む</span><span class="tab">タブ6「回答CSVを取り込む…」／タブ7「報告CSVを取り込む…」</span></div>
+    <div class="body">
+      <ol>
+        <li>申請フォームの管理画面から回答を<b>CSVで書き出し</b>、そのまま選びます（Excelで開き直さなくて大丈夫です）。</li>
+        <li>職員番号・姓・名・回答日時・対象の検診の列は<b>自動で選ばれます</b>。「○件が一致」と<b>一致しない行</b>を確かめて<b>「この内容で取り込む」</b>。</li>
+      </ol>
+      <figure class="f-imp"><img src="manual/m9_import.png" alt="回答CSVの取込"></figure>
+      <p class="tip">「この一覧にいません」と出たら：職員番号の入力違いか、その人にまだ<b>キャンセル・未受診・要精密検査</b>を付けていないかです。タブ3で付けてから取り込み直します。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="head"><span class="n">STEP 8</span><span class="t">年度のまとめを保存する</span><span class="tab">タブ「5. 印刷・出力」</span></div>
+    <div class="body">
+      <b>「年度のまとめ（Excel・検診ごとのシート）」</b>で <b>検診まとめ_○年度.xlsx</b> を保存します。胃がん・乳がん・子宮頸がん・生活習慣病の<b>4シート</b>に、
+      1人1行で <b>予約状況 → 受診状況 → 判定 → 未受診状況調査（回答内容） → 要精密検査確認調査（報告内容）</b> が並びます。
+      <div class="warn" style="margin:1.2mm 0 0">
+        <b>年度が替わる前に必ず保存してください。</b>「○年度の作業を始める」や「保存データを消去」を押すと、<b>判定・調査・報告の記録も消えます</b>。
+      </div>
+    </div>
+  </div>
+
+  <h2>受診のあとのチェックリスト</h2>
+  <div class="check">
+    <div>
+      <ul>
+        <li>結果が届いた検診の<b>判定</b>を付けた</li>
+        <li>キャンセル・未受診の<b>チェック</b>を付けた</li>
+        <li>産休・育休などの人を<b>調査免除</b>にした</li>
+      </ul>
+    </div>
+    <div>
+      <ul>
+        <li>タブ6・7の<b>「未送付」が 0</b> になった</li>
+        <li>回答・報告CSVを取り込み、<b>一致しない行</b>を確かめた</li>
+        <li>年度末に<b>年度のまとめ（Excel）</b>を保存した</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot"><span>職員検診 受検票作成アプリ 操作マニュアル</span><span>3 / 3</span></div>
 </section>
 
 </body>
