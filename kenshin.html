@@ -445,6 +445,8 @@ select.tjud.on-seimitsu{border-color:#a8410f;background:#fde4d8;color:#a8410f;fo
 #svTable label.svx{display:inline-flex;align-items:center;gap:4px;margin-right:12px;white-space:nowrap;cursor:pointer}
 #svTable .svst-ex{color:#55636f;font-weight:bold;white-space:nowrap}
 #svTable tr.exempt td{background:#f3f5f7;color:#6a7580}
+#svTable label.svx.carry{margin-top:4px;color:var(--accent);font-weight:bold}
+#svTable .carryfrom{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:var(--accent-bg);color:var(--accent);font-size:11px}
 /* ===== 回答・報告の取込 ===== */
 .ansimp{margin:12px 0;padding:12px 14px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-bg)}
 .ansimp h3{margin:0 0 8px;font-size:14px;color:var(--accent)}
@@ -933,6 +935,18 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <div id="svImport" class="ansimp" style="display:none"></div>
     <div class="scroll"><table class="grid" id="svTable"></table></div>
   </div>
+
+  <div class="panel" id="carryPanel" style="display:none">
+    <h2>継続免除の一覧（来年度以降も調査を免除する人）</h2>
+    <p class="hint">
+      調査免除の「その他」で<strong>「来年度以降も免除（継続）」</strong>にチェックした人です。
+      年度を切り替えても、「保存データを消去」をしても<strong>この一覧は残り</strong>、新しい年度でも最初から調査免除になります。
+      <strong>年に1回、理由が今も続いているかを見直してください。</strong>
+    </p>
+    <p class="hint" id="carryHint"></p>
+    <div class="scroll"><table class="grid" id="carryTable"></table></div>
+    <p class="hint">理由には健康に関わる内容が含まれることがあります。必要以上のことは書かず、共用のパソコンでは使わないでください。</p>
+  </div>
 </section>
 
 <!-- ================= 7. 要精密検査確認調査 ================= -->
@@ -1076,6 +1090,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <thead><tr><th>保存されるもの</th><th>消し方</th></tr></thead>
       <tbody>
         <tr><td>職員名簿・予約状況・個別の除外・キャンセル・判定・未受診状況調査・要精密検査確認調査の記録</td><td>「１. 名簿の読込」画面の「保存データを消去」</td></tr>
+        <tr><td>継続免除（来年度以降も調査を免除する人・理由）</td><td>「６. 未受診状況調査」の継続免除の一覧で「継続をやめる」（年度の切り替えや「保存データを消去」では消えません）</td></tr>
         <tr><td>様式レイアウト・団体名</td><td>「４. 様式レイアウト」画面の「この検診を初期値に戻す」</td></tr>
         <tr><td>印刷が不要になる入力値・注意事項</td><td>それぞれの画面の「初期値に戻す」</td></tr>
       </tbody>
@@ -1326,6 +1341,7 @@ var state = {
   cancelled:  {},        // kenshinId -> { 職員番号: キャンセルした日(YYYY-MM-DD) }  直前キャンセル
   survey:     {},        // "取込元:職員番号" -> 未受診状況調査の記録 { st, sentAt, ansAt, reason, memo }
   seikatsuExclude: defaultSeikatsuExclude(),   // 生活習慣病健診の対象外にする雇用区分
+  svCarry:    {},        // 職員番号 -> 継続免除 { text, since:開始年度, checked:最後に見直した年度, name, dept }（年度をまたいで残す）
   svExempt:   {},        // 職員番号 -> 未受診状況調査の免除 { leave:産休・育休, other:その他, text:その他の内容 }
   judge:      {},        // kenshinId -> { 職員番号: "kensa"（要検査）| "seimitsu"（要精密検査） }
   seimitsu:   {},        // "検診:職員番号" -> 要精密検査確認調査の記録 { st, sentAt, repAt }
@@ -1994,6 +2010,10 @@ function openFyGuard(kind, proceed){
     + [nsv ? "未受診状況調査の記録（" + nsv + "名分）" : "", nsm ? "要精密検査確認調査の記録（" + nsm + "名分）" : ""].filter(Boolean).join("と")
     + "も消えます。</b>残す必要があるときは、先に「" + old + "年度」のまま開いて、"
     + "「６」「７」のタブから CSV を出力してください。</p>";
+  var ncar = Object.keys(state.svCarry).length;
+  if(ncar) body += '<p><b>来年度以降も免除（継続）の ' + ncar + "名は引き継ぎます：</b>"
+    + Object.keys(state.svCarry).map(function(no){ return esc(state.svCarry[no].name || no); }).join("、")
+    + "。新しい年度で「６. 未受診状況調査」の継続免除の一覧を見直してください。</p>";
   $("fyGuardHead").textContent = head;
   $("fyGuardBody").innerHTML = '<p class="mq">' + q + "</p>" + body;
   $("fyGuardFoot").innerHTML = foot;
@@ -3228,6 +3248,18 @@ function bindSkipPhrases(){
    ========================================================================= */
 
 var LS_DATA = "kenshin.data.v1";
+/* 年度をまたいで引き継ぐ「継続免除」（未受診状況調査の調査免除・その他）。
+   年度の切り替えや「保存データを消去」では消さず、６のタブの一覧で外したときだけ消えます。 */
+var LS_CARRY = "kenshin.carry.v1";
+function saveCarry(){
+  try{
+    if(Object.keys(state.svCarry).length) localStorage.setItem(LS_CARRY, JSON.stringify(state.svCarry));
+    else localStorage.removeItem(LS_CARRY);
+  }catch(err){ toast("継続免除を保存できませんでした: " + err.message, true); }
+}
+function loadCarry(){
+  try{ state.svCarry = JSON.parse(localStorage.getItem(LS_CARRY) || "{}") || {}; }catch(err){ state.svCarry = {}; }
+}
 
 function saveSettings(){
   localStorage.setItem(LS_KEY, JSON.stringify({
@@ -3767,17 +3799,19 @@ var SV_ST = { todo:"未送付", sent:"送付済み", answered:"回答あり", ex
 /* 調査を免除する人。産休・育休とその他は人ごとに持つので、胃がん・婦人検診の両方の行に効きます。
    他受診機関で受診は検診ごとに違いうるので、その行（取込元:職員番号）だけに持ちます */
 function svExemptOf(no, key){
-  var x = state.svExempt[no] || {};
+  var x = state.svExempt[no] || {}, c = state.svCarry[no];
   var el = !!(state.survey[key] && state.survey[key].elsewhere);
-  if(!x.leave && !x.other && !el) return null;
-  return { leave:!!x.leave, other:!!x.other, text:x.text || "", elsewhere:el };
+  var other = !!x.other || !!c;
+  if(!x.leave && !other && !el) return null;
+  return { leave:!!x.leave, other:other, text: c ? c.text : (x.text || ""), elsewhere:el,
+           carry: !!c, since: c ? c.since : 0 };
 }
 function svExemptLabel(x){
   if(!x) return "";
   var a = [];
   if(x.leave) a.push("産休・育休");
   if(x.elsewhere) a.push("他受診機関で受診");
-  if(x.other) a.push("その他" + (x.text ? "：" + x.text : ""));
+  if(x.other) a.push("その他" + (x.text ? "：" + x.text : "") + (x.carry ? "（継続免除・" + x.since + "年度〜）" : ""));
   return a.join("／");
 }
 
@@ -3928,14 +3962,81 @@ function renderSurvey(){
       + "<td>"
         + '<label class="svx"><input type="checkbox" data-svx="leave" data-no="' + no + '"' + (x.leave ? " checked" : "") + "> 産休・育休</label>"
         + '<label class="svx"><input type="checkbox" data-svx="elsewhere" data-no="' + no + '" data-svk="' + k + '"' + (r.rec.elsewhere ? " checked" : "") + "> 他受診機関で受診</label>"
-        + '<label class="svx"><input type="checkbox" data-svx="other" data-no="' + no + '"' + (x.other ? " checked" : "") + "> その他</label>"
-        + (x.other ? '<br><input type="text" data-svx="text" data-no="' + no + '" value="' + esc(x.text || "") + '" placeholder="その他の内容（例：長期療養中）">' : "")
+        + '<label class="svx"><input type="checkbox" data-svx="other" data-no="' + no + '"' + (r.ex && r.ex.other ? " checked" : "") + "> その他</label>"
+        + (r.ex && r.ex.other
+            ? '<br><input type="text" data-svx="text" data-no="' + no + '" value="' + esc(r.ex.text || "") + '" placeholder="その他の内容（例：長期療養中）">'
+              + '<br><label class="svx carry"><input type="checkbox" data-svx="carry" data-no="' + no + '"' + (r.ex.carry ? " checked" : "") + "> 来年度以降も免除（継続）</label>"
+              + (r.ex.carry && r.ex.since < state.fiscalYear ? '<span class="carryfrom">' + r.ex.since + "年度から継続</span>" : "")
+            : "")
         + "</td>"
       + "</tr>";
   });
   box.innerHTML = h + "</tbody>";
+  renderCarry();
   renderTabProgress();
 }
+
+/* 継続免除のオン・オフ（「その他」の理由ごと、職員番号単位で年度をまたいで残します） */
+function setCarry(no, on){
+  var emp = empByNo(no), x = state.svExempt[no] || {};
+  if(on){
+    var c0 = state.svCarry[no];
+    state.svCarry[no] = { text: x.text || (c0 && c0.text) || "", since: (c0 && c0.since) || state.fiscalYear,
+                          checked: state.fiscalYear, name: emp ? emp.name : (c0 && c0.name) || "",
+                          dept: emp ? emp.deptName : (c0 && c0.dept) || "" };
+    if(!state.svCarry[no].text) toast("「その他」の内容（理由）も書いておいてください。来年度以降の確認に使います。", true);
+  }else{
+    var c = state.svCarry[no];
+    if(c){
+      /* 継続をやめても、今年度の免除（その他）はそのまま残します */
+      state.svExempt[no] = state.svExempt[no] || {};
+      state.svExempt[no].other = true;
+      if(!state.svExempt[no].text) state.svExempt[no].text = c.text;
+      delete state.svCarry[no];
+    }
+  }
+  saveCarry(); saveData(); renderCarry();
+}
+
+function renderCarry(){
+  var box = $("carryTable");
+  if(!box) return;
+  var nos = Object.keys(state.svCarry);
+  $("carryPanel").style.display = nos.length ? "" : "none";
+  if(!nos.length){ box.innerHTML = ""; return; }
+  var fy = state.fiscalYear;
+  nos.sort(function(a, b){ return sortKey(a) < sortKey(b) ? -1 : 1; });
+  var todo = nos.filter(function(no){ return (state.svCarry[no].checked || 0) < fy; }).length;
+  $("carryHint").innerHTML = todo
+    ? '<strong style="color:#a8410f">' + todo + "名が今年度まだ見直されていません。</strong>理由が今も続いているかを確かめ、「今年度も継続」を押してください。"
+    : "全員、今年度の見直しが済んでいます。";
+  box.innerHTML = "<thead><tr><th>職員番号</th><th>氏名</th><th>所属名</th><th>免除の理由（その他）</th><th>免除を始めた年度</th><th>今年度の見直し</th><th></th></tr></thead><tbody>"
+    + nos.map(function(no){
+        var c = state.svCarry[no], emp = empByNo(no), ok = (c.checked || 0) >= fy;
+        return "<tr>"
+          + "<td>" + esc(no) + "</td>"
+          + '<td class="nw">' + esc(emp ? emp.name : c.name) + (state.employees.length && !emp ? '<br><span class="hint">今年度の名簿にいません</span>' : "") + "</td>"
+          + '<td class="nw">' + esc(emp ? emp.deptName : c.dept) + "</td>"
+          + "<td>" + (c.text ? esc(c.text) : '<span style="color:#a8410f">（理由が書かれていません）</span>') + "</td>"
+          + '<td class="nw">' + c.since + "年度（" + (fy - c.since + 1) + "年目）</td>"
+          + '<td class="nw">' + (ok ? "済み（" + c.checked + "年度）" : '<button class="btn" data-carryok="' + esc(no) + '">今年度も継続</button>') + "</td>"
+          + '<td><button class="btn" data-carryoff="' + esc(no) + '">継続をやめる</button></td>'
+          + "</tr>";
+      }).join("") + "</tbody>";
+}
+$("carryTable").addEventListener("click", function(e){
+  var t = e.target, no;
+  if((no = t.dataset.carryok)){
+    state.svCarry[no].checked = state.fiscalYear; saveCarry(); renderCarry();
+    return;
+  }
+  if((no = t.dataset.carryoff)){
+    var c = state.svCarry[no];
+    if(!confirm((c.name || no) + " さんの継続免除をやめます。来年度からは調査の対象に戻ります（今年度の免除はそのまま残ります）。よろしいですか？")) return;
+    setCarry(no, false);
+    renderSurvey();
+  }
+});
 
 function surveyRec(key){
   if(!state.survey[key]) state.survey[key] = {};
@@ -3962,10 +4063,26 @@ $("svTable").addEventListener("change", function(e){
     saveData(); renderSurvey();
     return;
   }
+  if(t.dataset.svx === "carry"){
+    setCarry(t.dataset.no, t.checked);
+    renderSurvey();
+    return;
+  }
   if(t.dataset.svx){
     var no = t.dataset.no, x = state.svExempt[no] || (state.svExempt[no] = {});
-    if(t.dataset.svx === "text"){ x.text = t.value.trim(); saveData(); return; }
+    if(t.dataset.svx === "text"){
+      x.text = t.value.trim();
+      if(state.svCarry[no]){ state.svCarry[no].text = x.text; saveCarry(); renderCarry(); }
+      saveData(); return;
+    }
+    if(t.dataset.svx === "other" && !t.checked && state.svCarry[no]){
+      if(!confirm((state.svCarry[no].name || no) + " さんは来年度以降も免除（継続）になっています。「その他」を外すと継続免除も解除します。よろしいですか？")){
+        t.checked = true; return;
+      }
+      delete state.svCarry[no]; saveCarry();
+    }
     x[t.dataset.svx] = t.checked;
+    if(t.dataset.svx === "other" && t.checked && !x.text && state.svCarry[no]) x.text = state.svCarry[no].text;
     if(!x.leave && !x.other) delete state.svExempt[no];
     saveData(); renderSurvey();
     if(t.dataset.svx === "other" && t.checked){
@@ -4380,7 +4497,7 @@ function fujinKidsByAge(age){
 
 var YEAR_COLS = ["所属コード","所属名","職員番号","氏名","カナ","性別","年齢",
   "予約状況（入力欄）","受診日","受付時間","会場","受診状況","受検票","判定",
-  "未受診状況調査","調査票送付日","回答日","調査免除","回答内容",
+  "未受診状況調査","調査票送付日","回答日","調査免除","継続免除","回答内容",
   "要精密検査確認調査","依頼送付日","報告日","報告内容"];
 
 function yearSheet(k){
@@ -4439,7 +4556,7 @@ function yearSheet(k){
       t && t.nyu ? t.nyu.raw : "", a ? assignDateLabel(a) : "", a ? a.time : "", a ? a.place : "",
       jyushin, ticket, JUDGE[jud] || "",
       sv ? SV_ST[sv.st] : "", sv ? sv.rec.sentAt || "" : "", sv ? sv.rec.ansAt || "" : "",
-      sv ? svExemptLabel(sv.ex) : "", sv ? answersText(sv.rec.answers) : "",
+      sv ? svExemptLabel(sv.ex) : "", state.svCarry[no] ? state.svCarry[no].since + "年度から継続" : "", sv ? answersText(sv.rec.answers) : "",
       sm ? SM_ST[sm.st] : "", sm ? sm.rec.sentAt || "" : "", sm ? sm.rec.repAt || "" : "", sm ? answersText(sm.rec.answers) : ""]);
   });
   return { name:k.name, rows:out };
@@ -6252,7 +6369,8 @@ $("btnSample").addEventListener("click", function(){
     var nsv = surveyRows().length, nsm = seimitsuRows().length;
     if(!confirm("この端末に保存されている職員名簿・予約状況・キャンセル・判定・未受診状況調査・要精密検査確認調査の記録をすべて消去します。よろしいですか？\n（様式レイアウトなどの設定は残ります）"
       + (nsv ? "\n\n未受診状況調査の記録（" + nsv + "名分）も消えます。必要なら先に「６. 未受診状況調査」から CSV を出力してください。" : "")
-      + (nsm ? "\n\n要精密検査確認調査の記録（" + nsm + "名分）も消えます。必要なら先に「７. 要精密検査確認調査」から CSV を出力してください。" : ""))) return;
+      + (nsm ? "\n\n要精密検査確認調査の記録（" + nsm + "名分）も消えます。必要なら先に「７. 要精密検査確認調査」から CSV を出力してください。" : "")
+      + (Object.keys(state.svCarry).length ? "\n\n来年度以降も免除（継続）の " + Object.keys(state.svCarry).length + "名は消さずに残します（外すときは「６. 未受診状況調査」の継続免除の一覧で）。" : ""))) return;
     clearData();
     toast("保存データを消去しました");
   });
@@ -6271,6 +6389,7 @@ $("btnSample").addEventListener("click", function(){
 
   /* 前回この端末に保存したデータを復元する */
   var restored = false;
+  loadCarry();
   try{ restored = loadData(); }catch(err){ restored = false; }
   if(restored){
     $("fiscalYear").value = state.fiscalYear;
