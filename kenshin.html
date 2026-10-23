@@ -434,6 +434,7 @@ table.grid td.c{text-align:center}
 .svk.cancel{background:#fde4d8;color:#a8410f}
 .svk.decline{background:#fdf0cf;color:#7a5600}
 .svk.blank{background:#eceff2;color:#55636f}
+.svk.absent{background:#fde4d8;color:#a8410f}
 .svk.unlisted{background:#eceff2;color:#55636f;border:1px dashed #9aa7b4}
 #svTable select, #smTable select{font:inherit;padding:3px 4px}
 #svTable select.todo, #smTable select.todo{border-color:#a8410f;color:#a8410f;font-weight:bold}
@@ -618,7 +619,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
 <section class="page" id="p4">
   <div class="panel">
     <h2>対象者一覧</h2>
-    <p class="hint">検診を選ぶと、その検診で受検票が印刷される人を確認できます。</p>
+    <p class="hint">検診を選ぶと、その検診で受検票が印刷される人（生活習慣病健診は受診の対象者）を確認できます。</p>
     <div class="row" id="tgKenshinTabs"></div>
     <div class="stat" id="targetStat" style="margin-top:12px"></div>
   </div>
@@ -631,10 +632,10 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <label>状態
         <select id="filterState">
           <option value="">（すべて）</option>
-          <option value="print">受検票を印刷する人</option>
+          <option value="print">受検票を印刷する人（生活習慣病健診は受診の対象）</option>
           <option value="check">印刷するが要確認（日時を読み取れない）</option>
-          <option value="skip">印刷しない（該当文言・空欄）</option>
-          <option value="cancel">キャンセルした人</option>
+          <option value="skip">印刷しない（該当文言・空欄）／対象外</option>
+          <option value="cancel">キャンセル・未受診の人</option>
           <option value="manual">手動で除外した人</option>
         </select>
       </label>
@@ -646,8 +647,16 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           <option value="date">受診日時順</option>
         </select>
       </label>
-      <span class="hint">直前に受診を取りやめた人は<strong>「キャンセル」</strong>にチェックします（受検票は印刷されず、「６. 未受診状況調査」に載ります）。
+      <span class="hint" id="tgHintTicket">直前に受診を取りやめた人は<strong>「キャンセル」</strong>にチェックします（受検票は印刷されず、「６. 未受診状況調査」に載ります）。
         休職・異動などで受検票そのものが要らない人は「対象」のチェックを外します（調査には載りません）。</span>
+      <span class="hint" id="tgHintSeikatsu" style="display:none">生活習慣病健診は、名簿の全員（下の雇用区分を除く）が受診の対象です。
+        受診しなかった人は<strong>「未受診」</strong>にチェックすると「６. 未受診状況調査」に載ります。休職などで対象から外す人は「対象」のチェックを外します。</span>
+    </div>
+    <div class="row" id="seikatsuOpt" style="display:none">
+      <label>対象外にする雇用区分
+        <input type="text" id="seikatsuExclude" style="width:280px" placeholder="例）パート時間額、パート日額">
+      </label>
+      <span class="hint" id="seikatsuExcludeHint"></span>
     </div>
     <div class="scroll"><table class="grid" id="targetTable"></table></div>
   </div>
@@ -669,7 +678,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <div id="lyLockBar" class="note"></div>
     <div class="note">
       <strong>生活習慣病健診は受検票を印刷しません。</strong>
-      対象者の把握とCSV出力には引き続き使えます。
+      対象者の把握・未受診状況調査・判定・CSV出力に使えます。
     </div>
   </div>
 
@@ -877,12 +886,12 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
   <div class="panel">
     <h2>年度のまとめ（受診状況・判定・調査結果）</h2>
     <p class="hint">
-      胃がん・乳がん・子宮頸がんの<strong>検診ごとに1シート</strong>で、予約状況から受診状況・判定・未受診状況調査・要精密検査確認調査の結果までを1人1行にまとめます。
-      CSV にはシートを持たせられないため、<strong>Excel（3シート）</strong>で出力します。CSV が必要なときは検診ごとに3つのファイルで出せます。
+      胃がん・乳がん・子宮頸がん・生活習慣病の<strong>検診ごとに1シート</strong>で、予約状況から受診状況・判定・未受診状況調査・要精密検査確認調査の結果までを1人1行にまとめます。
+      CSV にはシートを持たせられないため、<strong>Excel（4シート）</strong>で出力します。CSV が必要なときは検診ごとに4つのファイルで出せます。
     </p>
     <div class="row">
       <button class="btn primary" id="btnYearXlsx">年度のまとめ（Excel・検診ごとのシート）</button>
-      <button class="btn" id="btnYearCsv">年度のまとめ（CSV・検診ごとに3ファイル）</button>
+      <button class="btn" id="btnYearCsv">年度のまとめ（CSV・検診ごとに4ファイル）</button>
     </div>
   </div>
 </section>
@@ -894,7 +903,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <h2>未受診状況調査</h2>
     <p class="hint">
       予約状況で<strong>「受診しない」などと入力した人</strong>、<strong>予約していない人</strong>（入力欄が空欄の人・予約状況ファイルに載っていない人）、
-      「３. 対象者一覧」で<strong>キャンセルにした人</strong>が自動で並びます（派遣元・他の受診機関で受診する人は載りません）。<br>
+      「３. 対象者一覧」で<strong>キャンセルにした人</strong>、<strong>生活習慣病健診で未受診にした人</strong>が自動で並びます（派遣元・他の受診機関で受診する人は載りません）。<br>
       調査票（フォーム）を送ったら「送付済み」にします。<strong>産休・育休</strong>、<strong>他受診機関で受診</strong>、<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。<br>
       フォームの回答をCSV（またはExcel）で書き出したら<strong>「回答CSVを取り込む」</strong>で読み込むと、回答した人が「回答あり」になり、回答内容を見られます。
       この記録もこの端末に保存されます。
@@ -1011,6 +1020,8 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           （派遣元・他の受診機関で受診する人は載りません）。調査票（フォーム）を送ったら「送付済み」にします。
           <strong>産休・育休</strong>・<strong>他受診機関で受診</strong>・<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。
           フォームの回答を書き出したCSV（Excelも可）を<strong>「回答CSVを取り込む」</strong>で読み込むと、回答した人が「回答あり」になります。一覧はCSVで出せます。</li>
+      <li><strong>生活習慣病健診</strong>　「３. 対象者一覧」で生活習慣病健診を選ぶと、名簿の全員（雇用区分が<strong>パート時間額・パート日額</strong>の人を除く）が並びます。
+          受診しなかった人は<strong>「未受診」</strong>にチェックすると、６の未受診状況調査に載ります。</li>
       <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>で「要検査」「要精密検査」を選びます。
           <strong>要精密検査</strong>の人は「７. 要精密検査確認調査」に自動で並びます。病院で受けた精密検査の結果をフォームで報告してもらい、
           フォームを送ったら「送付済み」にし、報告のCSVを<strong>「報告CSVを取り込む」</strong>で読み込むと「報告あり」になります。一覧はCSVで出せます。</li>
@@ -1155,7 +1166,8 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     </table>
     <div class="note">
       <strong>生活習慣病健診は受検票を印刷しません。</strong>
-      対象者の把握、所属別の集計、CSV出力には引き続き使えます。
+      名簿の全員（雇用区分がパート時間額・パート日額の人を除く）が対象で、「３. 対象者一覧」で未受診のチェックと判定を付け、
+      未受診状況調査・要精密検査確認調査・年度のまとめに使えます。
       印刷が必要になった場合は、A4 の自前様式が利用できます（「印刷する検診」の一覧に戻すには設定の変更が必要です）。
     </div>
     <div class="info">
@@ -1210,6 +1222,21 @@ var KENSHIN = [
 /* 受検票を印刷する検診だけを返す */
 function ticketKenshin(){
   return KENSHIN.filter(function(k){ return !k.noTicket; });
+}
+/* 対象者一覧・要精密検査・年度のまとめで扱う検診（がん検診の後に生活習慣病健診） */
+function mgmtKenshin(){
+  return ticketKenshin().concat(KENSHIN.filter(function(k){ return k.noTicket; }));
+}
+/* 生活習慣病健診で対象外にする雇用区分（部分一致・全角半角や空白の違いは無視） */
+function defaultSeikatsuExclude(){ return ["パート時間額", "パート日額"]; }
+function seikatsuExcludedBy(e){
+  var t = normText(e.empType);
+  if(!t) return "";
+  for(var i = 0; i < state.seikatsuExclude.length; i++){
+    var p = normText(state.seikatsuExclude[i]);
+    if(p && t.indexOf(p) >= 0) return e.empType;
+  }
+  return "";
 }
 function hasTicket(kid){
   for(var i = 0; i < KENSHIN.length; i++) if(KENSHIN[i].id === kid) return !KENSHIN[i].noTicket;
@@ -1288,6 +1315,7 @@ var state = {
   excluded:   {},        // kenshinId -> Set(職員番号)  手動で除外した人
   cancelled:  {},        // kenshinId -> { 職員番号: キャンセルした日(YYYY-MM-DD) }  直前キャンセル
   survey:     {},        // "取込元:職員番号" -> 未受診状況調査の記録 { st, sentAt, ansAt, reason, memo }
+  seikatsuExclude: defaultSeikatsuExclude(),   // 生活習慣病健診の対象外にする雇用区分
   svExempt:   {},        // 職員番号 -> 未受診状況調査の免除 { leave:産休・育休, other:その他, text:その他の内容 }
   judge:      {},        // kenshinId -> { 職員番号: "kensa"（要検査）| "seimitsu"（要精密検査） }
   seimitsu:   {},        // "検診:職員番号" -> 要精密検査確認調査の記録 { st, sentAt, repAt }
@@ -3191,7 +3219,8 @@ function saveSettings(){
     fujinFallback: state.fujinFallback,
     rosterSig: state.rosterSig || "",
     rosterMap: state.rosterMap || null,
-    nyuSig: state.nyuSig || {}
+    nyuSig: state.nyuSig || {},
+    seikatsuExclude: state.seikatsuExclude
   }));
 }
 
@@ -3427,7 +3456,15 @@ function computeTargets(){
         list.push(item);
       });
     }
-    /* 予約状況ファイルを読み込んでいない検診は対象者なし（対象はファイルで決まります） */
+    else if(k.noTicket){
+      /* 生活習慣病健診は予約状況ファイルがないので、名簿の全員（対象外の雇用区分を除く）が対象です */
+      state.employees.forEach(function(e){
+        var ex = seikatsuExcludedBy(e);
+        list.push({ emp:e, assign:null, source:"roster", nyu:null, print:!ex,
+                    skipReason: ex ? "雇用区分が「" + ex + "」" : "", needCheck:false, checkWhy:"" });
+      });
+    }
+    /* がん検診は、予約状況ファイルを読み込んでいなければ対象者なし（対象はファイルで決まります） */
 
     list.sort(cmpDeptKana);
     state.targets[k.id] = list;
@@ -3504,15 +3541,21 @@ function renderDeptFilter(){
 function renderTargetStat(){
   var box = $("targetStat");
   if(!box) return;
-  var kid = tgKid || (ticketKenshin()[0] && ticketKenshin()[0].id);
+  var kid = tgKid || mgmtKenshin()[0].id;
   var list = state.targets[kid] || [];
   var c = { print:0, check:0, skip:0, manual:0, cancel:0 };
   list.forEach(function(t){ c[targetStatus(kid, t).key]++; });
-  var h = statBox(list.length, "予約状況ファイル掲載")
-        + statBox(c.print + c.check, "受検票を印刷")
-        + statBox(c.skip, "印刷しない（文言・空欄）")
-        + statBox(c.cancel, "キャンセル")
-        + statBox(c.manual, "手動で除外");
+  var h = hasTicket(kid)
+        ? statBox(list.length, "予約状況ファイル掲載")
+          + statBox(c.print + c.check, "受検票を印刷")
+          + statBox(c.skip, "印刷しない（文言・空欄）")
+          + statBox(c.cancel, "キャンセル")
+          + statBox(c.manual, "手動で除外")
+        : statBox(list.length, "名簿の人数")
+          + statBox(c.print, "受診の対象")
+          + statBox(c.skip, "対象外（雇用区分）")
+          + statBox(c.cancel, "未受診")
+          + statBox(c.manual, "手動で除外");
   var nk = 0, ns = 0;
   activeTargets(kid).forEach(function(t){ var j = state.judge[kid][t.emp.empNo]; if(j === "kensa") nk++; if(j === "seimitsu") ns++; });
   if(nk || ns) h += statBox(nk, "判定：要検査") + statBox(ns, "判定：要精密検査");
@@ -3530,8 +3573,8 @@ var tgKid = null;
 function renderTgTabs(){
   var box = $("tgKenshinTabs");
   if(!box) return;
-  if(!tgKid) tgKid = ticketKenshin()[0].id;
-  box.innerHTML = ticketKenshin().map(function(k){
+  if(!tgKid) tgKid = mgmtKenshin()[0].id;
+  box.innerHTML = mgmtKenshin().map(function(k){
     var n = activeTargets(k.id).length;
     return '<button class="btn' + (tgKid === k.id ? " primary" : "") + '" data-tgk="' + k.id + '">'
          + esc(k.name) + "（" + n + "名）</button>";
@@ -3545,12 +3588,35 @@ document.addEventListener("click", function(e){
   renderTargets();
 });
 
+/* 生活習慣病健診の対象外にする雇用区分の設定欄 */
+function renderSeikatsuOpt(){
+  var inp = $("seikatsuExclude");
+  if(document.activeElement !== inp) inp.value = state.seikatsuExclude.join("、");
+  var types = {}, any = false;
+  state.employees.forEach(function(e){ if(e.empType){ any = true; types[e.empType] = (types[e.empType] || 0) + 1; } });
+  $("seikatsuExcludeHint").innerHTML = !state.employees.length ? ""
+    : !any ? '<span style="color:#a8410f">名簿に雇用区分の列がないため、全員を対象にしています。「１. 名簿の読込」で雇用区分（区分名）の列を指定してください。</span>'
+    : "名簿の雇用区分：" + Object.keys(types).map(function(t){
+        return (seikatsuExcludedBy({ empType:t }) ? "<s>" + esc(t) + "</s>" : esc(t)) + " " + types[t] + "名"; }).join("、")
+      + "（取り消し線が対象外）";
+}
+$("seikatsuExclude").addEventListener("change", function(){
+  state.seikatsuExclude = this.value.split(/[、,，\n]/).map(function(x){ return x.trim(); }).filter(Boolean);
+  saveSettings();
+  computeTargets();
+  renderTargets();
+  toast("生活習慣病健診の対象外にする雇用区分を「" + (state.seikatsuExclude.join("、") || "なし") + "」にしました");
+});
+
 /* 行の状態を表す（画面表示とCSV出力で共通に使う） */
 function targetStatus(kid, t){
+  var nt = !hasTicket(kid);       // 生活習慣病健診（受検票なし）
   if(t.print && isCancelled(kid, t.emp.empNo))
-    return { key:"cancel", label:"キャンセル（" + mdOf(state.cancelled[kid][t.emp.empNo]) + "）印刷しません・未受診状況調査へ", warn:true };
-  if(state.excluded[kid].has(t.emp.empNo)) return { key:"manual", label:"手動で除外（印刷しません）", warn:true };
-  if(!t.print)    return { key:"skip",  label:"印刷しない：" + t.skipReason, warn:false };
+    return nt ? { key:"cancel", label:"未受診（" + mdOf(state.cancelled[kid][t.emp.empNo]) + "）未受診状況調査へ", warn:true }
+              : { key:"cancel", label:"キャンセル（" + mdOf(state.cancelled[kid][t.emp.empNo]) + "）印刷しません・未受診状況調査へ", warn:true };
+  if(state.excluded[kid].has(t.emp.empNo)) return { key:"manual", label: nt ? "手動で除外" : "手動で除外（印刷しません）", warn:true };
+  if(!t.print)    return { key:"skip",  label:(nt ? "対象外：" : "印刷しない：") + t.skipReason, warn:false };
+  if(nt)          return { key:"print", label:"受診の対象", warn:false };
   if(t.needCheck) return { key:"check", label:"印刷する（要確認：" + (t.checkWhy || "内容をご確認ください") + "）", warn:true };
   return { key:"print", label:"印刷する", warn:false };
 }
@@ -3560,7 +3626,12 @@ function renderTargets(){
   renderTabProgress();
   renderTgTabs();
   renderTargetStat();
-  var kid = tgKid || (ticketKenshin()[0] && ticketKenshin()[0].id);
+  var kid = tgKid || mgmtKenshin()[0].id;
+  var nt = !hasTicket(kid);
+  $("seikatsuOpt").style.display = nt ? "" : "none";
+  $("tgHintTicket").style.display = nt ? "none" : "";
+  $("tgHintSeikatsu").style.display = nt ? "" : "none";
+  if(nt) renderSeikatsuOpt();
   var fd = $("filterDept").value;
   var fs = $("filterState").value;
   var ord = $("listOrder").value;
@@ -3573,7 +3644,7 @@ function renderTargets(){
     rows.push({ kid:kid, t:t, st:st });
   });
 
-  var h = "<thead><tr><th>対象</th><th>キャンセル</th><th>職員番号</th><th>所属コード</th><th>氏名</th><th>年齢</th><th>性別</th>"
+  var h = "<thead><tr><th>対象</th><th>" + (nt ? "未受診" : "キャンセル") + "</th><th>職員番号</th><th>所属コード</th><th>氏名</th><th>年齢</th><th>性別</th>"
         + "<th>所属名</th><th>状態</th><th>判定</th><th>受診日</th><th>受付時間</th><th>入力欄の内容</th></tr></thead><tbody>";
   if(!rows.length){
     h += '<tr><td colspan="13" class="hint">該当する方がいません。'
@@ -3590,7 +3661,7 @@ function renderTargets(){
         + (checked ? " checked" : "") + (disabled ? " disabled" : "") + "></td>"
       + '<td class="c">' + (r.t.print
           ? '<input type="checkbox" class="tcan" data-k="' + r.kid + '" data-n="' + esc(e.empNo) + '"' + (cancelled ? " checked" : "")
-            + ' title="直前キャンセル（印刷せず、未受診状況調査へ）">'
+            + (nt ? ' title="受診しなかった（未受診状況調査へ）">' : ' title="直前キャンセル（印刷せず、未受診状況調査へ）">')
           : "") + "</td>"
       + "<td>" + esc(e.empNo) + "</td>"
       + "<td>" + esc(e.deptCode) + "</td>"
@@ -3617,10 +3688,10 @@ $("targetTable").addEventListener("change", function(e){
     var emp = empByNo(no);
     if(e.target.checked){
       state.cancelled[kid][no] = isoOf(new Date());
-      toast((emp ? emp.name : no) + " さんを " + kenshinName(kid) + " のキャンセルにしました。「６. 未受診状況調査」に載ります。");
+      toast((emp ? emp.name : no) + " さんを " + kenshinName(kid) + (hasTicket(kid) ? " のキャンセル" : " の未受診") + "にしました。「６. 未受診状況調査」に載ります。");
     }else{
       delete state.cancelled[kid][no];
-      toast((emp ? emp.name : no) + " さんのキャンセルを取り消しました");
+      toast((emp ? emp.name : no) + " さんの" + (hasTicket(kid) ? "キャンセル" : "未受診") + "を取り消しました");
     }
   }else if(e.target.classList.contains("tjud")){
     var em = empByNo(no);
@@ -3658,6 +3729,7 @@ var SV_CAT = {
   cancel:  "キャンセル",
   decline: "受診しない",
   blank:   "予約なし",
+  absent:  "未受診",
   unlisted:"ファイルに未掲載"
 };
 var SV_ST = { todo:"未送付", sent:"送付済み", answered:"回答あり", exempt:"調査免除" };
@@ -3728,9 +3800,20 @@ function surveyRows(){
       rows.push(r);
     });
   });
+  /* 生活習慣病健診：「３. 対象者一覧」で未受診にチェックした人 */
+  (state.targets.seikatsu || []).forEach(function(t){
+    var no = t.emp.empNo;
+    if(!t.print || !isCancelled("seikatsu", no)) return;
+    var key = "seikatsu:" + no, rec = state.survey[key] || {}, ex = svExemptOf(no, key);
+    rows.push({ key:key, src:SV_SEIKATSU, emp:t.emp, nyu:null, cats:{ absent:1 }, cat:"absent",
+                cancelKids:["seikatsu"], cancelAt:state.cancelled.seikatsu[no], rec:rec, ex:ex,
+                st: ex ? "exempt" : (rec.st === "sent" || rec.st === "answered" ? rec.st : "todo"),
+                kname:"生活習慣病健診" });
+  });
   rows.sort(cmpDeptKana);
   return rows;
 }
+var SV_SEIKATSU = { id:"seikatsu", name:"生活習慣病健診", kenshin:["seikatsu"] };
 
 function surveyCount(rows){
   var c = { all:rows.length, todo:0, sent:0, answered:0, exempt:0 };
@@ -3752,6 +3835,7 @@ function surveyDetail(r){
   if(r.cat === "unlisted") return "予約状況ファイルに載っていません";
   var raw = r.nyu && r.nyu.raw ? r.nyu.raw : "（空欄）";
   if(r.cat === "cancel") return mdOf(r.cancelAt) + " にキャンセル（予約：" + raw + "）";
+  if(r.cat === "absent") return mdOf(r.cancelAt) + " に未受診として記録";
   return raw;
 }
 
@@ -3760,7 +3844,7 @@ function renderSurvey(){
   if(!box) return;
   /* 絞り込みの選択肢 */
   var srcSel = $("svSrc"), keep = srcSel.value;
-  srcSel.innerHTML = '<option value="">（すべて）</option>' + NYU_SOURCES.map(function(src){
+  srcSel.innerHTML = '<option value="">（すべて）</option>' + NYU_SOURCES.concat([SV_SEIKATSU]).map(function(src){
     return '<option value="' + src.id + '">' + esc(src.name.replace(/（.*）/, "")) + "</option>";
   }).join("");
   srcSel.value = keep;
@@ -3799,7 +3883,7 @@ function renderSurvey(){
             + ["todo","sent","answered"].map(function(v){ return '<option value="' + v + '"' + (r.st === v ? " selected" : "") + ">" + SV_ST[v] + "</option>"; }).join("")
             + "</select>") + "</td>"
       + '<td class="nw"><span class="svk ' + r.cat + '">' + SV_CAT[r.cat] + "</span>"
-        + (r.cat === "cancel" ? '<br><button class="btn" style="padding:0 6px;font-size:11px;margin-top:3px" data-uncancel="' + k + '" title="キャンセルを取り消して、受検票の印刷対象に戻します">取り消す</button>' : "")
+        + (r.cat === "cancel" || r.cat === "absent" ? '<br><button class="btn" style="padding:0 6px;font-size:11px;margin-top:3px" data-uncancel="' + k + '" title="' + (r.cat === "cancel" ? "キャンセルを取り消して、受検票の印刷対象に戻します" : "未受診の記録を取り消します") + '">取り消す</button>' : "")
         + "</td>"
       + '<td class="nw">' + esc(r.kname) + "</td>"
       + '<td class="nw">' + esc(e.deptName) + "</td>"
@@ -3863,7 +3947,9 @@ $("svTable").addEventListener("click", function(e){
   if(!key) return;
   var r = surveyRows().filter(function(x){ return x.key === key; })[0];
   if(!r) return;
-  if(!confirm(r.emp.name + " さんの " + r.kname + " のキャンセルを取り消します。受検票の印刷対象に戻ります。よろしいですか？")) return;
+  if(!confirm(r.cat === "absent"
+      ? r.emp.name + " さんの " + r.kname + " の未受診の記録を取り消します。よろしいですか？"
+      : r.emp.name + " さんの " + r.kname + " のキャンセルを取り消します。受検票の印刷対象に戻ります。よろしいですか？")) return;
   r.cancelKids.forEach(function(kid){ delete state.cancelled[kid][r.emp.empNo]; });
   saveData(); renderSurvey();
   toast(r.emp.name + " さんのキャンセルを取り消しました");
@@ -3901,7 +3987,7 @@ var SM_ST = { todo:"未送付", sent:"送付済み", reported:"報告あり" };
 
 function seimitsuRows(){
   var rows = [];
-  ticketKenshin().forEach(function(k){
+  mgmtKenshin().forEach(function(k){
     activeTargets(k.id).forEach(function(t){
       if(state.judge[k.id][t.emp.empNo] !== "seimitsu") return;
       var key = k.id + ":" + t.emp.empNo, rec = state.seimitsu[key] || {};
@@ -3933,7 +4019,7 @@ function renderSeimitsu(){
   var box = $("smTable");
   if(!box) return;
   var kSel = $("smKid"), keep = kSel.value;
-  kSel.innerHTML = '<option value="">（すべて）</option>' + ticketKenshin().map(function(k){
+  kSel.innerHTML = '<option value="">（すべて）</option>' + mgmtKenshin().map(function(k){
     return '<option value="' + k.id + '">' + esc(k.name) + "</option>";
   }).join("");
   kSel.value = keep;
@@ -4057,12 +4143,12 @@ function ansConf(kind){
     ? { rows: surveyRows, box:"svImport", word:"回答", st:"answered", at:"ansAt", render: renderSurvey,
         kenOf: function(r){ return [r.src.id]; },
         kenFilter: function(txt){ txt = normText(txt); var a = [];
-          if(/胃/.test(txt)) a.push("i"); if(/乳|子宮|婦人/.test(txt)) a.push("fujin"); return a; } }
+          if(/胃/.test(txt)) a.push("i"); if(/乳|子宮|婦人/.test(txt)) a.push("fujin"); if(/生活習慣病/.test(txt)) a.push("seikatsu"); return a; } }
     : { rows: seimitsuRows, box:"smImport", word:"報告", st:"reported", at:"repAt", render: renderSeimitsu,
         kenOf: function(r){ return [r.kid]; },
         kenFilter: function(txt){ txt = normText(txt); var a = [];
           if(/胃/.test(txt)) a.push("i"); if(/乳/.test(txt)) a.push("nyu"); if(/子宮/.test(txt)) a.push("shikyu");
-          if(/婦人/.test(txt) && !a.length) a.push("nyu", "shikyu"); return a; } };
+          if(/婦人/.test(txt) && !a.length) a.push("nyu", "shikyu"); if(/生活習慣病/.test(txt)) a.push("seikatsu"); return a; } };
 }
 
 function startAnswerImport(kind, file){
@@ -4287,7 +4373,14 @@ function yearSheet(k){
     var e = it.emp, t = it.t, a = t ? t.assign : null, no = e.empNo;
     var jud = t && t.print ? (state.judge[k.id][no] || "") : "";
     var jyushin, ticket = "印刷しない";
-    if(!t) jyushin = "予約なし（ファイルに未掲載）";
+    if(k.noTicket){
+      ticket = "―";
+      if(!t.print) jyushin = "対象外（" + (seikatsuExcludedBy(e) || "雇用区分") + "）";
+      else if(isCancelled(k.id, no)) jyushin = "未受診（" + mdOf(state.cancelled[k.id][no]) + "）";
+      else if(state.excluded[k.id].has(no)) jyushin = "対象外（手動で除外）";
+      else jyushin = jud ? "受診（判定あり）" : "受診の対象";
+    }
+    else if(!t) jyushin = "予約なし（ファイルに未掲載）";
     else if(t.print){
       if(isCancelled(k.id, no)) jyushin = "キャンセル（" + mdOf(state.cancelled[k.id][no]) + "）";
       else if(state.excluded[k.id].has(no)) jyushin = "対象外（手動で除外）";
@@ -4295,7 +4388,7 @@ function yearSheet(k){
     }
     else if(t.nyu && t.nyu.kind === "skip") jyushin = isElsewhere(t.skipReason) ? "派遣元・他の受診機関で受診" : "受診しない";
     else jyushin = "予約なし";
-    var sv = src ? svMap[src.id + ":" + no] : null;
+    var sv = src ? svMap[src.id + ":" + no] : k.noTicket ? svMap[k.id + ":" + no] : null;
     var sm = smMap[k.id + ":" + no];
     out.push([e.deptCode, e.deptName, no, e.name, e.kana, sexLabel(e.sex), e.age,
       t && t.nyu ? t.nyu.raw : "", a ? assignDateLabel(a) : "", a ? a.time : "", a ? a.place : "",
@@ -4307,7 +4400,7 @@ function yearSheet(k){
   return { name:k.name, rows:out };
 }
 
-function yearSheets(){ return ticketKenshin().map(yearSheet); }
+function yearSheets(){ return mgmtKenshin().map(yearSheet); }
 
 $("btnYearXlsx").addEventListener("click", function(){
   if(!state.employees.length){ toast("先に名簿と予約状況を読み込んでください", true); return; }
@@ -5961,9 +6054,9 @@ $("btnCsvUnassigned").addEventListener("click", function(){
                    "入力欄を受診日時として読み取れません：" + (t.nyu ? t.nyu.raw : "")]);
         return;
       }
-      var kubun = st.key === "manual" ? "手動で除外" : st.key === "cancel" ? "キャンセル" : "印刷しない";
+      var kubun = st.key === "manual" ? "手動で除外" : st.key === "cancel" ? (k.noTicket ? "未受診" : "キャンセル") : (k.noTicket ? "対象外" : "印刷しない");
       var naiyou = st.key === "manual" ? "画面上で対象から除外されています"
-                 : st.key === "cancel" ? mdOf(state.cancelled[k.id][t.emp.empNo]) + " にキャンセル（未受診状況調査の対象）"
+                 : st.key === "cancel" ? mdOf(state.cancelled[k.id][t.emp.empNo]) + (k.noTicket ? " に未受診" : " にキャンセル") + "（未受診状況調査の対象）"
                  : t.skipReason;
       rows.push([kubun, k.name, t.emp.empNo, t.emp.name, t.emp.deptName, naiyou]);
     });
@@ -6044,6 +6137,7 @@ $("btnSample").addEventListener("click", function(){
     if(saved && saved.fujinFallback) state.fujinFallback = saved.fujinFallback;
     if(saved && saved.rosterSig){ state.rosterSig = saved.rosterSig; state.rosterMap = saved.rosterMap || null; }
     if(saved && saved.nyuSig) state.nyuSig = saved.nyuSig;
+    if(saved && Array.isArray(saved.seikatsuExclude)) state.seikatsuExclude = saved.seikatsuExclude;
     if(saved && saved.layouts){
       ticketKenshin().forEach(function(k){
         if(saved.layouts[k.id] && Array.isArray(saved.layouts[k.id].fields)) state.layouts[k.id] = saved.layouts[k.id];
