@@ -2801,12 +2801,13 @@ function renderNyuCard(sid){
 
   if(s){
     var cn = countOf(s.map), pr = printSplit(s.map);
+    var tk = src.kenshin.some(hasTicket);         // 生活習慣病健診は受検票がないので、言い方を変えます
     h += '<div class="stat" style="margin-top:10px">'
        + statBox(cn.total, "ファイル掲載（実人数）")
-       + statBox(pr.inRoster, "受検票を印刷")
-       + (pr.missing ? statBox(pr.missing, "名簿にいない（印刷されない）") : "")
-       + statBox(cn.skip, "印刷しない（該当文言）")
-       + statBox(cn.blank, "印刷しない（空欄）")
+       + statBox(pr.inRoster, tk ? "受検票を印刷" : "予約あり")
+       + (pr.missing ? statBox(pr.missing, tk ? "名簿にいない（印刷されない）" : "名簿にいない") : "")
+       + statBox(cn.skip, tk ? "印刷しない（該当文言）" : "受診しない（該当文言）")
+       + statBox(cn.blank, tk ? "印刷しない（空欄）" : "予約なし（空欄）")
        + "</div>";
 
     if(src.kenshin.length > 1){
@@ -4324,6 +4325,9 @@ function applyAnswers(kind){
       + '<div class="miss">' + m.miss.slice(0, 30).map(function(x){ return x.line + "行目　" + esc(x.who) + "：" + esc(x.why); }).join("<br>") + "</div>"
       + '<div class="row" style="margin-top:8px"><button class="btn" data-anscancel="' + kind + '">閉じる</button></div>';
     box.style.display = "";
+  }else{
+    box.style.display = "none";            // 全部一致したら、列の指定の枠は閉じます
+    box.innerHTML = "";
   }
   toast(n + "行を「" + cf.word + "あり」にしました" + (miss ? "（一致しない" + cf.word + " " + miss + "件）" : ""));
 }

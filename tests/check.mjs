@@ -314,6 +314,7 @@ await tab('p10');
 await page.setInputFiles('#smAnsFile', csvFile(path.join(FIX, 'houkoku_seimitsu_shinsei.csv'))); await wait(800);
 await page.click('#smImport button[data-ansgo]'); await wait(500);
 ok(await ev(() => state.seimitsu['seikatsu:1002'] && state.seimitsu['seikatsu:1002'].answers['検査結果'] === '経過観察'), '  生活習慣病健診の報告CSVも取り込める');
+ok(!(await page.isVisible('#smImport')), '  全部一致したときは、取り込んだあと列の指定の枠を閉じる');
 await tab('p5');
 await page.click('#btnYearXlsx'); await wait(500);
 const ys = await ev(async () => { const sh = await readXlsxFile(new File([window.__blob.b], 'a.xlsx')); const s = sh[3], h = s.rows[0];
@@ -323,6 +324,7 @@ ok(ys.n === 24 && ys.a === '対象外（パート時間額）' && /^未受診/.t
 await tab('p7');
 await page.setInputFiles('#nyfile_seikatsu', xlsx(path.join(SAMPLE, '予約状況_胃がん検診_サンプル.xlsx'))); await wait(1000);
 if (await page.$('#ny_seikatsu button[data-nyimport="seikatsu"]')) { await page.click('#ny_seikatsu button[data-nyimport="seikatsu"]'); await wait(500); }
+ok(await ev(() => /予約あり/.test(document.getElementById('ny_seikatsu').innerText) && !/受検票を印刷/.test(document.getElementById('ny_seikatsu').innerText)), '  生活習慣病健診の枠は「受検票を印刷」ではなく「予約あり」と表示');
 const sres = await ev(() => ({ n: state.targets.seikatsu.length, act: activeTargets('seikatsu').length,
   sv: surveyRows().filter(r => r.src.id === 'seikatsu').map(r => r.emp.empNo + ':' + r.cat) }));
 ok(sres.n === 24 && sres.sv.length >= 1 && sres.sv.every(x => /:(decline|blank|unlisted|absent)$/.test(x)), '生活習慣病健診の予約状況を取り込むと、受診しない・予約なしの人が未受診状況調査に載る', sres);
