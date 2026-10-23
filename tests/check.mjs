@@ -99,7 +99,7 @@ ok(counts.join() === '20,7,11', '印刷対象 胃がん20・乳がん7・子宮�
 const blanks = await ev(() => surveyRows().filter(r => r.cat === 'blank').map(r => r.emp.empNo));
 ok(blanks.length >= 1, '予約していない（入力欄が空欄の）人は未受診状況調査に載る', blanks);
 const unl0 = await ev(() => surveyRows().filter(r => r.cat === 'unlisted').map(r => r.key));
-ok(unl0.length === 0, '  全員がファイルに載っていれば「ファイルに未掲載」は出ない（婦人検診では男性を数えない）', unl0);
+ok(unl0.length === 0, '  がん検診では「ファイルに未掲載」の区分は出ない', unl0);
 const unl = await ev(() => {
   const m = state.nyuSrc.i.map; const k = Object.keys(m).find(x => String(x) === '1101'); const keep = m[k];
   delete m[k]; rebuildNyuryoku(); computeTargets();
@@ -107,7 +107,7 @@ const unl = await ev(() => {
   m[k] = keep; rebuildNyuryoku(); computeTargets();
   return r;
 });
-ok(unl.join() === 'i:1101', '  予約状況ファイルに載っていない人も「ファイルに未掲載」として載る', unl);
+ok(unl.length === 0, '  がん検診では、予約状況ファイルに載っていない人は未受診状況調査に載らない', unl);
 
 section('年齢（年度末現在・法律どおりの数え方）');
 const ages = await ev(() => {
@@ -330,6 +330,14 @@ const sres = await ev(() => ({ n: state.targets.seikatsu.length, act: activeTarg
   sv: surveyRows().filter(r => r.src.id === 'seikatsu').map(r => r.emp.empNo + ':' + r.cat) }));
 ok(sres.n === 24 && sres.sv.length >= 1 && sres.sv.every(x => /:(decline|blank|unlisted|absent)$/.test(x)), '生活習慣病健診の予約状況を取り込むと、受診しない・予約なしの人が未受診状況調査に載る', sres);
 ok(!sres.sv.some(x => /^(1004|1503):/.test(x)), '  パート（時間額・日額）の人は未受診状況調査に載らない', sres.sv);
+const sunl = await ev(() => {
+  const m = state.nyuSrc.seikatsu.map; const k = Object.keys(m).find(x => String(x) === '1001'); const keep = m[k];
+  delete m[k]; rebuildNyuryoku(); computeTargets();
+  const r = surveyRows().filter(x => x.cat === 'unlisted').map(x => x.key);
+  m[k] = keep; rebuildNyuryoku(); computeTargets();
+  return r;
+});
+ok(sunl.join() === 'seikatsu:1001', '  生活習慣病健診は、予約状況ファイルに載っていない人も「ファイルに未掲載」として載る', sunl);
 const pf = await ev(() => ['10月6日(男)　8:30', '11月12日（女）　9：00～9：15'].map(v => { const r = parseNyuryoku(v, 'seikatsu'); return [r.kind, isoOf(r.date), r.sexMark, r.timeText, r.warn || ''].join('|'); }));
 ok(pf[0] === 'time|2026-10-06|男|8:30|' && pf[1] === 'time|2026-11-12|女|9：00～9：15|', '生活習慣病健診の「○月○日(性別)　時間」を読み取る（日付・性別・受付時間）', pf);
 
