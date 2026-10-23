@@ -526,7 +526,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <summary>名簿に必要な列と、読み取れる書き方</summary>
       <div class="more-b">
       職員番号（番号） ／ 氏名 ／ カナ（フリガナ） ／ 生年月日 ／ 性別 ／ 所属コード（所属CD） ／ 所属名 ／
-      雇用区分（区分名・身分） ／ 在職 ／ 組合員証記号番号（社保） ／ 係名<br>
+      雇用区分（E列の身分） ／ 在職 ／ 組合員証記号番号（社保） ／ 係名<br>
       生年月日は <code>1985/4/1</code>／<code>19850401</code>／<code>昭和60年4月1日</code>／<code>S60.4.1</code> のほか、
       <strong>Excelの日付セル（和暦表示を含む）</strong>もそのまま読み取れます。<br>
       性別は <strong><code>1</code> が男性、<code>0</code> が女性</strong>です（<code>男</code>/<code>女</code>、<code>2</code>（女性）も判別します）。
@@ -650,7 +650,8 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <span class="hint" id="tgHintTicket">直前に受診を取りやめた人は<strong>「キャンセル」</strong>にチェックします（受検票は印刷されず、「６. 未受診状況調査」に載ります）。
         休職・異動などで受検票そのものが要らない人は「対象」のチェックを外します（調査には載りません）。</span>
       <span class="hint" id="tgHintSeikatsu" style="display:none">生活習慣病健診は、名簿の全員（下の雇用区分を除く）が受診の対象です。
-        受診しなかった人は<strong>「未受診」</strong>にチェックすると「６. 未受診状況調査」に載ります。休職などで対象から外す人は「対象」のチェックを外します。</span>
+        予約状況を読み込むと、受診しない人・予約していない人は自動で「６. 未受診状況調査」に載ります（下の雇用区分の人は載りません）。
+        予約していたのに受診しなかった人は<strong>「未受診」</strong>にチェックします。休職などで対象から外す人は「対象」のチェックを外します。</span>
     </div>
     <div class="row" id="seikatsuOpt" style="display:none">
       <label>対象外にする雇用区分
@@ -1006,7 +1007,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <h3>作業の流れ</h3>
     <ol>
       <li><strong>名簿の読込</strong>　職員名簿を貼り付け（またはファイルを選び）、列の対応付けを確認します。</li>
-      <li><strong>予約状況の取込</strong>　胃がん検診・婦人検診それぞれを貼り付け（またはファイルを選び）、職員番号の列と入力の列を指定して取り込みます。<br>
+      <li><strong>予約状況の取込</strong>　胃がん検診・婦人検診・生活習慣病健診それぞれを貼り付け（またはファイルを選び）、職員番号の列と入力の列を指定して取り込みます。<br>
           取り込むと、確認が必要な件があればこの画面に表示されます。</li>
       <li><strong>対象者一覧</strong>　検診を選んで、受検票が印刷される人を確認します。
           直前に受診を取りやめた人は<strong>「キャンセル」</strong>にチェックします（印刷されず、６の未受診状況調査に載ります）。
@@ -1021,7 +1022,8 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           <strong>産休・育休</strong>・<strong>他受診機関で受診</strong>・<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。
           フォームの回答を書き出したCSV（Excelも可）を<strong>「回答CSVを取り込む」</strong>で読み込むと、回答した人が「回答あり」になります。一覧はCSVで出せます。</li>
       <li><strong>生活習慣病健診</strong>　「３. 対象者一覧」で生活習慣病健診を選ぶと、名簿の全員（雇用区分が<strong>パート時間額・パート日額</strong>の人を除く）が並びます。
-          受診しなかった人は<strong>「未受診」</strong>にチェックすると、６の未受診状況調査に載ります。</li>
+          予約状況（「２. 予約状況の取込」の生活習慣病健診）を読み込むと、受診しない人・予約していない人は自動で６の未受診状況調査に載ります。
+          予約していたのに受診しなかった人は<strong>「未受診」</strong>にチェックします。雇用区分は名簿のE列「身分」で判定します。</li>
       <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>で「要検査」「要精密検査」を選びます。
           <strong>要精密検査</strong>の人は「７. 要精密検査確認調査」に自動で並びます。病院で受けた精密検査の結果をフォームで報告してもらい、
           フォームを送ったら「送付済み」にし、報告のCSVを<strong>「報告CSVを取り込む」</strong>で読み込むと「報告あり」になります。一覧はCSVで出せます。</li>
@@ -1251,7 +1253,8 @@ var FIELDS = [
   { key:"sex",     label:"性別",       required:true,  aliases:["性別","性","男女"] },
   { key:"deptCode",label:"所属コード", required:false, aliases:["所属コード","所属CD","部署コード","組織コード","課コード"] },
   { key:"deptName",label:"所属名",     required:true,  aliases:["所属名","所属","部署名","部署","課名","所属課","組織名"] },
-  { key:"empType", label:"雇用区分",   required:false, aliases:["雇用区分","区分名","身分","職員区分","勤務形態","区分"] },
+  { key:"empType", label:"雇用区分（身分）", required:false, byAlias:true,   // 名簿の E 列「身分」（パート時間額・パート日額の判定に使います）
+    aliases:["身分","雇用区分","職員区分","勤務形態","区分名","区分"] },
   { key:"active",  label:"在職",       required:false, aliases:["在職","在籍","在職区分","在職フラグ"] },
   { key:"insNo",   label:"組合員証記号番号", required:false, aliases:["社保","組合員証","記号番号","組合員証記号番号","保険証番号"] },
   { key:"section", label:"係名",       required:false, aliases:["係名","係","担当名"] }
@@ -1342,6 +1345,7 @@ var state = {
 
 KENSHIN.forEach(function(k){ state.excluded[k.id] = new Set(); state.cancelled[k.id] = {}; state.judge[k.id] = {}; });
 
+var MAP_VER = 2;   // 2：雇用区分を「身分」の列で読むようにした
 var LS_KEY = "kenshin.settings.v1";
 
 /* =========================================================================
@@ -2196,7 +2200,14 @@ function autoMap(){
   var used = {};
   FIELDS.forEach(function(f){
     var found = -1, i, j;
-    for(i = 0; i < state.rawHeader.length; i++){                      // 完全一致を優先
+    if(f.byAlias){                                                    // 候補の名前の順に探す（左の列より名前の優先順位を重視）
+      for(j = 0; j < f.aliases.length && found < 0; j++){
+        for(i = 0; i < state.rawHeader.length; i++){
+          if(!used[i] && normText(state.rawHeader[i]) === normText(f.aliases[j])){ found = i; break; }
+        }
+      }
+    }
+    for(i = 0; found < 0 && i < state.rawHeader.length; i++){         // 完全一致を優先
       if(used[i]) continue;
       var h = normText(state.rawHeader[i]);
       for(j = 0; j < f.aliases.length; j++){
@@ -2433,7 +2444,10 @@ var NYU_SOURCES = [
     note:"性別・日・受付時間帯を読み取ります。" },
   { id:"fujin", name:"婦人検診（乳がん・子宮頸がん）", kenshin:["nyu","shikyu"],
     sample:"09:30〜09:45（35歳以上）",
-    note:"受付時間帯と年齢区分を読み取り、年齢区分で対象の検診が決まります。" }
+    note:"受付時間帯と年齢区分を読み取り、年齢区分で対象の検診が決まります。" },
+  { id:"seikatsu", name:"生活習慣病健診", kenshin:["seikatsu"],
+    sample:"6日（火）　8：30〜8：45",
+    note:"日・受付時間帯を読み取ります。読み込まない場合は、名簿の全員（パート時間額・パート日額を除く）を対象にします。" }
 ];
 
 function nyuSourceOf(id){
@@ -3212,6 +3226,7 @@ function saveSettings(){
     rules: state.rules,
     skipPhrases: state.skipPhrases,
     skipVer: SKIP_VER,
+    mapVer: MAP_VER,
     onlyActive: !!state.onlyActive,
     orgName: state.orgName,
     layouts: state.layouts,
@@ -3551,6 +3566,12 @@ function renderTargetStat(){
           + statBox(c.skip, "印刷しない（文言・空欄）")
           + statBox(c.cancel, "キャンセル")
           + statBox(c.manual, "手動で除外")
+        : state.nyuryoku[kid]
+        ? statBox(list.length, "予約状況ファイル掲載")
+          + statBox(c.print + c.check, "予約あり")
+          + statBox(c.skip, "予約なし・受診しない")
+          + statBox(c.cancel, "未受診")
+          + statBox(c.manual, "手動で除外")
         : statBox(list.length, "名簿の人数")
           + statBox(c.print, "受診の対象")
           + statBox(c.skip, "対象外（雇用区分）")
@@ -3595,7 +3616,7 @@ function renderSeikatsuOpt(){
   var types = {}, any = false;
   state.employees.forEach(function(e){ if(e.empType){ any = true; types[e.empType] = (types[e.empType] || 0) + 1; } });
   $("seikatsuExcludeHint").innerHTML = !state.employees.length ? ""
-    : !any ? '<span style="color:#a8410f">名簿に雇用区分の列がないため、全員を対象にしています。「１. 名簿の読込」で雇用区分（区分名）の列を指定してください。</span>'
+    : !any ? '<span style="color:#a8410f">名簿に雇用区分の列がないため、全員を対象にしています。「１. 名簿の読込」で雇用区分（E列の「身分」）の列を指定してください。</span>'
     : "名簿の雇用区分：" + Object.keys(types).map(function(t){
         return (seikatsuExcludedBy({ empType:t }) ? "<s>" + esc(t) + "</s>" : esc(t)) + " " + types[t] + "名"; }).join("、")
       + "（取り消し線が対象外）";
@@ -3615,8 +3636,9 @@ function targetStatus(kid, t){
     return nt ? { key:"cancel", label:"未受診（" + mdOf(state.cancelled[kid][t.emp.empNo]) + "）未受診状況調査へ", warn:true }
               : { key:"cancel", label:"キャンセル（" + mdOf(state.cancelled[kid][t.emp.empNo]) + "）印刷しません・未受診状況調査へ", warn:true };
   if(state.excluded[kid].has(t.emp.empNo)) return { key:"manual", label: nt ? "手動で除外" : "手動で除外（印刷しません）", warn:true };
-  if(!t.print)    return { key:"skip",  label:(nt ? "対象外：" : "印刷しない：") + t.skipReason, warn:false };
-  if(nt)          return { key:"print", label:"受診の対象", warn:false };
+  if(!t.print)    return { key:"skip",  label:(nt ? (t.nyu ? "予約なし・受診しない：" : "対象外：") : "印刷しない：") + t.skipReason
+                                      + (nt && t.nyu && seikatsuExcludedBy(t.emp) ? "（パートのため受診の義務なし）" : ""), warn:false };
+  if(nt)          return { key:"print", label: t.nyu ? "予約あり" : "受診の対象", warn:false };
   if(t.needCheck) return { key:"check", label:"印刷する（要確認：" + (t.checkWhy || "内容をご確認ください") + "）", warn:true };
   return { key:"print", label:"印刷する", warn:false };
 }
@@ -3764,14 +3786,15 @@ function surveyRows(){
     src.kenshin.forEach(function(kid){
       (state.targets[kid] || []).forEach(function(t){
         var no = t.emp.empNo, cat = null;
-        if(t.print){ if(isCancelled(kid, no)) cat = "cancel"; }
+        if(src.id === "seikatsu" && seikatsuExcludedBy(t.emp)) return;     // パート時間額・日額の人は受診の義務がないので調査しません
+        if(t.print){ if(isCancelled(kid, no)) cat = src.id === "seikatsu" ? "absent" : "cancel"; }
         else if(t.nyu && t.nyu.kind === "skip") cat = isElsewhere(t.skipReason) ? null : "decline";
         else if(t.nyu && t.nyu.kind === "blank") cat = "blank";
         if(!cat) return;
         var r = by[no];
         if(!r){ r = by[no] = { key:src.id + ":" + no, src:src, emp:t.emp, nyu:t.nyu, cats:{}, cancelKids:[], cancelAt:"" }; order.push(no); }
         r.cats[cat] = 1;
-        if(cat === "cancel"){
+        if(cat === "cancel" || cat === "absent"){
           r.cancelKids.push(kid);
           var at = state.cancelled[kid][no];
           if(!r.cancelAt || at < r.cancelAt) r.cancelAt = at;
@@ -3784,24 +3807,25 @@ function surveyRows(){
     Object.keys(s0.map).forEach(function(k){ loose[empKeyLoose(k)] = 1; });
     state.employees.forEach(function(e){
       if(s0.map[empKey(e.empNo)] || loose[empKeyLoose(e.empNo)] || by[e.empNo]) return;
-      if(src.kenshin.indexOf("i") < 0 && e.sex === "M") return;
+      if(src.id === "fujin" && e.sex === "M") return;
+      if(src.id === "seikatsu" && seikatsuExcludedBy(e)) return;
       by[e.empNo] = { key:src.id + ":" + e.empNo, src:src, emp:e, nyu:null, cats:{ unlisted:1 }, cancelKids:[], cancelAt:"" };
       order.push(e.empNo);
     });
     order.forEach(function(no){
       var r = by[no];
-      r.cat = r.cats.cancel ? "cancel" : r.cats.decline ? "decline" : r.cats.unlisted ? "unlisted" : "blank";
+      r.cat = r.cats.cancel ? "cancel" : r.cats.absent ? "absent" : r.cats.decline ? "decline" : r.cats.unlisted ? "unlisted" : "blank";
       r.rec = state.survey[r.key] || {};
       r.ex = svExemptOf(no, r.key);
       r.st = r.ex ? "exempt" : (r.rec.st === "sent" || r.rec.st === "answered" ? r.rec.st : "todo");
-      r.kname = r.cat === "cancel"
+      r.kname = r.cat === "cancel" || r.cat === "absent"
         ? r.cancelKids.map(kenshinName).join("・")
         : src.name.replace(/（.*）/, "");
       rows.push(r);
     });
   });
-  /* 生活習慣病健診：「３. 対象者一覧」で未受診にチェックした人 */
-  (state.targets.seikatsu || []).forEach(function(t){
+  /* 生活習慣病健診の予約状況を読み込んでいないとき：「３. 対象者一覧」で未受診にチェックした人 */
+  if(!state.nyuSrc.seikatsu) (state.targets.seikatsu || []).forEach(function(t){
     var no = t.emp.empNo;
     if(!t.print || !isCancelled("seikatsu", no)) return;
     var key = "seikatsu:" + no, rec = state.survey[key] || {}, ex = svExemptOf(no, key);
@@ -3835,7 +3859,7 @@ function surveyDetail(r){
   if(r.cat === "unlisted") return "予約状況ファイルに載っていません";
   var raw = r.nyu && r.nyu.raw ? r.nyu.raw : "（空欄）";
   if(r.cat === "cancel") return mdOf(r.cancelAt) + " にキャンセル（予約：" + raw + "）";
-  if(r.cat === "absent") return mdOf(r.cancelAt) + " に未受診として記録";
+  if(r.cat === "absent") return mdOf(r.cancelAt) + " に未受診として記録" + (r.nyu && r.nyu.raw ? "（予約：" + r.nyu.raw + "）" : "");
   return raw;
 }
 
@@ -3844,7 +3868,7 @@ function renderSurvey(){
   if(!box) return;
   /* 絞り込みの選択肢 */
   var srcSel = $("svSrc"), keep = srcSel.value;
-  srcSel.innerHTML = '<option value="">（すべて）</option>' + NYU_SOURCES.concat([SV_SEIKATSU]).map(function(src){
+  srcSel.innerHTML = '<option value="">（すべて）</option>' + NYU_SOURCES.map(function(src){
     return '<option value="' + src.id + '">' + esc(src.name.replace(/（.*）/, "")) + "</option>";
   }).join("");
   srcSel.value = keep;
@@ -4367,6 +4391,12 @@ function yearSheet(k){
       items.push({ emp:r.emp, t:null });
     });
   }
+  if(k.noTicket){
+    /* 生活習慣病健診は名簿の全員を載せます（予約状況ファイルに載っていない人・パートの人も） */
+    var have = {};
+    items.forEach(function(it){ have[it.emp.empNo] = 1; });
+    state.employees.forEach(function(e){ if(!have[e.empNo]) items.push({ emp:e, t:null }); });
+  }
   items.sort(cmpDeptKana);
   var out = [YEAR_COLS.slice()];
   items.forEach(function(it){
@@ -4375,10 +4405,14 @@ function yearSheet(k){
     var jyushin, ticket = "印刷しない";
     if(k.noTicket){
       ticket = "―";
-      if(!t.print) jyushin = "対象外（" + (seikatsuExcludedBy(e) || "雇用区分") + "）";
-      else if(isCancelled(k.id, no)) jyushin = "未受診（" + mdOf(state.cancelled[k.id][no]) + "）";
-      else if(state.excluded[k.id].has(no)) jyushin = "対象外（手動で除外）";
-      else jyushin = jud ? "受診（判定あり）" : "受診の対象";
+      var part = seikatsuExcludedBy(e);
+      if(t && t.print && isCancelled(k.id, no)) jyushin = "未受診（" + mdOf(state.cancelled[k.id][no]) + "）";
+      else if(t && t.print && state.excluded[k.id].has(no)) jyushin = "対象外（手動で除外）";
+      else if(t && t.print) jyushin = jud ? "受診（判定あり）" : (t.nyu ? "予約あり" : "受診の対象");
+      else if(part) jyushin = "対象外（" + part + "）";
+      else if(!t) jyushin = "予約なし（ファイルに未掲載）";
+      else if(t.nyu && t.nyu.kind === "skip") jyushin = isElsewhere(t.skipReason) ? "派遣元・他の受診機関で受診" : "受診しない";
+      else jyushin = "予約なし";
     }
     else if(!t) jyushin = "予約なし（ファイルに未掲載）";
     else if(t.print){
@@ -6135,7 +6169,8 @@ $("btnSample").addEventListener("click", function(){
     if(saved && saved.orgName) state.orgName = saved.orgName;
     if(saved && Array.isArray(saved.fujinRules) && saved.fujinRules.length) state.fujinRules = saved.fujinRules;
     if(saved && saved.fujinFallback) state.fujinFallback = saved.fujinFallback;
-    if(saved && saved.rosterSig){ state.rosterSig = saved.rosterSig; state.rosterMap = saved.rosterMap || null; }
+    /* 列の対応付けの決まりを変えたとき（MAP_VER）は、前回の対応付けを使わず一度確認してもらいます */
+    if(saved && saved.rosterSig && saved.mapVer === MAP_VER){ state.rosterSig = saved.rosterSig; state.rosterMap = saved.rosterMap || null; }
     if(saved && saved.nyuSig) state.nyuSig = saved.nyuSig;
     if(saved && Array.isArray(saved.seikatsuExclude)) state.seikatsuExclude = saved.seikatsuExclude;
     if(saved && saved.layouts){

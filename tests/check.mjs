@@ -88,6 +88,7 @@ section('名簿と予約状況の読込（サンプル）');
 await fresh(new Date(2026, 9, 7, 10, 0));
 await loadRoster(path.join(SAMPLE, '職員名簿_サンプル.xlsx'));
 ok(await ev(() => state.employees.length) === 24, '名簿 24名を読み込む', await ev(() => state.employees.length));
+ok(await ev(() => state.rawHeader[state.mapping.empType]) === '身分', '雇用区分は名簿の「身分」の列（E列）を使う', await ev(() => state.rawHeader[state.mapping.empType]));
 ok(await ev(() => state.fiscalYear) === 2026, '対象年度は PC の日付から 2026年度');
 ok(await ev(() => isoOf(state.baseDate)) === '2027-03-31', '年齢の基準日は年度末（2027-03-31）');
 await tab('p7');
@@ -120,7 +121,7 @@ ok(ages.diff === 0, '画面の年齢と受検票の年齢が一致', ages.diff);
 
 section('タブの進み具合');
 const marks = await ev(() => Array.from(document.querySelectorAll('nav .tab .tabmark')).map(m => m.textContent));
-ok(marks[0] === '✓ 24名' && marks[1] === '✓ 2/2' && /^要確認 \d+$|^✓$/.test(marks[2] || ''), '名簿・予約状況・対象者一覧に印が付く', marks);
+ok(marks[0] === '✓ 24名' && marks[1] === '2/3' && /^要確認 \d+$|^✓$/.test(marks[2] || ''), '名簿・予約状況・対象者一覧に印が付く', marks);
 
 section('前回と同じ列の並びなら確認を省く');
 await tab('p1');
@@ -319,6 +320,13 @@ const ys = await ev(async () => { const sh = await readXlsxFile(new File([window
   const row = (no) => Object.fromEntries(h.map((k, i) => [k, s.rows.find(r => String(r[2]) === no)[i]]));
   return { n: s.rows.length - 1, a: row('1004')['受診状況'], b: row('1101')['受診状況'], c: row('1002')['報告内容'] }; });
 ok(ys.n === 24 && ys.a === '対象外（パート時間額）' && /^未受診/.test(ys.b) && /検査結果：経過観察/.test(ys.c), '  年度のまとめの「生活習慣病健診」シートに受診状況・報告内容', ys);
+await tab('p7');
+await page.setInputFiles('#nyfile_seikatsu', xlsx(path.join(SAMPLE, '予約状況_胃がん検診_サンプル.xlsx'))); await wait(1000);
+if (await page.$('#ny_seikatsu button[data-nyimport="seikatsu"]')) { await page.click('#ny_seikatsu button[data-nyimport="seikatsu"]'); await wait(500); }
+const sres = await ev(() => ({ n: state.targets.seikatsu.length, act: activeTargets('seikatsu').length,
+  sv: surveyRows().filter(r => r.src.id === 'seikatsu').map(r => r.emp.empNo + ':' + r.cat) }));
+ok(sres.n === 24 && sres.sv.length >= 1 && sres.sv.every(x => /:(decline|blank|unlisted|absent)$/.test(x)), '生活習慣病健診の予約状況を取り込むと、受診しない・予約なしの人が未受診状況調査に載る', sres);
+ok(!sres.sv.some(x => /^(1004|1503):/.test(x)), '  パート時間額・パート日額の人は未受診状況調査に載らない', sres.sv);
 
 section('年度の取り違え防止');
 await page.clock.setFixedTime(new Date(2027, 3, 10, 10, 0));
