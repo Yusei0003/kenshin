@@ -4026,7 +4026,8 @@ $("btnSmCsv").addEventListener("click", function(){
    ========================================================================= */
 
 var ansPending = {};          // "sv" | "sm" -> 読込中の回答ファイル
-var ANS_META = /^(ID|開始時刻|完了時刻|最終変更時刻|メール|電子メール|メールアドレス|タイムスタンプ|ポイント.*|フィードバック.*|クイズ.*)$/;
+var ANS_META = /^(ID|開始時刻|完了時刻|最終変更時刻|メール|電子メール|メールアドレス|タイムスタンプ|ポイント.*|フィードバック.*|クイズ.*|回答番号|受付番号|回答日時|申請状況.*|申請方式|処理状況.*)$/;
+var ANS_CODE = /^\d+:[a-z]+$/i;   // 申請フォームの書き出しで1行目に入る「3:number」「2:lastname」などの項目コード
 
 function answersText(ans){
   if(!ans) return "";
@@ -4070,11 +4071,30 @@ function startAnswerImport(kind, file){
     sheets.forEach(function(x){ if(x.rows.length > sh.rows.length) sh = x; });
     var rows = sh.rows.filter(function(r){ return r.some(function(v){ return String(v == null ? "" : v).trim() !== ""; }); });
     if(rows.length < 2) throw new Error("回答の行が見つかりませんでした");
-    var hdr = rows[0].map(function(h){ return String(h == null ? "" : h).trim(); });
+    var str = function(v){ return String(v == null ? "" : v).trim(); };
+    var hdr = rows[0].map(str), body = rows.slice(1), codeCols = {};
+    /* 1行目が「3:number」などの項目コードで、2行目が質問文になっている書き出し（見出しが2行）に対応します */
+    if(hdr.some(function(h){ return ANS_CODE.test(h); }) && rows.length >= 3 && str(rows[1][0]) === ""){
+      var q = rows[1].map(str);
+      hdr = hdr.map(function(h, i){
+        if(q[i]) return q[i];
+        if(ANS_CODE.test(h)){
+          codeCols[i] = true;              // 質問文のない項目（職員番号・所属・氏名など）は回答内容に入れません
+          if(/:lastname$/i.test(h)) return "姓";
+          if(/:firstname$/i.test(h)) return "名";
+          if(/:number$/i.test(h)) return "職員番号";
+          return h + "（質問文なし）";
+        }
+        return h;
+      });
+      body = rows.slice(2);
+    }
+    var headerRows = rows.length - body.length;
     var find = function(re){ for(var i = 0; i < hdr.length; i++) if(re.test(normText(hdr[i]))) return i; return -1; };
-    var pn = { label:file.name, header:hdr, rows:rows.slice(1),
+    var pn = { label:file.name, header:hdr, rows:body, codeCols:codeCols, headerRows:headerRows,
                colNo:   find(/職員番号|職員No|職員コード|^番号$/i),
-               colName: find(/^(氏名|お名前|名前を入力|職員氏名)/),
+               colName: find(/^(氏名|お名前|名前を入力|職員氏名|姓)$|^(氏名|お名前|職員氏名)/),
+               colName2: find(/^名$/),
                colTime: find(/^完了時刻/) >= 0 ? find(/^完了時刻/) : find(/タイムスタンプ|回答日|送信日|報告日|^開始時刻/),
                colKen:  find(/検診/) };
     if(pn.colName < 0 && pn.colNo < 0) pn.colName = find(/^名前$/);
@@ -4093,12 +4113,19 @@ function matchAnswers(kind){
     (byNo[k] = byNo[k] || []).push(r);
     (byName[n] = byName[n] || []).push(r);
   });
-  var hits = [], miss = [];
+  var hits = [], miss = [], other = {};
+  var top = (pn.headerRows || 1) + 1;     // 何行目かは、Excel で開いたときの行番号に合わせます
   pn.rows.forEach(function(row, i){
-    var line = i + 2;
+    var line = i + top;
+    if(pn.colKen >= 0 && String(row[pn.colKen] || "").trim() && !cf.kenFilter(row[pn.colKen]).length){
+      var kn = String(row[pn.colKen]).trim();
+      other[kn] = (other[kn] || 0) + 1;      // 生活習慣病健診など、この一覧で扱わない検診の回答
+      return;
+    }
     var no = pn.colNo >= 0 ? empKeyLoose(String(row[pn.colNo] == null ? "" : row[pn.colNo]).normalize("NFKC").trim()) : "";
-    var nm = pn.colName >= 0 ? normText(row[pn.colName]) : "";
-    var cand = null, label = no || (pn.colName >= 0 ? String(row[pn.colName] || "") : "");
+    var rawName = (pn.colName >= 0 ? String(row[pn.colName] || "") : "") + (pn.colName2 >= 0 ? String(row[pn.colName2] || "") : "");
+    var nm = normText(rawName);
+    var cand = null, label = no ? no + (rawName ? " " + rawName : "") : rawName;
     if(no) cand = byNo[no] || null;
     else if(nm){
       if(nameCount[nm] > 1){ miss.push({ line:line, who:label, why:"同じ氏名の職員が複数います（職員番号の列で照合してください）" }); return; }
@@ -4113,14 +4140,14 @@ function matchAnswers(kind){
     }
     var ans = {};
     pn.header.forEach(function(h, j){
-      if(j === pn.colNo || j === pn.colName || j === pn.colTime || j === pn.colKen) return;
-      if(!h || ANS_META.test(h)) return;
+      if(j === pn.colNo || j === pn.colName || j === pn.colName2 || j === pn.colTime || j === pn.colKen) return;
+      if(!h || ANS_META.test(h) || (pn.codeCols && pn.codeCols[j])) return;
       var v = ansCellText(row[j]);
       if(v !== "") ans[h] = v;
     });
     hits.push({ line:line, rows:cand, at: pn.colTime >= 0 ? ansDateOf(row[pn.colTime]) : "", answers:ans });
   });
-  return { hits:hits, miss:miss };
+  return { hits:hits, miss:miss, other:other };
 }
 
 function renderAnswerImport(kind){
@@ -4136,12 +4163,15 @@ function renderAnswerImport(kind){
   box.innerHTML = "<h3>" + cf.word + "の取込：" + esc(pn.label) + "（" + pn.rows.length + "件）</h3>"
     + '<div class="row">'
     + "<label>職員番号の列 " + sel("colNo", pn.colNo, "（なし・氏名で照合）") + "</label>"
-    + "<label>氏名の列 " + sel("colName", pn.colName, "（なし）") + "</label>"
+    + "<label>氏名（姓）の列 " + sel("colName", pn.colName, "（なし）") + "</label>"
+    + "<label>名の列 " + sel("colName2", pn.colName2, "（なし・氏名が1列）") + "</label>"
     + "<label>" + cf.word + "日時の列 " + sel("colTime", pn.colTime, "（なし・今日の日付）") + "</label>"
     + "<label>検診の列 " + sel("colKen", pn.colKen, "（なし）") + "</label>"
     + "</div>"
     + '<div class="row"><span><strong>' + m.hits.length + "件</strong>が一覧の人と一致しました（" + n + "行が「" + cf.word + "あり」になります）。"
     + (m.miss.length ? '<strong style="color:#a8410f">' + m.miss.length + "件は一致しません。</strong>" : "") + "</span></div>"
+    + (Object.keys(m.other).length ? '<div class="hint">この一覧で扱わない検診の' + cf.word + "は取り込みません："
+        + Object.keys(m.other).map(function(k){ return esc(k) + " " + m.other[k] + "件"; }).join("、") + "</div>" : "")
     + (m.miss.length ? '<div class="miss">' + m.miss.slice(0, 30).map(function(x){
         return x.line + "行目　" + esc(x.who) + "：" + esc(x.why); }).join("<br>") + (m.miss.length > 30 ? "<br>…ほか" + (m.miss.length - 30) + "件" : "") + "</div>" : "")
     + '<div class="row" style="margin-top:10px">'
@@ -4153,14 +4183,25 @@ function renderAnswerImport(kind){
 
 function applyAnswers(kind){
   var cf = ansConf(kind), m = matchAnswers(kind), today = isoOf(new Date()), n = 0;
-  var store = kind === "sv" ? state.survey : state.seimitsu;
+  var store = kind === "sv" ? state.survey : state.seimitsu, seen = {};
   m.hits.forEach(function(x){
     x.rows.forEach(function(r){
       var rec = store[r.key] || (store[r.key] = {});
       rec.st = cf.st;
-      rec[cf.at] = x.at || today;
-      rec.answers = x.answers;
-      n++;
+      var at = x.at || today;
+      if(seen[r.key]){
+        /* 同じ人の同じ行に2件目の回答（例：乳がん・子宮頸がんを別々に回答）は、内容をつなげて残します */
+        Object.keys(x.answers).forEach(function(q){
+          var a0 = rec.answers[q];
+          rec.answers[q] = a0 && a0 !== x.answers[q] ? a0 + "\n／ " + x.answers[q] : x.answers[q];
+        });
+        if(at > rec[cf.at]) rec[cf.at] = at;
+      }else{
+        rec[cf.at] = at;
+        rec.answers = x.answers;
+        seen[r.key] = true;
+        n++;
+      }
     });
   });
   var miss = m.miss.length;

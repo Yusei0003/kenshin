@@ -255,6 +255,25 @@ await page.click('#smImport button[data-ansgo]'); await wait(500);
 const smAns = await ev(() => state.seimitsu['i:1001']);
 ok(smAns.st === 'reported' && smAns.repAt === '2026-11-20' && smAns.answers['結果'] === '異常なし', '  報告あり・報告日・報告内容を記録', smAns);
 
+section('申請フォームの書き出し（Shift_JIS・見出し2行・姓と名が別の列）');
+await tab('p9');
+await page.setInputFiles('#svAnsFile', csvFile(path.join(FIX, 'kaitou_mijushin_shinsei.csv'))); await wait(800);
+const sp = await ev(() => { const p = ansPending.sv; return { h: p.header, no: p.header[p.colNo], n1: p.header[p.colName], n2: p.header[p.colName2], t: p.header[p.colTime], k: p.header[p.colKen], rows: p.rows.length }; });
+ok(sp.no === '職員番号' && sp.n1 === '姓' && sp.n2 === '名' && sp.t === '回答日時' && /対象の検診/.test(sp.k) && sp.rows === 4, '見出し2行を読み、職員番号・姓・名・回答日時・検診の列を推定', sp);
+const spTxt = await ev(() => document.getElementById('svImport').textContent);
+ok(/2件が一覧の人と一致/.test(spTxt) && /1件は一致しません/.test(spTxt) && /生活習慣病健診 1件/.test(spTxt), '  一致2件・不一致1件、生活習慣病健診の回答は取り込まない', spTxt.replace(/\s+/g, ' ').slice(0, 200));
+await page.click('#svImport button[data-ansgo]'); await wait(500);
+const sa = await ev(() => state.survey['i:1502']);
+ok(sa.st === 'answered' && sa.ansAt === '2026-11-06' && sa.answers['受診状況を選択してください。'] === '未受診' && /\n来年度/.test(sa.answers['理由'])
+   && !Object.keys(sa.answers).some(k => /回答番号|受付番号|申請|処理状況|質問文なし|^姓$|^名$/.test(k)), '  回答日・回答内容（改行を含む）を記録し、管理用の列・所属は入れない', sa);
+await tab('p10');
+await page.setInputFiles('#smAnsFile', csvFile(path.join(FIX, 'houkoku_seimitsu_shinsei.csv'))); await wait(800);
+const smTxt = await ev(() => document.getElementById('smImport').textContent);
+ok(/1件が一覧の人と一致/.test(smTxt) && /生活習慣病健診 1件/.test(smTxt), '報告：一致1件、生活習慣病健診の報告は取り込まない', smTxt.replace(/\s+/g, ' ').slice(0, 200));
+await page.click('#smImport button[data-ansgo]'); await wait(500);
+const sb = await ev(() => state.seimitsu['i:1001']);
+ok(sb.st === 'reported' && sb.repAt === '2026-11-20' && sb.answers['検査結果'] === '異常なし\n1年後に再検査', '  報告日・報告内容を記録', sb);
+
 section('年度のまとめ（Excel・検診ごとのシート）');
 await tab('p5');
 await ev(() => { window.__blob = null; const o = window.downloadBlob; window.downloadBlob = function (b, n) { window.__blob = { b, n }; }; });
@@ -268,7 +287,7 @@ const yx = await ev(async () => {
 });
 ok(yx && yx.names.join() === '胃がん検診,乳がん検診,子宮頸がん検診', 'Excel に検診ごとの3シート', yx && yx.names);
 ok(yx && yx.n === '検診まとめ_2026年度.xlsx' && yx.lens[0] === 24, '  胃がん検診のシートに予約状況の24名', yx && [yx.n, yx.lens]);
-ok(yx && yx.r1003['受診状況'] === '受診しない' && yx.r1003['回答日'] === '2026-11-02' && /仕事の都合/.test(yx.r1003['回答内容']), '  受診しない人：未受診状況調査の回答まで1行で見える', yx && yx.r1003);
+ok(yx && yx.r1003['受診状況'] === '受診しない' && yx.r1003['回答日'] === '2026-11-05' && /受診済/.test(yx.r1003['回答内容']), '  受診しない人：未受診状況調査の回答まで1行で見える', yx && yx.r1003);
 ok(yx && yx.r1001['判定'] === '要精密検査' && yx.r1001['要精密検査確認調査'] === '報告あり' && /異常なし/.test(yx.r1001['報告内容']), '  要精密検査の人：判定と報告内容まで1行で見える', yx && yx.r1001);
 ok(yx && yx.r1101['受診状況'] === '派遣元・他の受診機関で受診' && !yx.r1101['未受診状況調査'], '  派遣元で受診する人は調査なしで載る', yx && yx.r1101);
 
