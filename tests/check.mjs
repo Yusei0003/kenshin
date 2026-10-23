@@ -200,6 +200,12 @@ await page.check('#svTable input[data-svx="other"][data-no="1502"]'); await wait
 await page.fill('#svTable input[data-svx="text"][data-no="1502"]', '長期療養中');
 await page.dispatchEvent('#svTable input[data-svx="text"][data-no="1502"]', 'change');
 ok(await ev(() => svExemptLabel(surveyRows().find(r => r.emp.empNo == '1502').ex)) === 'その他：長期療養中', '「その他」にチェックして内容を記入すると調査免除');
+const elKey = await ev(() => surveyRows().find(r => r.cat === 'decline' && !r.ex).key);
+await page.check(`#svTable input[data-svx="elsewhere"][data-svk="${elKey}"]`); await wait(300);
+const el = await ev((k) => { const r = surveyRows().find(x => x.key === k); return { st: r.st, lab: svExemptLabel(r.ex) }; }, elKey);
+ok(el.st === 'exempt' && el.lab === '他受診機関で受診', '「他受診機関で受診」にチェックするとその行が調査免除', el);
+await page.uncheck(`#svTable input[data-svx="elsewhere"][data-svk="${elKey}"]`); await wait(300);
+ok(await ev((k) => surveyRows().find(x => x.key === k).st, elKey) === 'todo', '  チェックを外すと元に戻る');
 const k1203 = 'i:1203';
 await page.selectOption(`select[data-svst="${k1203}"]`, 'answered'); await wait(300);
 await page.click('#btnSvSent'); await wait(400);

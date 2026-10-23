@@ -895,7 +895,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <p class="hint">
       予約状況で<strong>「受診しない」などと入力した人</strong>、<strong>予約していない人</strong>（入力欄が空欄の人・予約状況ファイルに載っていない人）、
       「３. 対象者一覧」で<strong>キャンセルにした人</strong>が自動で並びます（派遣元・他の受診機関で受診する人は載りません）。<br>
-      調査票（フォーム）を送ったら「送付済み」にします。<strong>産休・育休</strong>の人と、<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。<br>
+      調査票（フォーム）を送ったら「送付済み」にします。<strong>産休・育休</strong>、<strong>他受診機関で受診</strong>、<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。<br>
       フォームの回答をCSV（またはExcel）で書き出したら<strong>「回答CSVを取り込む」</strong>で読み込むと、回答した人が「回答あり」になり、回答内容を見られます。
       この記録もこの端末に保存されます。
     </p>
@@ -1009,7 +1009,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           そのPDFを <strong>Adobe Acrobat で開き、複合機を選び、「実際のサイズ」で</strong>協会の用紙に印刷してください。</li>
       <li><strong>未受診状況調査</strong>　予約状況で「受診しない」などと入力した人、予約していない人（予約状況ファイルに載っていない人を含む）、キャンセルにした人が自動で並びます
           （派遣元・他の受診機関で受診する人は載りません）。調査票（フォーム）を送ったら「送付済み」にします。
-          <strong>産休・育休</strong>の人や<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。
+          <strong>産休・育休</strong>・<strong>他受診機関で受診</strong>・<strong>その他</strong>の事情がある人はチェックすると<strong>調査免除</strong>になります。
           フォームの回答を書き出したCSV（Excelも可）を<strong>「回答CSVを取り込む」</strong>で読み込むと、回答した人が「回答あり」になります。一覧はCSVで出せます。</li>
       <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>で「要検査」「要精密検査」を選びます。
           <strong>要精密検査</strong>の人は「７. 要精密検査確認調査」に自動で並びます。病院で受けた精密検査の結果をフォームで報告してもらい、
@@ -3662,15 +3662,19 @@ var SV_CAT = {
 };
 var SV_ST = { todo:"未送付", sent:"送付済み", answered:"回答あり", exempt:"調査免除" };
 
-/* 調査を免除する人（産休・育休、その他）。人ごとに持つので、胃がん・婦人検診の両方の行に効きます */
-function svExemptOf(no){
-  var x = state.svExempt[no];
-  return x && (x.leave || x.other) ? x : null;
+/* 調査を免除する人。産休・育休とその他は人ごとに持つので、胃がん・婦人検診の両方の行に効きます。
+   他受診機関で受診は検診ごとに違いうるので、その行（取込元:職員番号）だけに持ちます */
+function svExemptOf(no, key){
+  var x = state.svExempt[no] || {};
+  var el = !!(state.survey[key] && state.survey[key].elsewhere);
+  if(!x.leave && !x.other && !el) return null;
+  return { leave:!!x.leave, other:!!x.other, text:x.text || "", elsewhere:el };
 }
 function svExemptLabel(x){
   if(!x) return "";
   var a = [];
   if(x.leave) a.push("産休・育休");
+  if(x.elsewhere) a.push("他受診機関で受診");
   if(x.other) a.push("その他" + (x.text ? "：" + x.text : ""));
   return a.join("／");
 }
@@ -3716,7 +3720,7 @@ function surveyRows(){
       var r = by[no];
       r.cat = r.cats.cancel ? "cancel" : r.cats.decline ? "decline" : r.cats.unlisted ? "unlisted" : "blank";
       r.rec = state.survey[r.key] || {};
-      r.ex = svExemptOf(no);
+      r.ex = svExemptOf(no, r.key);
       r.st = r.ex ? "exempt" : (r.rec.st === "sent" || r.rec.st === "answered" ? r.rec.st : "todo");
       r.kname = r.cat === "cancel"
         ? r.cancelKids.map(kenshinName).join("・")
@@ -3807,6 +3811,7 @@ function renderSurvey(){
       + "<td>" + answersCell(r.rec.answers, "回答を見る") + "</td>"
       + "<td>"
         + '<label class="svx"><input type="checkbox" data-svx="leave" data-no="' + no + '"' + (x.leave ? " checked" : "") + "> 産休・育休</label>"
+        + '<label class="svx"><input type="checkbox" data-svx="elsewhere" data-no="' + no + '" data-svk="' + k + '"' + (r.rec.elsewhere ? " checked" : "") + "> 他受診機関で受診</label>"
         + '<label class="svx"><input type="checkbox" data-svx="other" data-no="' + no + '"' + (x.other ? " checked" : "") + "> その他</label>"
         + (x.other ? '<br><input type="text" data-svx="text" data-no="' + no + '" value="' + esc(x.text || "") + '" placeholder="その他の内容（例：長期療養中）">' : "")
         + "</td>"
@@ -3832,6 +3837,12 @@ $("svTable").addEventListener("change", function(e){
   var t = e.target;
   if(t.dataset.svst){
     setSurveyState(t.dataset.svst, t.value);
+    saveData(); renderSurvey();
+    return;
+  }
+  if(t.dataset.svx === "elsewhere"){
+    surveyRec(t.dataset.svk).elsewhere = t.checked;
+    if(!t.checked) delete state.survey[t.dataset.svk].elsewhere;
     saveData(); renderSurvey();
     return;
   }
