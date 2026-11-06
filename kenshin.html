@@ -439,6 +439,7 @@ table.grid td.c{text-align:center}
 #svTable select, #smTable select{font:inherit;padding:3px 4px}
 #svTable select.todo, #smTable select.todo{border-color:#a8410f;color:#a8410f;font-weight:bold}
 select.tjud{font:inherit;padding:2px 4px}
+select.tjud.on-kansatsu{border-color:#2b6cb0;background:#e8f1fb;color:#1c4e80;font-weight:bold}
 select.tjud.on-kensa{border-color:#b7791f;background:#fdf6e3;font-weight:bold}
 select.tjud.on-seimitsu{border-color:#a8410f;background:#fde4d8;color:#a8410f;font-weight:bold}
 #svTable input[type=text]{font:inherit;padding:3px 6px;width:100%;min-width:160px;box-sizing:border-box;margin-top:4px}
@@ -1039,7 +1040,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <li><strong>生活習慣病健診</strong>　「３. 対象者一覧」で生活習慣病健診を選ぶと、名簿の全員（身分に<strong>「パート」と「時間額」または「日額」</strong>を含む人を除く）が並びます。
           予約状況（「２. 予約状況の取込」の生活習慣病健診）を読み込むと、受診しない人・予約していない人は自動で６の未受診状況調査に載ります。
           予約していたのに受診しなかった人は<strong>「未受診」</strong>にチェックします。雇用区分は名簿のE列「身分」で判定します。</li>
-      <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>で「要検査」「要精密検査」を選びます。
+      <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>を選び直します（初期値は「異常なし」。ほかに「要経過観察」「要検査」「要精密検査」）。
           <strong>要精密検査</strong>の人は「７. 要精密検査確認調査」に自動で並びます。病院で受けた精密検査の結果をフォームで報告してもらい、
           フォームを送ったら「送付済み」にし、報告のCSVを<strong>「報告CSVを取り込む」</strong>で読み込むと「報告あり」になります。一覧はCSVで出せます。</li>
       <li><strong>年度のまとめ</strong>　「５. 印刷・出力」の<strong>「年度のまとめ（Excel・検診ごとのシート）」</strong>で、
@@ -3617,9 +3618,9 @@ function renderTargetStat(){
           + statBox(c.skip, "対象外（雇用区分）")
           + statBox(c.cancel, "未受診")
           + statBox(c.manual, "手動で除外");
-  var nk = 0, ns = 0;
-  activeTargets(kid).forEach(function(t){ var j = state.judge[kid][t.emp.empNo]; if(j === "kensa") nk++; if(j === "seimitsu") ns++; });
-  if(nk || ns) h += statBox(nk, "判定：要検査") + statBox(ns, "判定：要精密検査");
+  var nko = 0, nk = 0, ns = 0;
+  activeTargets(kid).forEach(function(t){ var j = state.judge[kid][t.emp.empNo]; if(j === "kansatsu") nko++; if(j === "kensa") nk++; if(j === "seimitsu") ns++; });
+  if(nko || nk || ns) h += statBox(nko, "判定：要経過観察") + statBox(nk, "判定：要検査") + statBox(ns, "判定：要精密検査");
   if(c.check) h += '<div style="border-color:#a8410f"><div class="n" style="color:#a8410f">' + c.check
                  + '</div><div class="l">印刷するが要確認</div></div>';
   box.innerHTML = h;
@@ -3765,13 +3766,17 @@ $("targetTable").addEventListener("change", function(e){
   saveData();
 });
 
-/* 検診の判定（受診した人だけ選べます）。要精密検査にすると「７. 要精密検査確認調査」に載ります */
-var JUDGE = { kensa:"要検査", seimitsu:"要精密検査" };
+/* 検診の判定（受診した人だけ選べます）。初期値は「異常なし」で、それ以外を選んだ人だけを記録します。
+   要精密検査にすると「７. 要精密検査確認調査」に載ります */
+var JUDGE_DEFAULT = "異常なし";
+var JUDGE = { kansatsu:"要経過観察", kensa:"要検査", seimitsu:"要精密検査" };
+/* 受診する人（印刷対象・キャンセルや除外でない人）の判定の表示名 */
+function judgeLabel(kid, no){ return JUDGE[state.judge[kid][no]] || JUDGE_DEFAULT; }
 function judgeCell(kid, t, st){
   if(!t.print || st.key === "cancel" || st.key === "manual") return "";
   var v = state.judge[kid][t.emp.empNo] || "";
   return '<select class="tjud' + (v ? " on-" + v : "") + '" data-k="' + kid + '" data-n="' + esc(t.emp.empNo) + '">'
-    + '<option value="">―</option>'
+    + '<option value="">' + JUDGE_DEFAULT + '</option>'
     + Object.keys(JUDGE).map(function(k){ return '<option value="' + k + '"' + (v === k ? " selected" : "") + ">" + JUDGE[k] + "</option>"; }).join("")
     + "</select>";
 }
@@ -4554,7 +4559,7 @@ function yearSheet(k){
     var sm = smMap[k.id + ":" + no];
     out.push([e.deptCode, e.deptName, no, e.name, e.kana, sexLabel(e.sex), e.age,
       t && t.nyu ? t.nyu.raw : "", a ? assignDateLabel(a) : "", a ? a.time : "", a ? a.place : "",
-      jyushin, ticket, JUDGE[jud] || "",
+      jyushin, ticket, (t && t.print && !isCancelled(k.id, no) && !state.excluded[k.id].has(no)) ? (JUDGE[jud] || JUDGE_DEFAULT) : "",
       sv ? SV_ST[sv.st] : "", sv ? sv.rec.sentAt || "" : "", sv ? sv.rec.ansAt || "" : "",
       sv ? svExemptLabel(sv.ex) : "", state.svCarry[no] ? state.svCarry[no].since + "年度から継続" : "", sv ? answersText(sv.rec.answers) : "",
       sm ? SM_ST[sm.st] : "", sm ? sm.rec.sentAt || "" : "", sm ? sm.rec.repAt || "" : "", sm ? answersText(sm.rec.answers) : ""]);
@@ -6161,7 +6166,7 @@ $("btnCsvTargets").addEventListener("click", function(){
       rows.push([k.name, e.empNo, e.name, e.kana, fmtDateSlash(e.birth), e.age, sexLabel(e.sex),
         e.deptCode, e.deptName, e.empType,
         a ? a.date : "", a ? a.time : "", a ? a.place : "", t.nyu ? t.nyu.raw : "",
-        JUDGE[state.judge[k.id][e.empNo]] || ""]);
+        judgeLabel(k.id, e.empNo)]);
     });
   });
   if(rows.length === 1){ toast("出力対象がありません", true); return; }
