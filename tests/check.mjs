@@ -242,6 +242,22 @@ ok(smc.c.reported === 1 && smc.r.sentAt && smc.r.repAt, '送付済み→報告�
 await page.reload(); await wait(900);
 ok(await ev((n) => state.judge.i[n] === 'seimitsu' && seimitsuCount(seimitsuRows()).reported === 1, jIds[0]), '開き直しても判定と報告の記録が残る');
 
+section('受診日で絞り込む');
+await tab('p4');
+await ev(() => { tgKid = 'i'; document.getElementById('listOrder').value = 'date'; renderTargets(); });
+const dkeys = await ev(() => [...document.querySelectorAll('#tgDateRow input[data-tgdate]')].map(i => i.dataset.tgdate));
+ok(dkeys.includes('7日（水）') && dkeys.includes('8日（木）') && dkeys.includes('9日（金）'), '受診日ごとのチェックが出る', dkeys);
+const nAll = await ev(() => document.querySelectorAll('#targetTable tbody tr').length);
+await page.check('#tgDateRow input[data-tgdate="7日（水）"]'); await wait(300);
+await page.check('#tgDateRow input[data-tgdate="8日（木）"]'); await wait(300);
+const dr = await ev(() => ({ ord: document.getElementById('listOrder').value,
+  rows: [...document.querySelectorAll('#targetTable tbody tr')].map(tr => [tr.cells[2].textContent, tr.cells[10].textContent]) }));
+const nos = dr.rows.map(r => +r[0]);
+ok(dr.rows.length > 0 && dr.rows.every(r => /^(7日|8日)/.test(r[1])) && dr.ord === 'empNo' && nos.every((v, i) => i === 0 || nos[i - 1] < v),
+   'チェックした日（7日・8日）の人だけを職員番号順で表示', dr);
+await page.click('#tgDateRow button[data-tgdateclear]'); await wait(300);
+ok(await ev(() => document.querySelectorAll('#targetTable tbody tr').length) === nAll, '  「すべての日を表示」で元に戻る');
+
 section('フォームの回答・報告の取込');
 const csvFile = (p) => ({ name: 'x.csv', mimeType: 'text/csv', buffer: readFileSync(p) });
 await tab('p9');

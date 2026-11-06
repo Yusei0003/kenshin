@@ -456,6 +456,10 @@ details.ans summary{cursor:pointer;color:var(--accent);font-size:12px;white-spac
 details.ans dl{margin:6px 0 0;font-size:12px;max-width:340px}
 details.ans dt{font-weight:bold;color:var(--text-sub)}
 details.ans dd{margin:0 0 4px 0;white-space:pre-wrap}
+/* ===== 受診日の絞り込み ===== */
+.tgdates{gap:6px 14px;padding:8px 10px;margin-top:8px;border:1px solid var(--line);border-radius:6px;background:#fafbfc}
+.tgdates label{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;white-space:nowrap}
+.tgdates label:has(input:checked){border-color:var(--accent);background:var(--accent-bg);font-weight:bold}
 /* ===== タブの進み具合 ===== */
 nav button .tabmark{display:inline-block;margin-left:6px;padding:0 7px;border-radius:9px;font-size:11px;
   font-weight:bold;line-height:18px;background:var(--accent-bg);color:var(--accent)}
@@ -656,6 +660,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
         予約状況を読み込むと、受診しない人・予約していない人は自動で「６. 未受診状況調査」に載ります（下の雇用区分の人は載りません）。
         予約していたのに受診しなかった人は<strong>「未受診」</strong>にチェックします。休職などで対象から外す人は「対象」のチェックを外します。</span>
     </div>
+    <div class="row tgdates" id="tgDateRow" style="display:none"></div>
     <div class="row" id="seikatsuOpt" style="display:none">
       <label>対象外にする雇用区分
         <input type="text" id="seikatsuExclude" style="width:280px" placeholder="例）パート+時間額、パート+日額"
@@ -1041,6 +1046,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           予約状況（「２. 予約状況の取込」の生活習慣病健診）を読み込むと、受診しない人・予約していない人は自動で６の未受診状況調査に載ります。
           予約していたのに受診しなかった人は<strong>「未受診」</strong>にチェックします。雇用区分は名簿のE列「身分」で判定します。</li>
       <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>を選び直します（初期値は「異常なし」。ほかに「要経過観察」「要検査」「要精密検査」）。
+          結果が前半・後半など日ごとに届くときは、表の上の<strong>「受診日で絞り込む」</strong>で届いた日だけをチェックすると、その日の人が職員番号順に並びます。
           <strong>要精密検査</strong>の人は「７. 要精密検査確認調査」に自動で並びます。病院で受けた精密検査の結果をフォームで報告してもらい、
           フォームを送ったら「送付済み」にし、報告のCSVを<strong>「報告CSVを取り込む」</strong>で読み込むと「報告あり」になります。一覧はCSVで出せます。</li>
       <li><strong>年度のまとめ</strong>　「５. 印刷・出力」の<strong>「年度のまとめ（Excel・検診ごとのシート）」</strong>で、
@@ -3650,6 +3656,55 @@ document.addEventListener("click", function(e){
   renderTargets();
 });
 
+/* 受診日で絞り込む（結果が受診日ごとに届くときに、その日の人だけを出して判定を付けるため） */
+var tgDates = {};                 // kenshinId -> { 受診日のキー: true }
+function tgDateKey(t){
+  var a = t.assign;
+  if(!a) return "";
+  return a.date ? String(a.date) : (a.dateText || "（受診日なし）");    // a.date は YYYY-MM-DD の文字列
+}
+function tgDateSort(k){
+  if(/^\d{4}-/.test(k)) return k;
+  var m = k.match(/(\d+)日/);
+  return m ? "9999-99-" + ("0" + m[1]).slice(-2) : "~" + k;      // 日だけの書き方は日の数字順、読めないものは最後
+}
+function renderTgDates(kid, shown){
+  var box = $("tgDateRow"), days = {}, label = {};
+  (state.targets[kid] || []).forEach(function(t){
+    if(!t.assign) return;
+    var k = tgDateKey(t);
+    days[k] = (days[k] || 0) + 1;
+    if(!label[k]) label[k] = assignDateLabel(t.assign) || k;
+  });
+  var keys = Object.keys(days).sort(function(a, b){ return tgDateSort(a) < tgDateSort(b) ? -1 : 1; });
+  if(keys.length < 2){ box.style.display = "none"; box.innerHTML = ""; return; }
+  var sel = tgDates[kid] || {};
+  box.style.display = "";
+  box.innerHTML = "<strong>受診日で絞り込む</strong>"
+    + keys.map(function(k){
+        return '<label><input type="checkbox" data-tgdate="' + esc(k) + '"' + (sel[k] ? " checked" : "") + "> "
+             + esc(label[k]) + ' <span class="hint">' + days[k] + "名</span></label>";
+      }).join("")
+    + (Object.keys(sel).length
+        ? '<button class="btn" data-tgdateclear="1">すべての日を表示</button><span class="hint">表示中 ' + shown + "名</span>"
+        : '<span class="hint">チェックした日の人だけを表示します（結果が日ごとに届いたときに）</span>');
+}
+$("tgDateRow").addEventListener("change", function(e){
+  var k = e.target.dataset ? e.target.dataset.tgdate : null;
+  if(k == null) return;
+  var kid = tgKid || mgmtKenshin()[0].id;
+  var sel = tgDates[kid] || (tgDates[kid] = {});
+  var first = !Object.keys(sel).length;
+  if(e.target.checked) sel[k] = true; else delete sel[k];
+  if(first && e.target.checked) $("listOrder").value = "empNo";   // 結果の一覧に合わせて職員番号順にします
+  renderTargets();
+});
+$("tgDateRow").addEventListener("click", function(e){
+  if(!e.target.dataset || !e.target.dataset.tgdateclear) return;
+  delete tgDates[tgKid || mgmtKenshin()[0].id];
+  renderTargets();
+});
+
 /* 生活習慣病健診の対象外にする雇用区分の設定欄 */
 function renderSeikatsuOpt(){
   var inp = $("seikatsuExclude");
@@ -3699,13 +3754,16 @@ function renderTargets(){
   var fs = $("filterState").value;
   var ord = $("listOrder").value;
 
+  var sel = tgDates[kid] || {}, useDate = Object.keys(sel).length > 0;
   var rows = [];
   sortForPrint(state.targets[kid] || [], ord).forEach(function(t){
     if(fd && t.emp.deptName !== fd) return;
+    if(useDate && !(t.assign && sel[tgDateKey(t)])) return;
     var st = targetStatus(kid, t);
     if(fs && fs !== st.key) return;
     rows.push({ kid:kid, t:t, st:st });
   });
+  renderTgDates(kid, rows.length);
 
   var h = "<thead><tr><th>対象</th><th>" + (nt ? "未受診" : "キャンセル") + "</th><th>職員番号</th><th>所属コード</th><th>氏名</th><th>年齢</th><th>性別</th>"
         + "<th>所属名</th><th>状態</th><th>判定</th><th>受診日</th><th>受付時間</th><th>入力欄の内容</th></tr></thead><tbody>";
