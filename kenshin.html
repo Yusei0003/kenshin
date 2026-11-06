@@ -441,7 +441,7 @@ table.grid td.c{text-align:center}
 select.tjud{font:inherit;padding:2px 4px}
 select.tjud.on-kansatsu{border-color:#2b6cb0;background:#e8f1fb;color:#1c4e80;font-weight:bold}
 select.tjud.on-kensa{border-color:#b7791f;background:#fdf6e3;font-weight:bold}
-select.tjud.on-seimitsu{border-color:#a8410f;background:#fde4d8;color:#a8410f;font-weight:bold}
+select.tjud.on-seimitsu, select.tjud.on-naishikyo{border-color:#a8410f;background:#fde4d8;color:#a8410f;font-weight:bold}
 #svTable input[type=text]{font:inherit;padding:3px 6px;width:100%;min-width:160px;box-sizing:border-box;margin-top:4px}
 #svTable label.svx{display:inline-flex;align-items:center;gap:4px;margin-right:12px;white-space:nowrap;cursor:pointer}
 #svTable .svst-ex{color:#55636f;font-weight:bold;white-space:nowrap}
@@ -960,7 +960,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
   <div class="panel">
     <h2>要精密検査確認調査</h2>
     <p class="hint">
-      「３. 対象者一覧」の<strong>「判定」で「要精密検査」</strong>を選んだ人が、検診ごとに自動で並びます。
+      「３. 対象者一覧」の<strong>「判定」で「要精密検査」</strong>（胃がん検診は<strong>「要内視鏡」</strong>も）を選んだ人が、検診ごとに自動で並びます。
       病院で精密検査を受けて、その結果を<strong>フォームで報告</strong>してもらいます。<br>
       報告のお願い（フォーム）を送ったら「送付済み」にします。フォームの回答を<strong>「報告CSVを取り込む」</strong>で読み込むと、報告した人が「報告あり」になり、報告内容を見られます。
       この記録もこの端末に保存されます。
@@ -1045,7 +1045,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       <li><strong>生活習慣病健診</strong>　「３. 対象者一覧」で生活習慣病健診を選ぶと、名簿の全員（身分に<strong>「パート」と「時間額」または「日額」</strong>を含む人を除く）が並びます。
           予約状況（「２. 予約状況の取込」の生活習慣病健診）を読み込むと、受診しない人・予約していない人は自動で６の未受診状況調査に載ります。
           予約していたのに受診しなかった人は<strong>「未受診」</strong>にチェックします。雇用区分は名簿のE列「身分」で判定します。</li>
-      <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>を選び直します（初期値は「異常なし」。ほかに「要経過観察」「要検査」「要精密検査」）。
+      <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>を選び直します（初期値は「異常なし」。ほかに「要経過観察」「要検査」「要精密検査」、胃がん検診は「要内視鏡」も。要内視鏡は要精密検査と同じ扱いです）。
           結果が前半・後半など日ごとに届くときは、表の上の<strong>「受診日で絞り込む」</strong>で届いた日だけをチェックすると、その日の人が職員番号順に並びます。
           <strong>要精密検査</strong>の人は「７. 要精密検査確認調査」に自動で並びます。病院で受けた精密検査の結果をフォームで報告してもらい、
           フォームを送ったら「送付済み」にし、報告のCSVを<strong>「報告CSVを取り込む」</strong>で読み込むと「報告あり」になります。一覧はCSVで出せます。</li>
@@ -1350,7 +1350,7 @@ var state = {
   seikatsuExclude: defaultSeikatsuExclude(),   // 生活習慣病健診の対象外にする雇用区分
   svCarry:    {},        // 職員番号 -> 継続免除 { text, since:開始年度, checked:最後に見直した年度, name, dept }（年度をまたいで残す）
   svExempt:   {},        // 職員番号 -> 未受診状況調査の免除 { leave:産休・育休, other:その他, text:その他の内容 }
-  judge:      {},        // kenshinId -> { 職員番号: "kensa"（要検査）| "seimitsu"（要精密検査） }
+  judge:      {},        // kenshinId -> { 職員番号: "kansatsu"（要経過観察）| "kensa"（要検査）| "seimitsu"（要精密検査）| "naishikyo"（要内視鏡・胃がんのみ） }
   seimitsu:   {},        // "検診:職員番号" -> 要精密検査確認調査の記録 { st, sentAt, repAt }
 
   onlyActive: true,      // 「在職」列がある場合、在職者のみを対象にする
@@ -3624,9 +3624,9 @@ function renderTargetStat(){
           + statBox(c.skip, "対象外（雇用区分）")
           + statBox(c.cancel, "未受診")
           + statBox(c.manual, "手動で除外");
-  var nko = 0, nk = 0, ns = 0;
-  activeTargets(kid).forEach(function(t){ var j = state.judge[kid][t.emp.empNo]; if(j === "kansatsu") nko++; if(j === "kensa") nk++; if(j === "seimitsu") ns++; });
-  if(nko || nk || ns) h += statBox(nko, "判定：要経過観察") + statBox(nk, "判定：要検査") + statBox(ns, "判定：要精密検査");
+  var jc = {};
+  activeTargets(kid).forEach(function(t){ var j = state.judge[kid][t.emp.empNo]; if(j) jc[j] = (jc[j] || 0) + 1; });
+  if(Object.keys(jc).length) judgeKeys(kid).forEach(function(k){ h += statBox(jc[k] || 0, "判定：" + JUDGE[k]); });
   if(c.check) h += '<div style="border-color:#a8410f"><div class="n" style="color:#a8410f">' + c.check
                  + '</div><div class="l">印刷するが要確認</div></div>';
   box.innerHTML = h;
@@ -3818,16 +3818,22 @@ $("targetTable").addEventListener("change", function(e){
     var em = empByNo(no);
     if(e.target.value) state.judge[kid][no] = e.target.value;
     else delete state.judge[kid][no];
-    if(e.target.value === "seimitsu") toast((em ? em.name : no) + " さんを " + kenshinName(kid) + " の要精密検査にしました。「７. 要精密検査確認調査」に載ります。");
+    if(isSeimitsuJudge(e.target.value)) toast((em ? em.name : no) + " さんを " + kenshinName(kid) + " の" + JUDGE[e.target.value] + "にしました。「７. 要精密検査確認調査」に載ります。");
   }else return;
   renderTargets();
   saveData();
 });
 
 /* 検診の判定（受診した人だけ選べます）。初期値は「異常なし」で、それ以外を選んだ人だけを記録します。
-   要精密検査にすると「７. 要精密検査確認調査」に載ります */
+   要精密検査・要内視鏡（胃がん検診のみ）にすると「７. 要精密検査確認調査」に載ります */
 var JUDGE_DEFAULT = "異常なし";
-var JUDGE = { kansatsu:"要経過観察", kensa:"要検査", seimitsu:"要精密検査" };
+var JUDGE = { kansatsu:"要経過観察", kensa:"要検査", seimitsu:"要精密検査", naishikyo:"要内視鏡" };
+/* 検診ごとに選べる判定（要内視鏡は胃がん検診だけ） */
+function judgeKeys(kid){
+  return Object.keys(JUDGE).filter(function(k){ return k !== "naishikyo" || kid === "i"; });
+}
+/* 要精密検査と同じ扱い（要精密検査確認調査の対象）になる判定 */
+function isSeimitsuJudge(v){ return v === "seimitsu" || v === "naishikyo"; }
 /* 受診する人（印刷対象・キャンセルや除外でない人）の判定の表示名 */
 function judgeLabel(kid, no){ return JUDGE[state.judge[kid][no]] || JUDGE_DEFAULT; }
 function judgeCell(kid, t, st){
@@ -3835,7 +3841,7 @@ function judgeCell(kid, t, st){
   var v = state.judge[kid][t.emp.empNo] || "";
   return '<select class="tjud' + (v ? " on-" + v : "") + '" data-k="' + kid + '" data-n="' + esc(t.emp.empNo) + '">'
     + '<option value="">' + JUDGE_DEFAULT + '</option>'
-    + Object.keys(JUDGE).map(function(k){ return '<option value="' + k + '"' + (v === k ? " selected" : "") + ">" + JUDGE[k] + "</option>"; }).join("")
+    + judgeKeys(kid).map(function(k){ return '<option value="' + k + '"' + (v === k ? " selected" : "") + ">" + JUDGE[k] + "</option>"; }).join("")
     + "</select>";
 }
 
@@ -4201,7 +4207,7 @@ function seimitsuRows(){
   var rows = [];
   mgmtKenshin().forEach(function(k){
     activeTargets(k.id).forEach(function(t){
-      if(state.judge[k.id][t.emp.empNo] !== "seimitsu") return;
+      if(!isSeimitsuJudge(state.judge[k.id][t.emp.empNo])) return;
       var key = k.id + ":" + t.emp.empNo, rec = state.seimitsu[key] || {};
       rows.push({ key:key, kid:k.id, emp:t.emp, t:t, rec:rec,
                   st: rec.st === "sent" || rec.st === "reported" ? rec.st : "todo" });
@@ -4251,12 +4257,12 @@ function renderSeimitsu(){
     + statBox(c.reported, "報告あり");
 
   var rows = seimitsuVisible();
-  var h = "<thead><tr><th>状況</th><th>検診</th><th>所属名</th><th>職員番号</th><th>氏名</th><th>年齢</th><th>性別</th>"
+  var h = "<thead><tr><th>状況</th><th>検診</th><th>判定</th><th>所属名</th><th>職員番号</th><th>氏名</th><th>年齢</th><th>性別</th>"
         + "<th>受診日</th><th>送付・報告</th><th>報告内容</th></tr></thead><tbody>";
   if(!rows.length){
-    h += '<tr><td colspan="10" class="hint">'
+    h += '<tr><td colspan="11" class="hint">'
        + (all.length ? "絞り込みの条件に当てはまる人がいません。"
-                     : "要精密検査の人はいません。「３. 対象者一覧」の「判定」で「要精密検査」を選ぶと、ここに並びます。")
+                     : "要精密検査の人はいません。「３. 対象者一覧」の「判定」で「要精密検査」（胃がん検診は「要内視鏡」も）を選ぶと、ここに並びます。")
        + "</td></tr>";
   }
   rows.forEach(function(r){
@@ -4266,6 +4272,7 @@ function renderSeimitsu(){
         + Object.keys(SM_ST).map(function(v){ return '<option value="' + v + '"' + (r.st === v ? " selected" : "") + ">" + SM_ST[v] + "</option>"; }).join("")
         + "</select></td>"
       + '<td class="nw">' + esc(kenshinName(r.kid)) + "</td>"
+      + '<td class="nw">' + esc(JUDGE[state.judge[r.kid][e.empNo]] || "") + "</td>"
       + '<td class="nw">' + esc(e.deptName) + "</td>"
       + "<td>" + esc(e.empNo) + "</td>"
       + '<td class="nw">' + esc(e.name) + "</td>"
@@ -4311,7 +4318,7 @@ $("btnSmCsv").addEventListener("click", function(){
   rows.forEach(function(r){
     var e = r.emp;
     out.push([state.fiscalYear || "", kenshinName(r.kid), e.deptCode, e.deptName, e.empNo, e.name, e.kana,
-              sexLabel(e.sex), e.age, assignDateLabel(r.t.assign), "要精密検査", SM_ST[r.st],
+              sexLabel(e.sex), e.age, assignDateLabel(r.t.assign), JUDGE[state.judge[r.kid][e.empNo]] || "", SM_ST[r.st],
               r.rec.sentAt || "", r.rec.repAt || "", answersText(r.rec.answers)]);
   });
   downloadCSV("要精密検査確認調査_" + (state.fiscalYear || "") + "年度.csv", out);

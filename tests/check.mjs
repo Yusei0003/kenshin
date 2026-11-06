@@ -226,7 +226,11 @@ const jIds = await ev(() => activeTargets('i').slice(0, 3).map(t => t.emp.empNo)
 await page.selectOption(`select.tjud[data-k="i"][data-n="${jIds[0]}"]`, 'seimitsu'); await wait(300);
 await page.selectOption(`select.tjud[data-k="i"][data-n="${jIds[1]}"]`, 'kensa'); await wait(300);
 const jopt = await ev((n) => { const sel = document.querySelector(`select.tjud[data-k="i"][data-n="${n}"]`); return { opts: [...sel.options].map(o => o.textContent).join(), cur: sel.options[sel.selectedIndex].textContent }; }, jIds[2]);
-ok(jopt.opts === '異常なし,要経過観察,要検査,要精密検査' && jopt.cur === '異常なし', '判定のプルダウンは「異常なし（初期値）」「要経過観察」「要検査」「要精密検査」', jopt);
+ok(jopt.opts === '異常なし,要経過観察,要検査,要精密検査,要内視鏡' && jopt.cur === '異常なし', '胃がん検診の判定は「異常なし（初期値）」「要経過観察」「要検査」「要精密検査」「要内視鏡」', jopt);
+ok(await ev(() => judgeKeys('nyu').map(k => JUDGE[k]).join()) === '要経過観察,要検査,要精密検査', '  要内視鏡は胃がん検診だけ（乳がん検診などには出ない）');
+await page.selectOption(`select.tjud[data-k="i"][data-n="${jIds[2]}"]`, 'naishikyo'); await wait(300);
+const nsk = await ev((n) => { const r = seimitsuRows().find(x => x.key === 'i:' + n); return r ? document.querySelector('#smTable') && JUDGE[state.judge.i[n]] : null; }, jIds[2]);
+ok(nsk === '要内視鏡', '  要内視鏡の人は要精密検査と同じく「７. 要精密検査確認調査」に載る', nsk);
 await page.selectOption(`select.tjud[data-k="i"][data-n="${jIds[2]}"]`, 'kansatsu'); await wait(300);
 ok(await ev((n) => state.judge.i[n] === 'kansatsu' && !seimitsuRows().some(r => r.key === 'i:' + n), jIds[2]), '  要経過観察を選べる（要精密検査確認調査には載らない）');
 await page.selectOption(`select.tjud[data-k="i"][data-n="${jIds[2]}"]`, ''); await wait(300);
