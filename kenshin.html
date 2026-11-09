@@ -460,6 +460,9 @@ details.ans dd{margin:0 0 4px 0;white-space:pre-wrap}
 .tgdates{gap:6px 14px;padding:8px 10px;margin-top:8px;border:1px solid var(--line);border-radius:6px;background:#fafbfc}
 .tgdates label{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;white-space:nowrap}
 .tgdates label:has(input:checked){border-color:var(--accent);background:var(--accent-bg);font-weight:bold}
+/* ===== 受診日の変更 ===== */
+.dchg{display:inline-block;margin:2px 4px 0 0;padding:0 6px;border-radius:8px;background:#fdf0cf;color:#7a5600;font-size:11px;font-weight:bold;white-space:normal}
+.btn.dbtn{padding:0 6px;font-size:11px;margin:2px 4px 0 0}
 /* ===== タブの進み具合 ===== */
 nav button .tabmark{display:inline-block;margin-left:6px;padding:0 7px;border-radius:9px;font-size:11px;
   font-weight:bold;line-height:18px;background:var(--accent-bg);color:var(--accent)}
@@ -644,6 +647,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           <option value="skip">印刷しない（該当文言・空欄）／対象外</option>
           <option value="cancel">キャンセル・未受診の人</option>
           <option value="manual">手動で除外した人</option>
+          <option value="changed">受診日を変更した人</option>
         </select>
       </label>
       <label>並び順
@@ -1047,6 +1051,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
           予約していたのに受診しなかった人は<strong>「未受診」</strong>にチェックします。雇用区分は名簿のE列「身分」で判定します。</li>
       <li><strong>要精密検査確認調査</strong>　検診の結果が届いたら、「３. 対象者一覧」の<strong>「判定」</strong>を選び直します（初期値は「異常なし」。ほかに「要経過観察」「要検査」「要精密検査」、胃がん検診は「要内視鏡」も。要内視鏡は要精密検査と同じ扱いです）。
           結果が前半・後半など日ごとに届くときは、表の上の<strong>「受診日で絞り込む」</strong>で届いた日だけをチェックすると、その日の人が職員番号順に並びます。
+          急に日程が変わったときは、受診日の欄の<strong>「変更」</strong>（1人ずつ）や<strong>「日をまとめて変更…」</strong>（ある日の全員）で受診日だけを変えられます。
           <strong>要精密検査</strong>の人は「７. 要精密検査確認調査」に自動で並びます。病院で受けた精密検査の結果をフォームで報告してもらい、
           フォームを送ったら「送付済み」にし、報告のCSVを<strong>「報告CSVを取り込む」</strong>で読み込むと「報告あり」になります。一覧はCSVで出せます。</li>
       <li><strong>年度のまとめ</strong>　「５. 印刷・出力」の<strong>「年度のまとめ（Excel・検診ごとのシート）」</strong>で、
@@ -1228,6 +1233,13 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <div class="mfoot" id="fyGuardFoot"></div>
   </div>
 </div>
+<div class="mbg" id="dateDlg" style="display:none">
+  <div class="mbox">
+    <div class="mhead" id="dateDlgHead"></div>
+    <div class="mbody" id="dateDlgBody"></div>
+    <div class="mfoot" id="dateDlgFoot"></div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -1350,6 +1362,8 @@ var state = {
   seikatsuExclude: defaultSeikatsuExclude(),   // 生活習慣病健診の対象外にする雇用区分
   svCarry:    {},        // 職員番号 -> 継続免除 { text, since:開始年度, checked:最後に見直した年度, name, dept }（年度をまたいで残す）
   svExempt:   {},        // 職員番号 -> 未受診状況調査の免除 { leave:産休・育休, other:その他, text:その他の内容 }
+  dateEdit:   {},        // kenshinId -> { 職員番号: { date:"YYYY-MM-DD", time:受付時間, at:変更した日 } }  1人ずつの受診日の変更
+  dateMove:   {},        // kenshinId -> { 元の受診日のキー: "YYYY-MM-DD" }  ある日をまとめて別の日へ移す
   judge:      {},        // kenshinId -> { 職員番号: "kansatsu"（要経過観察）| "kensa"（要検査）| "seimitsu"（要精密検査）| "naishikyo"（要内視鏡・胃がんのみ） }
   seimitsu:   {},        // "検診:職員番号" -> 要精密検査確認調査の記録 { st, sentAt, repAt }
 
@@ -3312,6 +3326,8 @@ function saveData(){
     survey: state.survey,
     svExempt: state.svExempt,
     judge: state.judge,
+    dateEdit: state.dateEdit,
+    dateMove: state.dateMove,
     seimitsu: state.seimitsu
   };
   NYU_SOURCES.forEach(function(src){
@@ -3372,6 +3388,8 @@ function loadData(){
     }
     state.cancelled[k.id] = (d.cancelled && d.cancelled[k.id]) || {};
     state.judge[k.id] = (d.judge && d.judge[k.id]) || {};
+    state.dateEdit[k.id] = (d.dateEdit && d.dateEdit[k.id]) || {};
+    state.dateMove[k.id] = (d.dateMove && d.dateMove[k.id]) || {};
   });
   state.survey = d.survey || {};
   state.svExempt = d.svExempt || {};
@@ -3414,6 +3432,8 @@ function clearData(){
   state.survey = {};
   state.svExempt = {};
   state.seimitsu = {};
+  state.dateEdit = {};
+  state.dateMove = {};
   computeTargets();
   $("mapPanel").style.display = "none";
   $("loadedPanel").style.display = "none";
@@ -3528,6 +3548,7 @@ function computeTargets(){
     }
     /* がん検診は、予約状況ファイルを読み込んでいなければ対象者なし（対象はファイルで決まります） */
 
+    list.forEach(function(item){ applyDateChange(k.id, item); });
     list.sort(cmpDeptKana);
     state.targets[k.id] = list;
   });
@@ -3575,6 +3596,24 @@ function activeTargets(kid){
   return (state.targets[kid] || []).filter(function(t){
     return t.print && !state.excluded[kid].has(t.emp.empNo) && !isCancelled(kid, t.emp.empNo);
   });
+}
+
+/* 急な日程変更：予約状況の受診日を、まとめて移した日（dateMove）や1人ずつ変えた日（dateEdit）で置き換えます。
+   予約状況を取り込み直してもこの変更は残り、元の受診日は assign.orig に覚えておきます。 */
+function applyDateChange(kid, item){
+  var a = item.assign;
+  if(!a || !item.print) return;
+  var key = a.date ? String(a.date) : (a.dateText || "（受診日なし）");
+  a.orig = { key:key, label: assignDateLabel(a) || "（受診日なし）", time: a.time || "" };
+  var mv = state.dateMove[kid] && state.dateMove[kid][key];
+  if(mv){ a.date = mv; a.dateText = ""; a.moved = { from: a.orig.label }; }
+  var ed = state.dateEdit[kid] && state.dateEdit[kid][item.emp.empNo];
+  if(ed && ed.date){
+    a.date = ed.date; a.dateText = "";
+    if(ed.time) a.time = ed.time;
+    a.changed = { from: a.orig.label + (a.orig.time ? " " + a.orig.time : ""), at: ed.at || "",
+                  same: ed.date === key && (!ed.time || ed.time === a.orig.time) };   // 取り込み直した予約状況が同じ日になっていれば「反映済み」
+  }
 }
 
 /* 直前キャンセルした人（受検票は印刷せず、未受診状況調査の対象にします） */
@@ -3677,7 +3716,7 @@ function renderTgDates(kid, shown){
     if(!label[k]) label[k] = assignDateLabel(t.assign) || k;
   });
   var keys = Object.keys(days).sort(function(a, b){ return tgDateSort(a) < tgDateSort(b) ? -1 : 1; });
-  if(keys.length < 2){ box.style.display = "none"; box.innerHTML = ""; return; }
+  if(!keys.length){ box.style.display = "none"; box.innerHTML = ""; return; }
   var sel = tgDates[kid] || {};
   box.style.display = "";
   box.innerHTML = "<strong>受診日で絞り込む</strong>"
@@ -3687,7 +3726,15 @@ function renderTgDates(kid, shown){
       }).join("")
     + (Object.keys(sel).length
         ? '<button class="btn" data-tgdateclear="1">すべての日を表示</button><span class="hint">表示中 ' + shown + "名</span>"
-        : '<span class="hint">チェックした日の人だけを表示します（結果が日ごとに届いたときに）</span>');
+        : '<span class="hint">チェックした日の人だけを表示します（結果が日ごとに届いたときに）</span>')
+    + '<button class="btn" data-datemove="1" style="margin-left:auto">日をまとめて変更…</button>'
+    + Object.keys(state.dateMove[kid] || {}).map(function(f){
+        return '<span class="dchg">日程変更：' + esc(origDateLabel(kid, f)) + " → " + esc(fmtDateWithDow(state.dateMove[kid][f])) + "</span>";
+      }).join("");
+}
+/* 元の受診日のキーから表示名を作る（YYYY-MM-DD は曜日つき、それ以外はそのまま） */
+function origDateLabel(kid, key){
+  return /^\d{4}-\d{2}-\d{2}$/.test(key) ? fmtDateWithDow(key) : key;
 }
 $("tgDateRow").addEventListener("change", function(e){
   var k = e.target.dataset ? e.target.dataset.tgdate : null;
@@ -3700,9 +3747,109 @@ $("tgDateRow").addEventListener("change", function(e){
   renderTargets();
 });
 $("tgDateRow").addEventListener("click", function(e){
+  if(e.target.dataset && e.target.dataset.datemove){ openDateMove(tgKid || mgmtKenshin()[0].id); return; }
   if(!e.target.dataset || !e.target.dataset.tgdateclear) return;
   delete tgDates[tgKid || mgmtKenshin()[0].id];
   renderTargets();
+});
+
+/* 受診日の欄：受診日と、変更ボタン・変更済みの印 */
+function dateCell(kid, t, st){
+  var a = t.assign;
+  var h = esc(assignDateLabel(a));
+  if(!a || !t.print || st.key === "cancel" || st.key === "manual") return h;
+  if(a.changed){
+    h += '<br><span class="dchg">変更済み（元：' + esc(a.changed.from) + "）" + (a.changed.same ? "・予約状況にも反映済み" : "") + "</span>"
+       + '<button class="btn dbtn" data-dateundo="' + esc(t.emp.empNo) + '">元に戻す</button>';
+  }else if(a.moved){
+    h += '<br><span class="dchg">日程変更（元：' + esc(a.moved.from) + "）</span>";
+  }
+  return h + '<button class="btn dbtn" data-dateedit="' + esc(t.emp.empNo) + '">変更</button>';
+}
+
+/* 小さな入力画面（受診日の変更に使います） */
+function openDlg(head, body, foot){
+  $("dateDlgHead").textContent = head;
+  $("dateDlgBody").innerHTML = body;
+  $("dateDlgFoot").innerHTML = foot;
+  $("dateDlg").style.display = "";
+}
+function closeDlg(){ $("dateDlg").style.display = "none"; }
+
+/* ① 1人ずつ受診日を変える */
+function openDateEdit(kid, no){
+  var t = (state.targets[kid] || []).filter(function(x){ return String(x.emp.empNo) === String(no); })[0];
+  if(!t || !t.assign) return;
+  var a = t.assign, iso = a.date ? String(a.date) : "";
+  openDlg("受診日の変更（" + kenshinName(kid) + "）",
+    '<p class="mq">' + esc(t.emp.name) + "　さん（" + esc(t.emp.empNo) + "・" + esc(t.emp.deptName) + "）</p>"
+    + "<p>今の受診日：<b>" + esc(assignDateLabel(a) || "（受診日なし）") + "</b>　受付時間：<b>" + esc(a.time || "（なし）") + "</b>"
+    + (a.orig && (a.changed || a.moved) ? '<br><span class="hint">予約状況の受診日：' + esc(a.orig.label) + " " + esc(a.orig.time) + "</span>" : "") + "</p>"
+    + '<div class="row"><label>新しい受診日 <input type="date" id="ddDate" value="' + esc(iso) + '"></label>'
+    + '<label>受付時間 <input type="text" id="ddTime" value="' + esc(a.time || "") + '" placeholder="例）8:30〜8:45" style="width:150px"></label></div>'
+    + '<p class="hint">予約状況はそのまま残り、このアプリの中だけで受診日を変えます。予約状況を取り込み直しても、この変更は残ります。</p>',
+    '<button class="btn" id="ddCancel">やめる</button><button class="btn primary" id="ddSave">この受診日にする</button>');
+  $("ddCancel").onclick = closeDlg;
+  $("ddSave").onclick = function(){
+    var d = $("ddDate").value, tm = $("ddTime").value.trim();
+    if(!d){ toast("新しい受診日を選んでください", true); return; }
+    (state.dateEdit[kid] = state.dateEdit[kid] || {})[no] = { date:d, time:tm, at:isoOf(new Date()) };
+    closeDlg(); computeTargets(); renderTargets(); saveData();
+    toast(t.emp.name + " さんの受診日を " + fmtDateWithDow(d) + (tm ? " " + tm : "") + " にしました");
+  };
+}
+
+/* ② ある日をまとめて別の日へ移す */
+function openDateMove(kid){
+  var days = {}, label = {};
+  (state.targets[kid] || []).forEach(function(t){
+    if(!t.assign || !t.assign.orig) return;
+    var k = t.assign.orig.key;
+    days[k] = (days[k] || 0) + 1; label[k] = t.assign.orig.label;
+  });
+  var keys = Object.keys(days).sort(function(a, b){ return tgDateSort(a) < tgDateSort(b) ? -1 : 1; });
+  var mv = state.dateMove[kid] || {};
+  openDlg("日をまとめて変更（" + kenshinName(kid) + "）",
+    '<p class="mq">予約状況の受診日を、まとめて別の日に移します。</p>'
+    + '<div class="row"><label>元の受診日 <select id="dmFrom">' + keys.map(function(k){
+        return '<option value="' + esc(k) + '">' + esc(label[k]) + "（" + days[k] + "名）" + (mv[k] ? " → 変更中：" + esc(fmtDateWithDow(mv[k])) : "") + "</option>";
+      }).join("") + "</select></label>"
+    + '<label>新しい受診日 <input type="date" id="dmTo"></label></div>'
+    + (Object.keys(mv).length
+        ? "<p><b>今の日程変更</b></p><ul>" + Object.keys(mv).map(function(f){
+            return "<li>" + esc(origDateLabel(kid, f)) + " → " + esc(fmtDateWithDow(mv[f]))
+              + ' <button class="btn dbtn" data-dmundo="' + esc(f) + '">元に戻す</button></li>'; }).join("") + "</ul>"
+        : "")
+    + '<p class="hint">1人ずつ変えた人（「変更済み」の人）は、1人ずつの変更のほうが優先されます。予約状況を取り込み直しても、この変更は残ります。</p>',
+    '<button class="btn" id="dmCancel">閉じる</button><button class="btn primary" id="dmSave">この日に移す</button>');
+  $("dmCancel").onclick = closeDlg;
+  $("dmSave").onclick = function(){
+    var f = $("dmFrom").value, to = $("dmTo").value;
+    if(!to){ toast("新しい受診日を選んでください", true); return; }
+    if(!confirm(origDateLabel(kid, f) + " の " + days[f] + "名の受診日を " + fmtDateWithDow(to) + " に変更します。よろしいですか？")) return;
+    (state.dateMove[kid] = state.dateMove[kid] || {})[f] = to;
+    closeDlg(); computeTargets(); renderTargets(); saveData();
+    toast(origDateLabel(kid, f) + " の受診日を " + fmtDateWithDow(to) + " に変更しました（" + days[f] + "名）");
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("#dateDlgBody [data-dmundo]"), function(b){
+    b.onclick = function(){
+      delete state.dateMove[kid][b.dataset.dmundo];
+      computeTargets(); renderTargets(); saveData();
+      openDateMove(kid);
+      toast("日程変更を取り消し、予約状況の受診日に戻しました");
+    };
+  });
+}
+
+$("targetTable").addEventListener("click", function(e){
+  var t = e.target, kid = tgKid || mgmtKenshin()[0].id;
+  if(t.dataset && t.dataset.dateedit){ openDateEdit(kid, t.dataset.dateedit); return; }
+  if(t.dataset && t.dataset.dateundo){
+    var no = t.dataset.dateundo, emp = empByNo(no);
+    if(!confirm((emp ? emp.name : no) + " さんの受診日の変更を取り消して、予約状況の受診日に戻します。よろしいですか？")) return;
+    delete state.dateEdit[kid][no];
+    computeTargets(); renderTargets(); saveData();
+  }
 });
 
 /* 生活習慣病健診の対象外にする雇用区分の設定欄 */
@@ -3760,7 +3907,8 @@ function renderTargets(){
     if(fd && t.emp.deptName !== fd) return;
     if(useDate && !(t.assign && sel[tgDateKey(t)])) return;
     var st = targetStatus(kid, t);
-    if(fs && fs !== st.key) return;
+    if(fs === "changed"){ if(!(t.assign && (t.assign.changed || t.assign.moved))) return; }
+    else if(fs && fs !== st.key) return;
     rows.push({ kid:kid, t:t, st:st });
   });
   renderTgDates(kid, rows.length);
@@ -3792,7 +3940,7 @@ function renderTargets(){
       + "<td>" + esc(e.deptName) + "</td>"
       + "<td" + (st.warn ? ' style="color:#a8410f"' : "") + ">" + esc(st.label) + "</td>"
       + "<td>" + judgeCell(r.kid, r.t, st) + "</td>"
-      + '<td class="nw">' + esc(assignDateLabel(a)) + "</td>"
+      + '<td class="nw">' + dateCell(r.kid, r.t, st) + "</td>"
       + '<td class="nw">' + (a ? esc(a.time) : "") + "</td>"
       + "<td>" + (r.t.nyu ? esc(r.t.nyu.raw) : "") + "</td>"
       + "</tr>";

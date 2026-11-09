@@ -262,6 +262,31 @@ ok(dr.rows.length > 0 && dr.rows.every(r => /^(7日|8日)/.test(r[1])) && dr.ord
 await page.click('#tgDateRow button[data-tgdateclear]'); await wait(300);
 ok(await ev(() => document.querySelectorAll('#targetTable tbody tr').length) === nAll, '  「すべての日を表示」で元に戻る');
 
+section('受診日の変更（1人ずつ・まとめて）');
+await tab('p4');
+await ev(() => { tgKid = 'i'; document.getElementById('filterState').value = ''; renderTargets(); });
+await page.click('#targetTable button[data-dateedit="1203"]'); await wait(300);
+await page.fill('#ddDate', '2026-10-14'); await page.fill('#ddTime', '8:00〜8:15'); await page.click('#ddSave'); await wait(400);
+const de = await ev(() => { const a = state.targets.i.find(t => t.emp.empNo == '1203').assign; return { lab: assignDateLabel(a), time: a.time, from: a.changed && a.changed.from }; });
+ok(de.lab === '10月14日（水）' && de.time === '8:00〜8:15' && /^7日（水）/.test(de.from), '① 1人ずつ受診日・受付時間を変えられ、元の受診日を表示', de);
+await page.click('#tgDateRow button[data-datemove]'); await wait(300);
+await page.selectOption('#dmFrom', '8日（木）'); await page.fill('#dmTo', '2026-10-15'); await page.click('#dmSave'); await wait(400);
+const dm = await ev(() => { const r = state.targets.i.filter(t => t.assign && t.assign.moved); return { n: r.length, labs: [...new Set(r.map(t => assignDateLabel(t.assign)))].join() }; });
+ok(dm.n > 0 && dm.labs === '10月15日（木）', '② ある日（8日）をまとめて別の日（10/15）に移せる', dm);
+await page.selectOption('#filterState', 'changed'); await wait(300);
+const dch = await ev(() => document.querySelectorAll('#targetTable tbody tr').length);
+ok(dch === dm.n + 1, '  状態「受診日を変更した人」で、変更した人だけを表示', dch);
+await page.selectOption('#filterState', ''); await wait(200);
+await page.reload(); await wait(1000);
+ok(await ev(() => { const a = state.targets.i.find(t => t.emp.empNo == '1203').assign; return assignDateLabel(a) === '10月14日（水）' && state.targets.i.some(t => t.assign && t.assign.moved); }), '  開き直しても受診日の変更が残る');
+await tab('p4');
+await ev(() => { tgKid = 'i'; renderTargets(); });
+await page.click('#targetTable button[data-dateundo="1203"]'); await wait(300);
+await page.click('#tgDateRow button[data-datemove]'); await wait(300);
+await page.click('#dateDlgBody [data-dmundo="8日（木）"]'); await wait(300);
+await page.click('#dmCancel'); await wait(200);
+ok(await ev(() => !state.targets.i.some(t => t.assign && (t.assign.changed || t.assign.moved))), '  元に戻すと予約状況の受診日に戻る');
+
 section('フォームの回答・報告の取込');
 const csvFile = (p) => ({ name: 'x.csv', mimeType: 'text/csv', buffer: readFileSync(p) });
 await tab('p9');
