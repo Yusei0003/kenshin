@@ -123,6 +123,20 @@ section('タブの進み具合');
 const marks = await ev(() => Array.from(document.querySelectorAll('nav .tab .tabmark')).map(m => m.textContent));
 ok(marks[0] === '✓ 24名' && marks[1] === '2/3' && /^要確認 \d+$|^✓$/.test(marks[2] || ''), '名簿・予約状況・対象者一覧に印が付く', marks);
 
+section('ホーム（検診ごとの進み具合）');
+await page.reload(); await wait(900);
+ok(await ev(() => document.querySelector('section.page.active').id) === 'p0', 'アプリを開くとホームが出る');
+const hr = await ev(() => mgmtKenshin().map(k => { const r = homeRow(k.id); return k.id + ':' + r.cells.nyu.st + ':' + (r.next || ''); }));
+ok(hr.includes('i:done:pdf') || hr.some(x => /^i:done:/.test(x)), '検診ごとの行に、予約状況の取込済み・次の作業が出る', hr);
+ok(await ev(() => homeRow('seikatsu').cells.pdf.st) === 'na', '  生活習慣病健診の受検票PDFは「―」（受検票なし）');
+ok(/次にやること/.test(await page.textContent('.hnext')), '  いちばん上に「次にやること」が出る');
+await page.click('td.hs[data-hgo="i"][data-hstep="pdf"]'); await wait(400);
+ok(await ev(() => document.querySelector('section.page.active').id === 'p5' && document.getElementById('printKenshin').value === 'i'), '  マスを押すとその作業の画面へ移る（胃がんの受検票PDF→印刷・出力）');
+await tab('p0');
+await page.click('button[data-hjud="nyu"]'); await wait(300);
+ok(await ev(() => !!state.judgeDone.nyu && homeRow('nyu').cells.jud.st === 'done'), '  「入力を終えた」で判定が済みになる');
+await page.click('button[data-hjud="nyu"]'); await wait(300);
+
 section('前回と同じ列の並びなら確認を省く');
 await tab('p1');
 await page.setInputFiles('#fileInput', xlsx(path.join(SAMPLE, '職員名簿_サンプル.xlsx'))); await wait(1300);
@@ -435,6 +449,7 @@ const pages = pdfs.map(p => {
   return { n: (s.match(/\/Type\s*\/Page\b/g) || []).length, w: m ? Math.round(+m[1] / 72 * 25.4) : 0, h: m ? Math.round(+m[2] / 72 * 25.4) : 0 };
 });
 ok(pages.map(p => p.n).join() === '20,7,11', 'ページ数 20・7・11（確認用ページは入らない）', pages);
+ok(await ev(() => ['i', 'nyu', 'shikyu'].every(k => state.pdfMade[k] && state.pdfMade[k].n === activeTargets(k).length) && homeRow('i').cells.pdf.st === 'done'), '  PDFを作ると、ホームの受検票PDFが「作成済み」になる');
 ok(pages.every(p => p.w === 364 && p.h === 257), '用紙は B4 横（364×257mm）', pages);
 await ev(() => { window.__dl = []; });
 await page.click('#btnCalibPdf'); await wait(2500);

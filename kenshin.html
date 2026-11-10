@@ -75,7 +75,7 @@ nav button{
   cursor:pointer;
   white-space:nowrap;
 }
-@media (max-width:1380px){ nav button{padding:8px 7px;font-size:13px} nav button .tabmark{margin-left:4px;padding:0 5px} }
+@media (max-width:1380px){ nav button{padding:8px 5px;font-size:12.5px} nav button .tabmark{margin-left:3px;padding:0 4px;font-size:10.5px} }
 nav button:first-child{border-radius:6px 0 0 6px}
 nav button:last-child{border-radius:0 6px 6px 0;border-right:1px solid var(--line)}
 nav button:hover{background:var(--accent-bg)}
@@ -460,6 +460,34 @@ details.ans dd{margin:0 0 4px 0;white-space:pre-wrap}
 .tgdates{gap:6px 14px;padding:8px 10px;margin-top:8px;border:1px solid var(--line);border-radius:6px;background:#fafbfc}
 .tgdates label{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;white-space:nowrap}
 .tgdates label:has(input:checked){border-color:var(--accent);background:var(--accent-bg);font-weight:bold}
+/* ===== ホーム ===== */
+.hnext{display:flex;align-items:center;gap:14px;margin:0 0 14px;padding:14px 18px;border:1px solid #f0d5c4;border-left:6px solid #a8410f;border-radius:8px;background:#fffdf7}
+.hnext .lab{background:#a8410f;color:#fff;font-size:12px;font-weight:bold;padding:3px 10px;border-radius:12px;white-space:nowrap}
+.hnext .msg{flex:1;font-size:16px;font-weight:bold}
+.hnext .msg small{display:block;font-weight:normal;font-size:12.5px;color:var(--text-sub);margin-top:3px}
+.hcards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 14px}
+.hc{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px 14px;display:flex;flex-direction:column}
+.hc h3{margin:0 0 4px;font-size:12.5px;color:var(--text-sub);font-weight:normal}
+.hc.done h3::before{content:"✓ ";color:var(--ok);font-weight:bold}
+.hc .v{font-size:21px;font-weight:bold;color:var(--accent)}
+.hc .v.w{color:#a8410f}
+.hc .d{font-size:12px;color:var(--text-sub);margin:4px 0 8px;flex:1}
+.hc.now{border:2px solid #a8410f;background:#fffdf7}
+.hc.warn{border-color:#e7b9a1}
+table.hgrid th.hk{background:#fff;font-size:14px;white-space:nowrap;color:var(--text)}
+table.hgrid td.hs{position:relative;vertical-align:top;cursor:pointer;min-width:118px;padding:10px 10px 8px}
+table.hgrid td.hs:hover{background:var(--accent-bg)}
+table.hgrid td.hs .v{font-weight:bold;font-size:14px}
+table.hgrid td.hs .d{font-size:11.5px;color:var(--text-sub);margin-top:2px}
+table.hgrid td.hs .mk{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;font-size:11px;margin-right:5px;color:#fff;vertical-align:1px}
+table.hgrid td.done{background:#f6fbf8} table.hgrid td.done .mk{background:var(--ok)} table.hgrid td.done .v{color:#1f6b45}
+table.hgrid td.warn .mk{background:#a8410f} table.hgrid td.warn .v{color:#a8410f}
+table.hgrid td.wait .mk{background:#7a8a99} table.hgrid td.wait .v{color:#4a5a6a}
+table.hgrid td.na{cursor:default;color:#9aa4b0;background:#fafbfc} table.hgrid td.na .v{color:#9aa4b0}
+table.hgrid td.next{outline:3px solid #a8410f;outline-offset:-3px;background:#fffdf7}
+.hl-next{display:inline-block;background:#a8410f;color:#fff;font-size:10.5px;font-weight:bold;padding:0 6px;border-radius:8px;margin:0 2px}
+table.hgrid td.next .hl-next{position:absolute;top:4px;right:4px}
+.hint b.w{color:#a8410f} .hint b.wt{color:#7a8a99}
 /* ===== 受診日の変更 ===== */
 .dchg{display:inline-block;margin:2px 4px 0 0;padding:0 6px;border-radius:8px;background:#fdf0cf;color:#7a5600;font-size:11px;font-weight:bold;white-space:normal}
 .btn.dbtn{padding:0 6px;font-size:11px;margin:2px 4px 0 0}
@@ -479,7 +507,8 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
 </header>
 
 <nav>
-  <button class="tab active" data-page="p1">１. 名簿の読込</button>
+  <button class="tab active" data-page="p0">ホーム</button>
+  <button class="tab" data-page="p1">１. 名簿の読込</button>
   <button class="tab" data-page="p7">２. 予約状況の取込</button>
   <button class="tab" data-page="p4">３. 対象者一覧</button>
   <button class="tab" data-page="p8">４. 様式レイアウト</button>
@@ -492,7 +521,12 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
 <main>
 
 <!-- ================= 1. 名簿の読込 ================= -->
-<section class="page active" id="p1">
+<!-- ================= ホーム（進み具合） ================= -->
+<section class="page active" id="p0">
+  <div id="homeBox"></div>
+</section>
+
+<section class="page" id="p1">
   <div class="panel">
     <h2>職員名簿ファイルの読込</h2>
 
@@ -1030,6 +1064,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     </p>
 
     <h3>作業の流れ</h3>
+    <p class="hint"><strong>アプリを開くと「ホーム」</strong>に、検診ごとの進み具合と「次にやること」が出ます。迷ったらホームを開き、「次」の印のマスを押してください。</p>
     <ol>
       <li><strong>名簿の読込</strong>　職員名簿を貼り付け（またはファイルを選び）、列の対応付けを確認します。</li>
       <li><strong>予約状況の取込</strong>　胃がん検診・婦人検診・生活習慣病健診それぞれを貼り付け（またはファイルを選び）、職員番号の列と入力の列を指定して取り込みます。<br>
@@ -1363,6 +1398,9 @@ var state = {
   svCarry:    {},        // 職員番号 -> 継続免除 { text, since:開始年度, checked:最後に見直した年度, name, dept }（年度をまたいで残す）
   svExempt:   {},        // 職員番号 -> 未受診状況調査の免除 { leave:産休・育休, other:その他, text:その他の内容 }
   dateEdit:   {},        // kenshinId -> { 職員番号: { date:"YYYY-MM-DD", time:受付時間, at:変更した日 } }  1人ずつの受診日の変更
+  pdfMade:    {},        // kenshinId -> { at:作成日, n:枚数 }  受検票PDFを作った記録
+  judgeDone:  {},        // kenshinId -> 判定の入力を終えた日
+  yearSaved:  "",        // 年度のまとめ（Excel）を保存した日
   dateMove:   {},        // kenshinId -> { 元の受診日のキー: "YYYY-MM-DD" }  ある日をまとめて別の日へ移す
   judge:      {},        // kenshinId -> { 職員番号: "kansatsu"（要経過観察）| "kensa"（要検査）| "seimitsu"（要精密検査）| "naishikyo"（要内視鏡・胃がんのみ） }
   seimitsu:   {},        // "検診:職員番号" -> 要精密検査確認調査の記録 { st, sentAt, repAt }
@@ -1935,6 +1973,7 @@ function showPage(id){
   Array.prototype.forEach.call(document.querySelectorAll("section.page"), function(x){
     x.classList.toggle("active", x.id === id);
   });
+  if(id === "p0") renderHome();
   if(id === "p4"){ renderTgTabs(); renderTargets(); }
   if(id === "p9") renderSurvey();
   if(id === "p10") renderSeimitsu();
@@ -2195,6 +2234,7 @@ function headerSig(cells){
 
 /* 名簿の表を受け取って、列の対応付けへ進む（前回と同じ並びなら確認を省いてそのまま読み込む） */
 function startRosterPending(label, sheets){
+  if(!$("p1").classList.contains("active")) showPage("p1");     // ホームなどから読み込んだときも、列の確認画面を見せます
   state.pending = { label:label, sheets:sheets, sheetIndex:guessSheetIndex(sheets), headerRow:0 };
   state.pending.headerRow = guessHeaderRow(sheets[state.pending.sheetIndex].rows);
   applyPendingSheet(true);
@@ -3328,6 +3368,9 @@ function saveData(){
     judge: state.judge,
     dateEdit: state.dateEdit,
     dateMove: state.dateMove,
+    pdfMade: state.pdfMade,
+    judgeDone: state.judgeDone,
+    yearSaved: state.yearSaved,
     seimitsu: state.seimitsu
   };
   NYU_SOURCES.forEach(function(src){
@@ -3394,6 +3437,9 @@ function loadData(){
   state.survey = d.survey || {};
   state.svExempt = d.svExempt || {};
   state.seimitsu = d.seimitsu || {};
+  state.pdfMade = d.pdfMade || {};
+  state.judgeDone = d.judgeDone || {};
+  state.yearSaved = d.yearSaved || "";
 
   if(d.nyuOpt) state.nyuOpt = d.nyuOpt;
   state.nyuSrc = {};
@@ -3434,6 +3480,9 @@ function clearData(){
   state.seimitsu = {};
   state.dateEdit = {};
   state.dateMove = {};
+  state.pdfMade = {};
+  state.judgeDone = {};
+  state.yearSaved = "";
   computeTargets();
   $("mapPanel").style.display = "none";
   $("loadedPanel").style.display = "none";
@@ -3467,6 +3516,7 @@ function renderTabProgress(){
   mark("p9", sv.todo ? "未送付 " + sv.todo : sv.sent ? "回答待ち " + sv.sent : (sv.all ? "✓ " + sv.all + "名" : ""), sv.todo > 0);
   var sm = seimitsuCount(seimitsuRows());
   mark("p10", sm.todo ? "未送付 " + sm.todo : sm.sent ? "報告待ち " + sm.sent : (sm.all ? "✓ " + sm.all + "名" : ""), sm.todo > 0);
+  if($("p0") && $("p0").classList.contains("active")) renderHome();    // ホームを開いているときは進み具合も更新します
   renderPdfAllHint();
 }
 
@@ -3997,6 +4047,171 @@ function empByNo(no){
   for(var i = 0; i < state.employees.length; i++) if(String(state.employees[i].empNo) === String(no)) return state.employees[i];
   return null;
 }
+
+/* =========================================================================
+   ホーム（検診ごとの進み具合）
+   予約状況 → 対象者の確認 → 受検票PDF → 判定 → 未受診状況調査 → 要精密検査確認調査 を
+   検診ごとに1行で示し、各行の次の作業に「次」の印を付けます。マスを押すとその作業の画面へ移ります。
+   ========================================================================= */
+
+var HOME_STEPS = [
+  { key:"nyu",  name:"予約状況" },
+  { key:"chk",  name:"対象者の確認" },
+  { key:"pdf",  name:"受検票PDF" },
+  { key:"jud",  name:"判定" },
+  { key:"sv",   name:"未受診状況調査" },
+  { key:"sm",   name:"要精密検査確認調査" }
+];
+
+function srcOfKid(kid){
+  for(var i = 0; i < NYU_SOURCES.length; i++) if(NYU_SOURCES[i].kenshin.indexOf(kid) >= 0) return NYU_SOURCES[i];
+  return null;
+}
+
+/* 1つの検診の各段の状態。st：done（済み）／now候補の todo・warn／wait（相手待ち）／na（なし） */
+function homeRow(kid){
+  var src = srcOfKid(kid), loaded = !!state.nyuryoku[kid], tk = hasTicket(kid);
+  var useRoster = !tk && !loaded;                 // 生活習慣病健診は予約状況がなくても名簿で対象が決まる
+  var ready = state.employees.length > 0 && (loaded || useRoster);
+  var act = activeTargets(kid), nchk = 0, ncan = 0;
+  act.forEach(function(t){ if(t.needCheck) nchk++; });
+  Object.keys(state.cancelled[kid] || {}).forEach(function(){ ncan++; });
+  var pm = state.pdfMade[kid];
+  var c = {};
+  /* 予約状況 */
+  if(loaded) c.nyu = { st:"done", v: Object.keys(state.nyuryoku[kid].map).length + "名", d: src && src.kenshin.length > 1 ? "婦人検診で取込" : "取込済み" };
+  else if(useRoster) c.nyu = { st:"todo", v:"未取込", d:"取り込まなければ名簿の全員が対象" };
+  else c.nyu = { st:"todo", v:"未取込", d:"予約状況を貼り付けます" };
+  /* 対象者の確認 */
+  if(!ready) c.chk = { st:"na", v:"―", d:"予約状況のあと" };
+  else if(nchk && !pm) c.chk = { st:"warn", v:"要確認 " + nchk + "名", d:"受診日時などを確かめます" };
+  else c.chk = { st:"done", v: act.length + "名", d: (tk ? "受検票を印刷" : "受診の対象") + (ncan ? "・" + (tk ? "キャンセル " : "未受診 ") + ncan + "名" : "") };
+  /* 受検票PDF */
+  if(!tk) c.pdf = { st:"na", v:"―", d:"受検票なし" };
+  else if(!ready) c.pdf = { st:"na", v:"―", d:"対象者の確認のあと" };
+  else if(!pm) c.pdf = { st:"todo", v:"未作成", d: act.length + "枚を作ります" };
+  else if(pm.n !== act.length) c.pdf = { st:"warn", v:"作り直し", d:"作成時 " + pm.n + "枚 → 今 " + act.length + "枚" };
+  else c.pdf = { st:"done", v:"作成済み", d: mdOf(pm.at) + "・" + pm.n + "枚" };
+  /* 判定 */
+  var jc = {}, jtxt = [];
+  act.forEach(function(t){ var j = state.judge[kid][t.emp.empNo]; if(j) jc[j] = (jc[j] || 0) + 1; });
+  judgeKeys(kid).slice().reverse().forEach(function(k){ if(jc[k]) jtxt.push(JUDGE[k] + " " + jc[k]); });
+  if(!ready) c.jud = { st:"na", v:"―", d:"受診のあと" };
+  else if(state.judgeDone[kid]) c.jud = { st:"done", v:"入力済み", d: jtxt.join("・") || "全員 異常なし", tog:true };
+  else c.jud = { st:"todo", v: jtxt.length ? "入力中" : "未入力", d: jtxt.join("・") || "結果が届いたら入力", tog:true };
+  /* 未受診状況調査（婦人検診は乳がん・子宮頸がんで共通） */
+  var sv = src ? surveyRows().filter(function(r){ return r.src.id === src.id; }) : [];
+  var sc = surveyCount(sv), share = src && src.kenshin.length > 1 ? "（婦人検診で共通）" : "";
+  if(!ready) c.sv = { st:"na", v:"―", d:"予約状況のあと" };
+  else if(!sv.length) c.sv = { st:"done", v:"対象なし", d: share || (useRoster ? "未受診にした人がいません" : "受診しない人がいません") };
+  else if(sc.todo) c.sv = { st:"warn", v:"未送付 " + sc.todo, d:"対象 " + sc.all + "名" + share };
+  else if(sc.sent) c.sv = { st:"wait", v:"回答待ち " + sc.sent, d:"回答 " + sc.answered + "・免除 " + sc.exempt + share };
+  else c.sv = { st:"done", v:"完了", d:"回答 " + sc.answered + "・免除 " + sc.exempt + share };
+  /* 要精密検査確認調査 */
+  var sm = seimitsuRows().filter(function(r){ return r.kid === kid; }), mc = seimitsuCount(sm);
+  if(!ready) c.sm = { st:"na", v:"―", d:"判定のあと" };
+  else if(!sm.length) c.sm = state.judgeDone[kid] ? { st:"done", v:"対象なし", d:"要精密検査の人なし" } : { st:"na", v:"―", d:"判定のあと" };
+  else if(mc.todo) c.sm = { st:"warn", v:"未送付 " + mc.todo, d:"対象 " + mc.all + "名" };
+  else if(mc.sent) c.sm = { st:"wait", v:"報告待ち " + mc.sent, d:"報告 " + mc.reported + " / " + mc.all };
+  else c.sm = { st:"done", v:"完了", d:"報告 " + mc.reported + " / " + mc.all };
+  /* 次の作業：左から見て、最初の「未」または「要対応」 */
+  var next = null;
+  HOME_STEPS.forEach(function(s){ if(!next && (c[s.key].st === "todo" || c[s.key].st === "warn")) next = s.key; });
+  return { kid:kid, cells:c, next:next };
+}
+
+var HOME_NEXT_TEXT = {
+  nyu:"予約状況を取り込む", chk:"要確認の人を確かめる", pdf:"受検票のPDFを作る", jud:"判定を入力する",
+  sv:"未受診状況調査の調査票を送る", sm:"要精密検査確認調査の依頼を送る"
+};
+
+function renderHome(){
+  var box = $("homeBox");
+  if(!box) return;
+  var ne = state.employees.length;
+  var rows = mgmtKenshin().map(function(k){ return homeRow(k.id); });
+  var carry = Object.keys(state.svCarry), carryTodo = carry.filter(function(no){ return (state.svCarry[no].checked || 0) < state.fiscalYear; }).length;
+  /* いちばん上の「次にやること」 */
+  var nx = !ne ? { t:"職員名簿を読み込む", d:"人事システムの一覧をコピーして、「１. 名簿の読込」の点線の枠に貼り付けます。", go:'data-go="p1"' } : null;
+  if(!nx){
+    var r0 = rows.filter(function(r){ return r.next && r.cells[r.next].st === "warn"; })[0] || rows.filter(function(r){ return r.next; })[0];
+    if(r0) nx = { t: kenshinName(r0.kid) + "：" + HOME_NEXT_TEXT[r0.next], d: r0.cells[r0.next].v + "（" + r0.cells[r0.next].d + "）",
+                  go:'data-hgo="' + r0.kid + '" data-hstep="' + r0.next + '"' };
+  }
+  var h = '<div class="hnext">' + (nx
+      ? '<span class="lab">次にやること</span><div class="msg">' + esc(nx.t) + "<small>" + esc(nx.d) + '</small></div><button class="btn primary" ' + nx.go + ">この作業へ</button>"
+      : '<span class="lab" style="background:var(--ok)">完了</span><div class="msg">いまやることはありません<small>回答・報告を待っている調査があれば、届いたらCSVを取り込みます。年度末に年度のまとめを保存してください。</small></div>')
+    + "</div>";
+  /* 上段のカード */
+  h += '<div class="hcards">'
+    + '<div class="hc' + (ne ? " done" : " now") + '"><h3>名簿</h3><div class="v">' + (ne ? ne + "名" : "まだ") + '</div><div class="d">'
+      + (ne ? esc(state.rosterLabel || "") + "　検診の前に取り直すと、異動が反映されます" : "最初に読み込みます") + '</div><button class="btn' + (ne ? "" : " primary") + '" data-go="p1">'
+      + (ne ? "名簿を取り直す" : "名簿を読み込む") + "</button></div>"
+    + '<div class="hc"><h3>対象年度・年齢の基準日</h3><div class="v">' + state.fiscalYear + '年度</div><div class="d">年齢は ' + state.baseDate.getFullYear() + "年" + esc(fmtDateWithDow(isoOf(state.baseDate))) + " 現在</div>"
+      + '<button class="btn" data-go="p1">名簿の画面で変更</button></div>'
+    + '<div class="hc' + (carryTodo ? " warn" : "") + '"><h3>継続免除（来年度以降も調査免除）</h3><div class="v' + (carryTodo ? " w" : "") + '">' + carry.length + "名</div>"
+      + '<div class="d">' + (carryTodo ? "今年度の見直しがまだ " + carryTodo + "名" : carry.length ? "今年度の見直し済み" : "いません") + '</div><button class="btn" data-go="p9">未受診状況調査へ</button></div>'
+    + '<div class="hc' + (state.yearSaved ? " done" : "") + '"><h3>年度のまとめ（Excel）</h3><div class="v">' + (state.yearSaved ? "保存 " + mdOf(state.yearSaved) : "未保存") + "</div>"
+      + '<div class="d">年度末・年度を切り替える前に保存します</div><button class="btn" data-homeyear="1"' + (ne ? "" : " disabled") + ">年度のまとめを保存</button></div>"
+    + "</div>";
+  /* 検診ごとの進み具合 */
+  h += '<div class="panel" style="margin-top:0"><h2>検診ごとの進み具合</h2>'
+    + '<p class="hint">マスを押すと、その作業の画面へ移ります。<span class="hl-next">次</span>の印が各検診の次の作業です。'
+    + "　<b>✓</b> 済み　<b class=\"w\">!</b> 要対応　<b class=\"wt\">…</b> 回答・報告待ち</p>"
+    + '<div class="scroll" style="max-height:none"><table class="grid hgrid"><thead><tr><th>検診</th>'
+    + HOME_STEPS.map(function(s, i){ return "<th>" + (i + 1) + ". " + s.name + "</th>"; }).join("") + "</tr></thead><tbody>"
+    + rows.map(function(r){
+        return '<tr><th class="hk">' + esc(kenshinName(r.kid)) + "</th>" + HOME_STEPS.map(function(s){
+          var c = r.cells[s.key], isNext = ne && r.next === s.key;
+          var mark = c.st === "done" ? "✓" : c.st === "warn" ? "!" : c.st === "wait" ? "…" : "";
+          return '<td class="hs ' + c.st + (isNext ? " next" : "") + '"' + (c.st === "na" ? "" : ' data-hgo="' + r.kid + '" data-hstep="' + s.key + '"') + ">"
+            + (isNext ? '<span class="hl-next">次</span>' : "")
+            + '<div class="v">' + (mark ? '<span class="mk">' + mark + "</span>" : "") + esc(c.v) + '</div><div class="d">' + esc(c.d) + "</div>"
+            + (c.tog && c.st !== "na" ? '<button class="btn dbtn" data-hjud="' + r.kid + '">' + (state.judgeDone[r.kid] ? "入力中に戻す" : "入力を終えた") + "</button>" : "")
+            + "</td>";
+        }).join("") + "</tr>";
+      }).join("")
+    + "</tbody></table></div></div>";
+  box.innerHTML = h;
+}
+
+/* マスやボタンから、その作業の画面へ移る */
+function homeGo(kid, step){
+  if(step === "nyu"){
+    showPage("p7");
+    var src = srcOfKid(kid), card = src && $("ny_" + src.id);
+    if(card) card.scrollIntoView({ block:"start" });
+  }else if(step === "chk" || step === "jud"){
+    tgKid = kid;
+    $("filterState").value = step === "chk" && homeRow(kid).cells.chk.st === "warn" ? "check" : "";
+    showPage("p4");
+  }else if(step === "pdf"){
+    showPage("p5");
+    $("printKenshin").value = kid;
+    $("printKenshin").dispatchEvent(new Event("change"));
+  }else if(step === "sv"){
+    showPage("p9");
+    var s2 = srcOfKid(kid);
+    $("svSrc").value = s2 ? s2.id : ""; $("svState").value = ""; renderSurvey();
+  }else if(step === "sm"){
+    showPage("p10");
+    $("smKid").value = kid; $("smState").value = ""; renderSeimitsu();
+  }
+  window.scrollTo(0, 0);
+}
+$("homeBox").addEventListener("click", function(e){
+  var t = e.target.closest ? e.target.closest("[data-hjud],[data-homeyear],[data-go],[data-hgo]") : e.target;
+  if(!t) return;
+  if(t.dataset.hjud){
+    var k = t.dataset.hjud;
+    if(state.judgeDone[k]) delete state.judgeDone[k]; else state.judgeDone[k] = isoOf(new Date());
+    saveData(); renderHome();
+    return;
+  }
+  if(t.dataset.homeyear){ $("btnYearXlsx").click(); renderHome(); return; }
+  if(t.dataset.go){ showPage(t.dataset.go); window.scrollTo(0, 0); return; }
+  if(t.dataset.hgo) homeGo(t.dataset.hgo, t.dataset.hstep);
+});
 
 /* =========================================================================
    未受診状況調査
@@ -4786,6 +5001,7 @@ $("btnYearXlsx").addEventListener("click", function(){
   if(!state.employees.length){ toast("先に名簿と予約状況を読み込んでください", true); return; }
   var name = "検診まとめ_" + (state.fiscalYear || "") + "年度.xlsx";
   downloadBlob(makeXlsx(yearSheets()), name);
+  state.yearSaved = isoOf(new Date()); saveData();
   toast(name + " を出力しました");
 });
 $("btnYearCsv").addEventListener("click", function(){
@@ -6200,6 +6416,8 @@ function makeTicketPdfsAndSave(jobs){
         downloadBlob(blob, name);
         base += j.list.length;
         saved.push({ kid:j.kid, n:j.list.length, size:blob.size, name:name });
+        state.pdfMade[j.kid] = { at:isoOf(new Date()), n:j.list.length };       // ホームの進み具合に使います
+        saveData();
         return new Promise(function(r){ setTimeout(r, 600); });   // 続けて保存するときは少し間をあけます
       });
     });
