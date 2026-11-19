@@ -370,6 +370,39 @@ ok(yx && yx.r1003['受診状況'] === '受診しない' && yx.r1003['回答日']
 ok(yx && yx.r1001['判定'] === '要精密検査' && yx.r1001['要精密検査確認調査'] === '報告あり' && /異常なし/.test(yx.r1001['報告内容']), '  要精密検査の人：判定と報告内容まで1行で見える', yx && yx.r1001);
 ok(yx && yx.r1101['受診状況'] === '派遣元・他の受診機関で受診' && !yx.r1101['未受診状況調査'], '  派遣元で受診する人は調査なしで載る', yx && yx.r1101);
 
+section('未受診・要精密検査一覧（Excel・2シート）');
+await tab('p9');
+ok(/未受診・要精密検査一覧/.test(await ev(() => document.querySelector('#p9 .panel h2').textContent)), '６のタブの最上段に「未受診・要精密検査一覧（Excel）」');
+// 未送付の人を作る（送付済みの人を未送付に戻し、もう1人をキャンセルにする）。確かめたら元に戻します
+const lxUndo = await ev(() => {
+  const r = surveyRows().find(r => r.st === 'sent'); const before = JSON.stringify(state.survey[r.key]);
+  setSurveyState(r.key, 'todo');
+  const t = state.targets.i.find(t => t.print && !isCancelled('i', t.emp.empNo) && !state.excluded.i.has(t.emp.empNo) && !state.judge.i[t.emp.empNo]);
+  state.cancelled.i[t.emp.empNo] = '2026-10-06';
+  return { key: r.key, before, no: t.emp.empNo };
+});
+await ev(() => { window.__blob = null; });
+await page.click('#btnListXlsx'); await wait(500);
+const lx = await ev(async () => {
+  const x = window.__blob; if (!x) return null;
+  const buf = await x.b.arrayBuffer();
+  const sheets = await readXlsxFile(new File([buf], 'a.xlsx'));
+  const z = zipOpen(buf);
+  const xml = new TextDecoder().decode(await zipRead(z, z.entries.find(e => e.name === 'xl/worksheets/sheet1.xml')));
+  const s1 = sheets[0], st = s1.rows[0].indexOf('状況');
+  const states = s1.rows.slice(1).map(r => r[st]);
+  // 行ごとに黄色（s="2"）かどうか
+  const yel = s1.rows.slice(1).map((r, i) => new RegExp('<row r="' + (i + 2) + '">(<c [^>]*s="2"[^>]*>)').test(xml));
+  return { n: x.n, names: sheets.map(s => s.name), states, yel, sm: sheets[1].rows.length - 1, smN: seimitsuRows().length, svN: surveyRows().length };
+});
+ok(lx && lx.n === '未受診・要精密検査一覧.xlsx' && lx.names.join() === '未受診一覧,要精密検査一覧', '  ファイル名「未受診・要精密検査一覧.xlsx」に「未受診一覧」「要精密検査一覧」の2シート', lx && [lx.n, lx.names]);
+const firstOther = lx ? lx.states.findIndex(v => v !== '未送付') : -1;
+ok(lx && lx.states.length === lx.svN && lx.states.includes('未送付') && firstOther > 0 && lx.states.slice(firstOther).every(v => v !== '未送付'),
+   '  未受診一覧は全員が入り、「未送付」の人が上に来る', lx && lx.states);
+ok(lx && lx.yel.every((y, i) => y === (lx.states[i] === '未送付')), '  「未送付」の行だけ黄色のマーカー', lx && lx.yel);
+ok(lx && lx.sm === lx.smN && lx.sm > 0, '  要精密検査一覧に要精密検査確認調査の全員', lx && [lx.sm, lx.smN]);
+await ev((u) => { state.survey[u.key] = JSON.parse(u.before); delete state.cancelled.i[u.no]; saveData(); }, lxUndo);
+
 section('生活習慣病健診');
 await ev(() => { const E = (n) => state.employees.find(e => e.empNo == n);
   E('1004').empType = '会計年度任用職員（パート・時間額）'; E('1503').empType = 'パート（日額）'; E('1101').empType = '会計年度任用職員（フルタイム・日額）'; computeTargets(); });

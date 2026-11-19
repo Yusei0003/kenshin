@@ -973,6 +973,18 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
 <!-- ================= 6. 未受診状況調査 ================= -->
 <section class="page" id="p9">
   <div class="panel">
+    <h2>未受診・要精密検査一覧（Excel）</h2>
+    <div class="row" style="margin-top:0">
+      <button class="btn primary" id="btnListXlsx">未受診・要精密検査一覧（Excel）を出力</button>
+      <span class="hint" id="listXlsxHint"></span>
+    </div>
+    <p class="hint" style="margin:6px 0 0">
+      「<strong>未受診一覧</strong>」（未受診状況調査）と「<strong>要精密検査一覧</strong>」（要精密検査確認調査）の2つのシートを1つのファイル（未受診・要精密検査一覧.xlsx）にします。
+      絞り込みに関係なく全員が入り、未受診一覧は<strong>「未送付」の人を上</strong>にして<strong>黄色のマーカー</strong>を付けます。
+    </p>
+  </div>
+
+  <div class="panel">
     <h2>未受診状況調査</h2>
     <p class="hint">
       予約状況で<strong>「受診しない」などと入力した人</strong>、<strong>予約していない人</strong>（入力欄が空欄の人。生活習慣病健診は予約状況ファイルに載っていない人も）、
@@ -4445,6 +4457,7 @@ function surveyDetail(r){
 function renderSurvey(){
   var box = $("svTable");
   if(!box) return;
+  renderListXlsxHint();
   /* 絞り込みの選択肢 */
   var srcSel = $("svSrc"), keep = srcSel.value;
   srcSel.innerHTML = '<option value="">（すべて）</option>' + NYU_SOURCES.map(function(src){
@@ -4799,6 +4812,41 @@ $("btnSmCsv").addEventListener("click", function(){
               r.rec.sentAt || "", r.rec.repAt || "", answersText(r.rec.answers)]);
   });
   downloadCSV("要精密検査確認調査_" + (state.fiscalYear || "") + "年度.csv", out);
+});
+
+/* 未受診・要精密検査一覧（Excel・2シート）：絞り込みに関係なく全員。未受診一覧は「未送付」を上にして黄色のマーカー */
+function listSheets(){
+  var sv = surveyRows().map(function(r, i){ return { r:r, i:i }; });
+  sv.sort(function(a, b){ var x = a.r.st === "todo" ? 0 : 1, y = b.r.st === "todo" ? 0 : 1; return x - y || a.i - b.i; });
+  var s1 = { name:"未受診一覧", yellow:[], rows:[["年度","検診","区分","所属コード","所属名","職員番号","氏名","カナ","性別","年齢",
+              "予約状況の入力欄","キャンセル日","状況","送付日","回答日","調査免除の理由","回答内容"]] };
+  sv.forEach(function(x){
+    var r = x.r, e = r.emp;
+    s1.yellow[s1.rows.length] = r.st === "todo";
+    s1.rows.push([state.fiscalYear || "", r.kname, SV_CAT[r.cat], e.deptCode, e.deptName, e.empNo, e.name, e.kana,
+                  sexLabel(e.sex), e.age, r.nyu && r.nyu.raw ? r.nyu.raw : "", r.cancelAt || "", SV_ST[r.st],
+                  r.rec.sentAt || "", r.rec.ansAt || "", svExemptLabel(r.ex), answersText(r.rec.answers)]);
+  });
+  var s2 = { name:"要精密検査一覧", rows:[["年度","検診","所属コード","所属名","職員番号","氏名","カナ","性別","年齢","受診日","判定","状況","送付日","報告日","報告内容"]] };
+  seimitsuRows().forEach(function(r){
+    var e = r.emp;
+    s2.rows.push([state.fiscalYear || "", kenshinName(r.kid), e.deptCode, e.deptName, e.empNo, e.name, e.kana,
+                  sexLabel(e.sex), e.age, assignDateLabel(r.t.assign), JUDGE[state.judge[r.kid][e.empNo]] || "", SM_ST[r.st],
+                  r.rec.sentAt || "", r.rec.repAt || "", answersText(r.rec.answers)]);
+  });
+  return [s1, s2];
+}
+function renderListXlsxHint(){
+  if(!$("listXlsxHint")) return;
+  var sv = surveyRows(), todo = sv.filter(function(r){ return r.st === "todo"; }).length, sm = seimitsuRows().length;
+  $("listXlsxHint").textContent = "未受診一覧 " + sv.length + "名（うち未送付 " + todo + "名）／要精密検査一覧 " + sm + "名";
+}
+$("btnListXlsx").addEventListener("click", function(){
+  var sh = listSheets();
+  if(sh[0].rows.length <= 1 && sh[1].rows.length <= 1){ toast("未受診・要精密検査の人がいません", true); return; }
+  var name = "未受診・要精密検査一覧.xlsx";
+  downloadBlob(makeXlsx(sh), name);
+  toast(name + " を出力しました（未受診一覧 " + (sh[0].rows.length - 1) + "名・要精密検査一覧 " + (sh[1].rows.length - 1) + "名）");
 });
 
 /* =========================================================================
@@ -5196,9 +5244,10 @@ function makeXlsx(sheets){
     sh.rows.forEach(function(r, ri){
       x += '<row r="' + (ri + 1) + '">';
       r.forEach(function(v, ci){
-        var ref = colName(ci) + (ri + 1), st = ri === 0 ? ' s="1"' : "";
+        var ref = colName(ci) + (ri + 1), st = ri === 0 ? ' s="1"' : (sh.yellow && sh.yellow[ri] ? ' s="2"' : "");
         if(typeof v === "number" && isFinite(v)) x += '<c r="' + ref + '"' + st + "><v>" + v + "</v></c>";
         else if(v != null && v !== "") x += '<c r="' + ref + '" t="inlineStr"' + st + '><is><t xml:space="preserve">' + xmlEsc(v) + "</t></is></c>";
+        else if(st) x += '<c r="' + ref + '"' + st + "/>";   // 黄色の行は空欄のセルも塗ります
       });
       x += "</row>";
     });
@@ -5213,12 +5262,14 @@ function makeXlsx(sheets){
   var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
     + '<fonts count="2"><font><sz val="11"/><name val="游ゴシック"/></font><font><b/><sz val="11"/><name val="游ゴシック"/></font></fonts>'
-    + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
-    + '<fill><patternFill patternType="solid"><fgColor rgb="FFE3F1F3"/><bgColor indexed="64"/></patternFill></fill></fills>'
+    + '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+    + '<fill><patternFill patternType="solid"><fgColor rgb="FFE3F1F3"/><bgColor indexed="64"/></patternFill></fill>'
+    + '<fill><patternFill patternType="solid"><fgColor rgb="FFFFFF00"/><bgColor indexed="64"/></patternFill></fill></fills>'
     + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
     + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-    + '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
-    + '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>'
+    + '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+    + '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+    + '<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/></cellXfs>'
     + '<cellStyles count="1"><cellStyle name="標準" xfId="0" builtinId="0"/></cellStyles>'
     + "</styleSheet>";
   return zipStore([
