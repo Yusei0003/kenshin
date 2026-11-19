@@ -7,7 +7,8 @@
 // 使うデータは sample/ と tests/fixtures/ の架空のデータだけです。実在の名簿は使わないでください。
 // 最後に「失敗 0 件」と出れば合格です（失敗があると終了コード 1）。
 
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, mkdtempSync } from 'fs';
+import os from 'os';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 
@@ -15,6 +16,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const APP = pathToFileURL(path.join(ROOT, 'kenshin.html')).href;
 const SAMPLE = path.join(ROOT, 'sample');
 const FIX = path.join(ROOT, 'tests', 'fixtures');
+const TMP = mkdtempSync(path.join(os.tmpdir(), 'kenshin-check-'));
 
 let chromium;
 try { ({ chromium } = await import('playwright')); }
@@ -41,7 +43,7 @@ const errs = [], external = [];
 page.on('pageerror', e => errs.push(e.message));
 page.on('request', r => { if (!/^(file|data|blob):/.test(r.url())) external.push(r.url()); });
 let nativeDialogs = 0;
-page.on('dialog', d => { nativeDialogs++; d.accept(); });
+page.on('dialog', d => { if (d.type() !== 'beforeunload') nativeDialogs++; d.accept(); });
 // ダウンロードしたファイル名を記録します（ヘッドレスでは保存名が取れないため）
 await page.addInitScript(() => {
   window.__dl = [];
@@ -54,6 +56,8 @@ page.on('download', async d => { const p = await d.path(); pdfs.push(p); });
 const wait = (ms) => page.waitForTimeout(ms);
 const tab = async (id) => { await page.click(`nav button[data-page="${id}"]`); await wait(300); };
 const ev = (fn, arg) => page.evaluate(fn, arg);
+let p2, unloadWarn = 0;
+const shown2 = (id) => p2.evaluate((id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; }, id);
 // アプリの中の確認画面（ブラウザの confirm の代わり）で「OK」側を押します
 const yes = async () => { await page.click('#askYes'); await wait(350); };
 const shown = (id) => ev((id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; }, id);
@@ -496,6 +500,97 @@ ok(await ev(() => state.svCarry['1502'].checked === 2027), '  「今年度も継
 ok(await ev(() => yearSheets()[0].rows.find(r => String(r[2]) === '1502')[yearSheets()[0].rows[0].indexOf('継続免除')]) === '2026年度から継続', '  年度のまとめに「継続免除」の列');
 await page.click('#carryTable button[data-carryoff="1502"]'); await wait(300); await yes();
 ok(await ev(() => !state.svCarry['1502'] && surveyRows().find(r => r.emp.empNo == '1502').st === 'exempt'), '  「継続をやめる」と一覧から外れ、今年度の免除は残る');
+
+section('バックアップ（別名で保存・復元・パスワード）');
+await fresh(new Date(2026, 9, 7, 10, 0));
+await loadRoster(path.join(SAMPLE, '職員名簿_サンプル.xlsx'));
+await tab('p7');
+await loadNyu('i', path.join(SAMPLE, '予約状況_胃がん検診_サンプル.xlsx'));
+await ev(() => { (state.dateEdit.i = state.dateEdit.i || {})['1203'] = { date: '2026-10-14', time: '8:00〜8:15', at: '2026-10-07' }; (state.cancelled.i = state.cancelled.i || {})['1001'] = '2026-10-06'; state.layouts.i.offX = 1.5; saveSettings(); computeTargets(); saveData(); });
+const bkDownload = async (pw) => {
+  await page.click('#bkSave'); await wait(300);
+  if (pw) { await page.fill('#bkPw', pw); await page.fill('#bkPw2', pw); }
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#bkDo')]);
+  const text = readFileSync(await dl.path(), 'utf-8'); await wait(300);
+  return { name: await ev(() => window.__dl[window.__dl.length - 1]), text };
+};
+const bk1 = await bkDownload('');
+const bj = JSON.parse(bk1.text);
+ok(/^健診_バックアップ_2026年度_\d{8}_\d{4}\.json$/.test(bk1.name) && bj['種類'] === '職員検診のバックアップ' && bj.data.data.employees.length === 24
+   && bj.data.data.dateEdit.i['1203'] && bj.data.data.cancelled.i['1001'] && bj.data.settings.layouts.i.offX === 1.5,
+   '「別名で保存（バックアップ）」で名簿・予約状況・変更の記録・設定を1つのファイルに保存', { name: bk1.name, kind: bj['種類'] });
+await page.click('#bkSave'); await wait(300);
+await page.fill('#bkPw', 'abc'); await page.fill('#bkPw2', 'abd'); await page.click('#bkDo'); await wait(300);
+ok(/一致しません/.test(await page.textContent('#bkMsg')), '  パスワードと確認が違うと保存しない');
+await page.click('#bkCancel'); await wait(200);
+const bk2 = await bkDownload('kenshin-test');
+const bj2 = JSON.parse(bk2.text);
+const nm = await ev(() => state.employees[0].name);
+ok(bj2['暗号化'] === 'あり' && bj2.encrypted && !bj2.data && !bk2.text.includes(nm), '  パスワードを付けると暗号化して保存（氏名などがそのまま見えない）');
+writeFileSync(path.join(TMP, 'bk_plain.json'), bk1.text);
+writeFileSync(path.join(TMP, 'bk_enc.json'), bk2.text);
+await tab('p1'); await page.click('#btnClearData'); await wait(300); await yes(); await wait(200);
+ok(await ev(() => state.employees.length) === 0, '  （保存データを消去）');
+await page.setInputFiles('#bkLoad', { name: 'bk.json', mimeType: 'application/json', buffer: Buffer.from(bk1.text) }); await wait(1500);
+ok(await ev(() => state.employees.length === 24 && !!state.nyuryoku.i && assignDateLabel(state.targets.i.find(t => t.emp.empNo == '1203').assign) === '10月14日（水）'
+     && isCancelled('i', '1001') && state.layouts.i.offX === 1.5),
+   '「バックアップから復元」で、名簿・予約状況・受診日の変更・キャンセル・様式レイアウトが元に戻る');
+await ev(() => { state.cancelled.i = {}; saveData(); });
+await page.setInputFiles('#bkLoad', { name: 'bk.json', mimeType: 'application/json', buffer: Buffer.from(bk2.text) }); await wait(400);
+ok(/置き換えます/.test(await page.textContent('#askBody')), '  データがあるときは、置き換えてよいか確認する');
+await yes();
+ok(await shown('bkDlg') && /パスワード付き/.test(await page.textContent('#bkLoadInfo')), '  パスワード付きのファイルはパスワードを聞く');
+await page.fill('#bkPwLoad', 'wrong'); await page.click('#bkDo'); await wait(1500);
+ok(/パスワードが違う/.test(await page.textContent('#bkMsg')) && await ev(() => !isCancelled('i', '1001')), '  パスワードが違うと開かない（データはそのまま）');
+await page.fill('#bkPwLoad', 'kenshin-test'); await page.click('#bkDo'); await wait(2500);
+ok(await ev(() => state.employees.length === 24 && isCancelled('i', '1001')), '  正しいパスワードで復元できる');
+await page.setInputFiles('#bkLoad', { name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"a":1}') }); await wait(400);
+ok(await ev(() => state.employees.length === 24) && /バックアップのファイルではありません/.test(await page.textContent('#toast')), '  違うファイルを選んでも、今のデータは消えない');
+
+section('作業ファイル（「バックアップ」フォルダの 健診_作業.js）');
+// アプリと「バックアップ」フォルダを一時フォルダに置いて試します（リポジトリには作業ファイルを作りません）
+const WD = path.join(TMP, 'app'); mkdirSync(path.join(WD, 'バックアップ'), { recursive: true });
+copyFileSync(path.join(ROOT, 'kenshin.html'), path.join(WD, 'kenshin.html'));
+const WORK = path.join(WD, 'バックアップ', '健診_作業.js');
+const wrap = (t) => '// 職員検診の作業ファイルです。\nwindow.KENSHIN_WORK = ' + t + ';\n';
+writeFileSync(WORK, wrap(bk1.text));
+const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+p2 = await ctx2.newPage();
+p2.on('pageerror', e => errs.push(e.message));
+p2.on('dialog', d => { if (d.type() === 'beforeunload') unloadWarn++; else nativeDialogs++; d.accept(); });
+const ev2 = (fn, arg) => p2.evaluate(fn, arg);
+const W2 = (ms) => p2.waitForTimeout(ms);
+await p2.goto(pathToFileURL(path.join(WD, 'kenshin.html')).href); await ev2(() => localStorage.clear()); await p2.reload(); await W2(1200);
+ok(await ev2(() => state.employees.length === 24 && isCancelled('i', '1001')) && /作業ファイル：バックアップ\\健診_作業\.js/.test(await p2.textContent('#bkNote')),
+   '開くだけで「バックアップ」フォルダの作業ファイルを読み込む', await p2.textContent('#bkNote'));
+// 上書き保存（Ctrl+S）：Edge のファイル保存の画面の代わりに、書き込んだ内容を受け取る仮のファイルを渡します
+await ev2(() => {
+  window.__wfText = '';
+  const h = { name: '健診_作業.js', queryPermission: async () => 'granted', createWritable: async () => ({ write: async (t) => { window.__wfText = t; }, close: async () => { } }) };
+  window.showSaveFilePicker = async () => h;
+});
+await ev2(() => { state.cancelled.i['1002'] = '2026-10-07'; saveData(); });
+ok(/上書き保存していない変更があります/.test(await p2.textContent('#bkNote')), '  変更すると「上書き保存していない変更があります」と出る');
+await p2.keyboard.press('Control+s'); await W2(800);
+const wt = await ev2(() => window.__wfText);
+ok(/^\/\/ 職員検診の作業ファイル/.test(wt) && /window\.KENSHIN_WORK = /.test(wt) && JSON.parse(wt.slice(wt.indexOf('{'), wt.lastIndexOf('}') + 1)).data.data.cancelled.i['1002']
+   && !/変更があります/.test(await p2.textContent('#bkNote')), '  Ctrl+S で作業ファイルに上書き保存（次に開いたとき自動で読める形）');
+// このパソコンのほうが新しいとき（作業ファイルは古いまま）
+await W2(1100);
+await ev2(() => { state.cancelled.i['1003'] = '2026-10-07'; saveData(); });
+await p2.reload(); await W2(1200);
+ok(unloadWarn === 1, '  上書き保存していない変更があるまま閉じようとすると、確認が出る', unloadWarn);
+ok(await shown2('wfBanner') && /このパソコンのデータ.*のほうが新しく/.test(await p2.textContent('#wfBanner')) && await ev2(() => isCancelled('i', '1003')),
+   '  このパソコンのデータのほうが新しいときは、上書きせずにどちらで続けるか聞く');
+await p2.click('#wfBFile'); await W2(1500);
+ok(await ev2(() => !isCancelled('i', '1003') && isCancelled('i', '1001')), '  「作業ファイルを読み込む」で作業ファイルの内容になる');
+// パスワード付きの作業ファイル
+writeFileSync(WORK, wrap(bk2.text));
+await ev2(() => localStorage.clear()); await p2.reload(); await W2(800);
+ok(await shown2('bkDlg') && await ev2(() => state.employees.length === 0), '  パスワード付きの作業ファイルは、開く前にパスワードを聞く');
+await p2.fill('#bkPwLoad', 'kenshin-test'); await p2.click('#bkDo'); await W2(2000);
+ok(await ev2(() => state.employees.length === 24) && /パスワード付き/.test(await p2.textContent('#bkNote')), '  パスワードを入れると読み込んで始まる');
+await ctx2.close();
 
 section('全体');
 ok(external.length === 0, '外部への通信なし', external.slice(0, 3));

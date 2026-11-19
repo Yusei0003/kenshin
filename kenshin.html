@@ -374,6 +374,19 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
 .mfoot{display:flex;gap:10px;justify-content:flex-end;padding:12px 18px 16px;flex-wrap:wrap}
 .mfoot .btn{font-size:14px;padding:8px 16px}
 #askDlg{z-index:9500}
+/* ===== 作業ファイル・バックアップ ===== */
+.hbreak{flex-basis:100%;height:0}
+.hbtns{display:flex;gap:6px;align-self:center;flex-wrap:wrap;margin-top:-6px}
+.hbtns .btn{padding:4px 10px;font-size:12.5px}
+.bknote{flex:1 1 320px;align-self:center;font-size:12px;color:var(--text-sub);margin-top:-6px}
+.bknote.dirty b{color:var(--warn);white-space:nowrap}
+.wfbanner{background:#fff4d6;border-bottom:1px solid #e0c060;padding:8px 22px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.5px}
+.wfbanner .btn{padding:3px 12px}
+.bkhead{background:var(--accent)}
+.bkinfo{background:var(--accent-bg);border:1px solid #b9dadf;border-radius:4px;padding:8px 12px;margin-bottom:10px;font-size:13px}
+.bkwarn{background:var(--warn-bg);border:1px solid #e3b79f;border-radius:4px;padding:6px 12px;font-size:13px;margin-bottom:6px}
+.bkerr{color:#c0392b;font-weight:bold;margin:6px 0}
+.bkok{color:var(--text-sub);margin:6px 0}
 #askBody{white-space:pre-wrap;padding-bottom:12px}
 .mlist{margin:10px 0 4px;padding:10px 14px;background:var(--warn-bg);
   border:1px solid #e6c3ad;border-radius:4px}
@@ -506,7 +519,17 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
   <h1>職員検診　受検票作成システム</h1>
   <span class="sub">胃がん／乳がん／子宮頸がん／生活習慣病健診　― インターネット不要・このパソコンの中だけで動きます</span>
   <span id="fyBadge" class="fybadge"></span>
+  <span class="hbreak"></span>
+  <span class="hbtns">
+    <button class="btn wf-only" id="wfSave" title="作業ファイルに上書き保存します（Ctrl+S）">上書き保存</button>
+    <button class="btn wf-only" id="wfOpen" title="作業ファイルを選んで開きます">作業ファイルを開く</button>
+    <button class="btn" id="bkSave" title="名簿・予約状況・キャンセル・判定・調査の記録と設定を1つのファイルとしてダウンロードします">別名で保存（バックアップ）</button>
+    <button class="btn nowf-only" id="bkLoadBtn" title="保存したバックアップのファイルを開いて、作業を続けます">バックアップから復元</button>
+    <input type="file" id="bkLoad" accept=".json,.js" style="display:none">
+  </span>
+  <span class="bknote" id="bkNote">データはこのパソコン（ブラウザ）にも自動で保存されます。別のパソコンで続けるときや、念のための保存は「別名で保存（バックアップ）」で</span>
 </header>
+<div id="wfBanner" class="wfbanner" style="display:none"></div>
 
 <nav>
   <button class="tab active" data-page="p0">ホーム</button>
@@ -1154,6 +1177,22 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
   </div>
 
   <div class="panel">
+    <h2>作業ファイル・バックアップ（別のパソコンで続ける・念のための保存）</h2>
+    <p>画面のいちばん上のボタンで、すべてを1つのファイルに保存したり、そのファイルから続きを始めたりできます（ラスパイレス指数計算と同じ形です）。</p>
+    <table class="grid">
+      <thead><tr><th>ボタン</th><th>すること</th></tr></thead>
+      <tbody>
+        <tr><td>別名で保存（バックアップ）</td><td>名簿・予約状況・キャンセル・判定・調査の記録と、様式レイアウトなどの設定を1つのファイル（健診_バックアップ_年度_日時.json）としてダウンロードします。パスワードを付けると暗号化します（忘れると開けません）。</td></tr>
+        <tr><td>作業ファイルを開く（Edge）／バックアップから復元</td><td>保存したファイルを開いて、その内容で続きから作業します。今のデータは置き換わります（確認が出ます）。</td></tr>
+        <tr><td>上書き保存（Ctrl+S）</td><td>作業ファイルに上書き保存します。最初に押したときは作業ファイルを作ります。</td></tr>
+      </tbody>
+    </table>
+    <p><strong>作業ファイル：</strong>このアプリ（HTML）と同じ場所に「<strong>バックアップ</strong>」フォルダを作り、その中に「<strong>健診_作業.js</strong>」という名前で保存すると、次からはアプリを開くだけで自動で読み込みます（パスワード付きなら最初にパスワードを聞きます）。
+      このパソコンのデータのほうが新しいときは自動では置き換えず、どちらで続けるかを画面の上で聞きます。上書き保存していない変更があるときは、画面の上に「● 上書き保存していない変更があります」と出ます。</p>
+    <div class="note">作業ファイル・バックアップには職員の氏名や健診の結果が入っています。庁内の規程に従い、決められた場所で管理し、できるだけパスワードを付けてください。</div>
+  </div>
+
+  <div class="panel">
     <h2>名簿の取り直しと、年度が替わったとき</h2>
     <p><strong>検診ごとに、受検票を作る直前に名簿を取り直して読み込んでください。</strong>
       予約状況と手動の除外はそのまま残ります。受検票はその時点の所属・氏名で印刷されます。
@@ -1277,15 +1316,40 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <div class="mfoot" id="dateDlgFoot"></div>
   </div>
 </div>
+<div class="mbg" id="bkDlg" style="display:none">
+  <div class="mbox" style="max-width:600px">
+    <div class="mhead bkhead" id="bkTitle">別名で保存（バックアップ）</div>
+    <div class="mbody">
+      <div id="bkFileNote" class="bkinfo" style="display:none">ファイル名は「<b>健診_作業.js</b>」のままにして、<b>このアプリ（HTML）と同じ場所の「バックアップ」フォルダ</b>に保存してください。次からはアプリを開くだけで自動で読み込みます。作った後は「上書き保存」（Ctrl+S）を押したときに、このファイルに保存します。</div>
+      <div id="bkSaveBody">
+        <p id="bkSaveText">名簿・予約状況・キャンセル・判定・未受診状況調査・要精密検査確認調査の記録と、様式レイアウトなどの設定を1つのファイルに保存します。保存したファイルは「バックアップから復元」（Edge では「作業ファイルを開く」）で開くと、続きから作業できます。</p>
+        <p>パスワード（任意）：<input type="password" id="bkPw" autocomplete="new-password" style="width:160px">　確認：<input type="password" id="bkPw2" autocomplete="new-password" style="width:160px"><br>
+          <span class="hint" id="bkPwNote">パスワードを付けると、ファイルを暗号化して保存します（パスワードを忘れると開けません）。</span></p>
+        <div class="bkwarn">保存したファイルには職員の氏名・健診の結果などが入っています。庁内の規程に従い、決められた場所で管理してください。</div>
+      </div>
+      <div id="bkLoadBody" style="display:none">
+        <p id="bkLoadInfo"></p>
+        <p>パスワード：<input type="password" id="bkPwLoad" autocomplete="current-password" style="width:200px"></p>
+      </div>
+      <div id="bkMsg"></div>
+    </div>
+    <div class="mfoot"><button class="btn" id="bkCancel">やめる</button><button class="btn primary" id="bkDo">保存する</button></div>
+  </div>
+</div>
 <div class="mbg" id="askDlg" style="display:none">
   <div class="mbox" style="max-width:520px">
     <div class="mhead">確認</div>
     <div class="mbody" id="askBody"></div>
-    <div class="mfoot"><button class="btn" id="askNo">やめる</button><button class="btn primary" id="askYes">OK</button></div>
+    <div class="mfoot"><button class="btn" id="askNo">やめる</button><button class="btn" id="askAlt" style="display:none"></button><button class="btn primary" id="askYes">OK</button></div>
   </div>
 </div>
 <div id="toast"></div>
 
+<script>
+/* このアプリと同じ場所の「バックアップ」フォルダに作業ファイル（健診_作業.js）があれば、先に読み込みます（なければ何もしません）。
+   中身は window.KENSHIN_WORK = {…}; の形です。外部への通信ではなく、同じパソコン（共有フォルダ）の中のファイルを読むだけです。 */
+try{ document.write('<script src="バックアップ/健診_作業.js?t=' + Date.now() + '" charset="utf-8"><\/script>'); }catch(e){ /* 読めなくても動きます */ }
+</script>
 <script>
 "use strict";
 
@@ -3325,6 +3389,7 @@ function saveCarry(){
   try{
     if(Object.keys(state.svCarry).length) localStorage.setItem(LS_CARRY, JSON.stringify(state.svCarry));
     else localStorage.removeItem(LS_CARRY);
+    wfTouch();
   }catch(err){ toast("継続免除を保存できませんでした: " + err.message, true); }
 }
 function loadCarry(){
@@ -3332,7 +3397,11 @@ function loadCarry(){
 }
 
 function saveSettings(){
-  localStorage.setItem(LS_KEY, JSON.stringify({
+  localStorage.setItem(LS_KEY, JSON.stringify(settingsObj()));
+  wfTouch();
+}
+function settingsObj(){
+  return {
     rules: state.rules,
     skipPhrases: state.skipPhrases,
     skipVer: SKIP_VER,
@@ -3346,18 +3415,31 @@ function saveSettings(){
     rosterMap: state.rosterMap || null,
     nyuSig: state.nyuSig || {},
     seikatsuExclude: state.seikatsuExclude
-  }));
+  };
 }
 
 /* --- 名簿・予約状況の保存 --- */
 function saveData(){
+  wfTouch();
   if(!state.employees.length && !Object.keys(state.nyuryoku).length){
     localStorage.removeItem(LS_DATA);
     renderSaveInfo();
     return;
   }
+  var d = dataObj(new Date().toISOString());
+  try{
+    localStorage.setItem(LS_DATA, JSON.stringify(d));
+    state.savedAt = d.savedAt;
+  }catch(err){
+    toast("この端末に保存できませんでした（保存できる容量を超えている可能性があります）: " + err.message, true);
+    return;
+  }
+  renderSaveInfo();
+}
+/* 保存する中身（この端末への保存と、作業ファイル・バックアップで共通） */
+function dataObj(savedAt){
   var d = {
-    savedAt: new Date().toISOString(),
+    savedAt: savedAt,
     fiscalYear: state.fiscalYear,
     baseDate: state.baseDate ? isoOf(state.baseDate) : "",
     rosterLabel: state.rosterLabel || "",
@@ -3393,15 +3475,7 @@ function saveData(){
     d.excluded[k.id] = [];
     state.excluded[k.id].forEach(function(no){ d.excluded[k.id].push(no); });
   });
-
-  try{
-    localStorage.setItem(LS_DATA, JSON.stringify(d));
-    state.savedAt = d.savedAt;
-  }catch(err){
-    toast("この端末に保存できませんでした（保存できる容量を超えている可能性があります）: " + err.message, true);
-    return;
-  }
-  renderSaveInfo();
+  return d;
 }
 
 function parseIso(v){
@@ -3838,13 +3912,16 @@ function closeDlg(){ $("dateDlg").style.display = "none"; }
 /* 確認画面（ブラウザの confirm の代わり）。
    ブラウザで「このページで追加のダイアログを作成しない」にチェックすると confirm が何も出さずに
    「キャンセル」を返し、操作が黙って止まってしまうため、アプリの中に確認画面を出します。 */
-function ask(msg, onYes, onNo, yesLabel){
+function ask(msg, onYes, onNo, yesLabel, alt){
   $("askBody").textContent = msg;
   $("askYes").textContent = yesLabel || "OK";
+  $("askAlt").style.display = alt ? "" : "none";   // 3つめの選択肢（{ label, fn }）
+  if(alt) $("askAlt").textContent = alt.label;
   $("askDlg").style.display = "";
-  function done(fn){ $("askDlg").style.display = "none"; $("askYes").onclick = $("askNo").onclick = null; if(fn) fn(); }
+  function done(fn){ $("askDlg").style.display = "none"; $("askYes").onclick = $("askNo").onclick = $("askAlt").onclick = null; if(fn) fn(); }
   $("askYes").onclick = function(){ done(onYes); };
   $("askNo").onclick = function(){ done(onNo); };
+  $("askAlt").onclick = function(){ done(alt && alt.fn); };
   setTimeout(function(){ $("askYes").focus(); }, 0);
 }
 document.addEventListener("keydown", function(e){
@@ -6745,10 +6822,398 @@ $("btnSample").addEventListener("click", function(){
 });
 
 /* =========================================================================
+   11-2. 作業ファイル・バックアップ（ラス指数計算と同じ形）
+   - 「別名で保存（バックアップ）」：すべてを1つのファイル（.json）としてダウンロードします。パスワードを付けると暗号化します。
+   - 「バックアップから復元」：保存したファイルを開いて続きから作業します。
+   - 作業ファイル（Edge）：アプリと同じ場所の「バックアップ」フォルダに「健診_作業.js」を置くと、開いたときに自動で読み込み、
+     「上書き保存」（Ctrl+S）でそのファイルに保存します。ブラウザ（IndexedDB）には「どのファイルか」だけを覚えます。
+   - これまでどおり、このパソコン（ブラウザ）にも自動で保存します。
+   ========================================================================= */
+var BK_KIND = "職員検診のバックアップ";
+var WF_NAME = "健診_作業.js";
+var FS = !!(window.showSaveFilePicker && window.showOpenFilePicker);
+var WF_TYPES = [{ description:"職員検診の作業ファイル", accept:{ "text/javascript":[".js"], "application/json":[".json"] } }];
+var SS_RESTORED = "kenshin.restored";
+var wf = { handle:null, name:"", password:"", encrypted:false, saved:"", auto:false, dirty:false, ready:false, leaving:false };
+
+/* 保存したら「上書き保存していない変更あり」にします（saveData・saveSettings・saveCarry から呼びます） */
+function wfTouch(){
+  if(typeof wf === "undefined" || !wf.ready) return;
+  wf.dirty = true; wfNote();
+}
+function hasWork(){ return !!(state.employees.length || Object.keys(state.nyuryoku).length); }
+function p2(x){ return (x < 10 ? "0" : "") + x; }
+function stamp(d){ d = d || new Date(); return d.getFullYear() + "/" + p2(d.getMonth() + 1) + "/" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes()); }
+function fileStamp(){ var d = new Date(); return d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + "_" + p2(d.getHours()) + p2(d.getMinutes()); }
+function isoStamp(iso){ return iso ? stamp(new Date(iso)) : ""; }
+
+/* --- 暗号化（ブラウザ組み込みの Web Crypto：PBKDF2-SHA256 で鍵を作り、AES-GCM 256bit で暗号化） --- */
+function b64(u8){ var s = ""; for(var i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+function unb64(t){ var s = atob(t), u = new Uint8Array(s.length); for(var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+function cryptoOk(){ return typeof crypto !== "undefined" && !!crypto.subtle && typeof TextEncoder !== "undefined"; }
+var KDF_ITER = 200000;
+function deriveKey(pw, salt, iter, usage){
+  var c = crypto.subtle;
+  return c.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]).then(function(k){
+    return c.deriveKey({ name:"PBKDF2", salt:salt, iterations:iter, hash:"SHA-256" }, k, { name:"AES-GCM", length:256 }, false, [usage]);
+  });
+}
+function encryptText(text, pw){
+  if(!cryptoOk()) return Promise.reject(new Error("このブラウザでは暗号化を使えません。"));
+  var salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  return deriveKey(pw, salt, KDF_ITER, "encrypt").then(function(key){
+    return crypto.subtle.encrypt({ name:"AES-GCM", iv:iv }, key, new TextEncoder().encode(text));
+  }).then(function(ct){
+    return { alg:"AES-GCM-256", kdf:"PBKDF2-SHA256", iterations:KDF_ITER, salt:b64(salt), iv:b64(iv), data:b64(new Uint8Array(ct)) };
+  });
+}
+function decryptText(obj, pw){
+  if(!cryptoOk()) return Promise.reject(new Error("このブラウザでは暗号化を使えません。"));
+  return deriveKey(pw, unb64(obj.salt), obj.iterations || KDF_ITER, "decrypt").then(function(key){
+    return crypto.subtle.decrypt({ name:"AES-GCM", iv:unb64(obj.iv) }, key, unb64(obj.data));
+  }).then(function(pt){ return new TextDecoder("utf-8").decode(pt); }, function(){
+    throw new Error("パスワードが違うか、ファイルが壊れています。");
+  });
+}
+
+/* --- ファイルの中身 --- */
+function backupData(){
+  return { format:1, settings:settingsObj(), data:dataObj(state.savedAt || new Date().toISOString()), carry:state.svCarry };
+}
+function makeBackupText(pw){
+  var data = backupData();
+  var head = { "種類":BK_KIND, "保存日時":stamp(), "対象年度":state.fiscalYear + "年度",
+               "職員名簿":state.employees.length + "名", "データの更新日時":data.data.savedAt };
+  if(!pw) return Promise.resolve(JSON.stringify(Object.assign(head, { "暗号化":"なし", data:data })));
+  return encryptText(JSON.stringify(data), pw).then(function(enc){ return JSON.stringify(Object.assign(head, { "暗号化":"あり", encrypted:enc })); });
+}
+/* 作業ファイル（.js）は「window.KENSHIN_WORK = {…};」の形にして、開いたときに自動で読み込めるようにします */
+function wrapWork(text, name){
+  return /\.js$/i.test(name || "") ? "// 職員検診の作業ファイルです。編集しないでください（アプリの「上書き保存」で更新します）。\nwindow.KENSHIN_WORK = " + text + ";\n" : text;
+}
+function parseWork(text){
+  var t = String(text), i = t.indexOf("{"), j = t.lastIndexOf("}");
+  if(i < 0 || j < i) throw new Error("バックアップの形式ではありません。");
+  var obj = JSON.parse(t.slice(i, j + 1));
+  if(!obj || obj["種類"] !== BK_KIND) throw new Error("職員検診のバックアップのファイルではありません。");
+  return obj;
+}
+function bkLabel(obj){ return (obj["保存日時"] || "") + " 保存・" + (obj["対象年度"] || "") + "・職員名簿 " + (obj["職員名簿"] || ""); }
+
+/* この端末に書き込みます（書き込めなかったら元に戻します） */
+function writeBackupToStorage(d){
+  if(!d || typeof d !== "object" || !d.data || !Array.isArray(d.data.employees)) throw new Error("バックアップの中身が読めません。");
+  var keys = [LS_KEY, LS_DATA, LS_CARRY], snap = {};
+  keys.forEach(function(k){ snap[k] = localStorage.getItem(k); });
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify(d.settings || {}));
+    localStorage.setItem(LS_DATA, JSON.stringify(d.data));
+    if(d.carry && Object.keys(d.carry).length) localStorage.setItem(LS_CARRY, JSON.stringify(d.carry));
+    else localStorage.removeItem(LS_CARRY);
+  }catch(err){
+    keys.forEach(function(k){ try{ if(snap[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, snap[k]); }catch(e){} });
+    throw new Error("この端末に書き込めませんでした（" + err.message + "）");
+  }
+}
+/* バックアップの内容に置き換えて、画面を読み込み直します */
+function applyBackup(d, obj, attach){
+  try{ writeBackupToStorage(d); }
+  catch(err){ toast("復元できませんでした：" + err.message + "（読み込む前の状態のままです）", true); return; }
+  try{ sessionStorage.setItem(SS_RESTORED, JSON.stringify({ label:bkLabel(obj), wf:attach || null })); }catch(e){}
+  wf.leaving = true;
+  location.reload();
+}
+/* 今のデータを置き換えてよいか確かめてから進めます */
+function confirmReplace(obj, go){
+  if(!hasWork()){ go(); return; }
+  ask("今のデータ（職員名簿 " + state.employees.length + "名" + (state.savedAt ? "・" + isoStamp(state.savedAt) + " 更新" : "") + "）を、"
+      + "次のファイルの内容で置き換えます。よろしいですか？\n\n" + bkLabel(obj)
+      + (wf.dirty && (wf.handle || wf.auto) ? "\n\n※ 作業ファイルに上書き保存していない変更があります。" : ""), go, null, "置き換える");
+}
+
+/* --- 保存・パスワードの入力画面 --- */
+var bk = { mode:"save", target:"download", pending:null, pendingAttach:null, onLoaded:null };
+function bkOpen(mode, info, target){
+  bk.mode = mode; bk.target = target || "download"; $("bkMsg").innerHTML = "";
+  $("bkTitle").textContent = mode === "load" ? "パスワード付きのファイルを開く"
+    : bk.target === "file" ? "作業ファイルを作る" : bk.target === "rewrite" ? "作業ファイルに上書き保存" : "別名で保存（バックアップ）";
+  $("bkFileNote").style.display = mode === "save" && bk.target === "file" ? "" : "none";
+  $("bkSaveBody").style.display = mode === "save" ? "" : "none";
+  $("bkLoadBody").style.display = mode === "load" ? "" : "none";
+  $("bkSaveText").textContent = bk.target === "rewrite"
+    ? "作業ファイル（" + wf.name + "）はパスワード付きです。上書き保存するときのパスワードを入れてください（前と同じパスワードにすると、これまでどおり開けます）。"
+    : "名簿・予約状況・キャンセル・判定・未受診状況調査・要精密検査確認調査の記録と、様式レイアウトなどの設定を1つのファイルに保存します。保存したファイルは「" + (FS ? "作業ファイルを開く" : "バックアップから復元") + "」で開くと、続きから作業できます。";
+  $("bkDo").textContent = mode === "load" ? "開く" : "保存する";
+  if(mode === "load"){ $("bkLoadInfo").textContent = info || ""; $("bkPwLoad").value = ""; }
+  else{
+    $("bkPw").value = ""; $("bkPw2").value = "";
+    var ok = cryptoOk();
+    $("bkPw").disabled = $("bkPw2").disabled = !ok;
+    if(!ok) $("bkPwNote").textContent = "このブラウザでは暗号化を使えないため、パスワードは付けられません。";
+  }
+  $("bkDlg").style.display = "";
+  setTimeout(function(){ (mode === "load" ? $("bkPwLoad") : $("bkPw")).focus(); }, 0);
+}
+function bkClose(){
+  var cb = bk.mode === "load" && bk.onCancel; bk.onCancel = null;
+  $("bkDlg").style.display = "none"; bk.pending = null; bk.pendingAttach = null; bk.onLoaded = null;
+  if(cb) cb();
+}
+function bkMsg(cls, text){ $("bkMsg").innerHTML = '<p class="' + cls + '">' + esc(text) + "</p>"; }
+$("bkCancel").addEventListener("click", bkClose);
+$("bkDlg").addEventListener("keydown", function(e){
+  if(e.key === "Enter" && e.target.tagName === "INPUT") $("bkDo").click();
+  if(e.key === "Escape") bkClose();
+});
+$("bkSave").addEventListener("click", function(){
+  if(!hasWork()){ toast("保存するデータがありません。先に職員名簿を読み込んでください。", true); return; }
+  bkOpen("save");
+});
+$("bkDo").addEventListener("click", function(){
+  if(bk.mode === "save"){
+    var pw = $("bkPw").value, pw2 = $("bkPw2").value;
+    if(pw !== pw2){ bkMsg("bkerr", "パスワードと確認が一致しません。"); return; }
+    if(bk.target === "file"){ wfCreate(pw); return; }
+    if(bk.target === "rewrite"){
+      if(!pw){ bkMsg("bkerr", "パスワードを入れてください。"); return; }
+      wf.password = pw; bkMsg("bkok", "保存しています…");
+      wfWrite().then(function(){ bkClose(); toast("作業ファイルに上書き保存しました"); }, function(e){ bkMsg("bkerr", "上書き保存できませんでした：" + (e && e.message)); });
+      return;
+    }
+    var name = "健診_バックアップ_" + state.fiscalYear + "年度_" + fileStamp() + ".json";
+    if(pw) bkMsg("bkok", "暗号化しています…");
+    makeBackupText(pw).then(function(text){
+      downloadBlob(new Blob([text], { type:"application/json" }), name);
+      bkClose();
+      if(!wf.handle && !wf.auto) wf.dirty = false;
+      wfNote("最後に保存：" + stamp() + "（" + name + "）");
+      toast("バックアップを保存しました（" + name + "）");
+    }, function(e){ bkMsg("bkerr", e.message); });
+  }else{
+    var obj = bk.pending;
+    if(!obj){ bkClose(); return; }
+    bkMsg("bkok", "開いています…");
+    decryptText(obj.encrypted, $("bkPwLoad").value).then(function(t){
+      var d, pw = $("bkPwLoad").value, fn = bk.onLoaded;
+      try{ d = JSON.parse(t); }catch(ex){ bkMsg("bkerr", "ファイルが壊れています。"); return; }
+      bk.onCancel = null; bkClose();
+      fn(d, pw);
+    }, function(e){ bkMsg("bkerr", e.message); });
+  }
+});
+/* パスワード付きなら入力してもらってから、中身（d）を渡します */
+function openBackupObj(obj, info, fn, onCancel){
+  if(!obj.encrypted){ fn(obj.data, ""); return; }
+  bkOpen("load", info + "はパスワード付きです。");
+  bk.pending = obj; bk.onLoaded = fn; bk.onCancel = onCancel || null;
+}
+
+/* --- バックアップから復元（ファイルを選ぶ） --- */
+$("bkLoadBtn").addEventListener("click", function(){ $("bkLoad").click(); });
+$("bkLoad").addEventListener("change", function(e){
+  var f = e.target.files[0]; if(!f) return;
+  e.target.value = "";
+  var fr = new FileReader();
+  fr.onload = function(){
+    var obj;
+    try{ obj = parseWork(fr.result); }catch(ex){ toast("バックアップのファイルを読めませんでした：" + ex.message, true); return; }
+    confirmReplace(obj, function(){
+      openBackupObj(obj, f.name + "（" + bkLabel(obj) + "）", function(d){ applyBackup(d, obj, null); });
+    });
+  };
+  fr.readAsText(f, "utf-8");
+});
+
+/* --- 作業ファイル（Edge のファイル システム アクセス機能） --- */
+document.querySelectorAll(".wf-only").forEach(function(e){ e.style.display = FS ? "" : "none"; });
+document.querySelectorAll(".nowf-only").forEach(function(e){ e.style.display = FS ? "none" : ""; });
+/* ファイルの場所（ハンドル）だけを覚えます。データベースは作業ファイルを決めたときに初めて作ります */
+var HS = (function(){
+  var DB = "kenshin-workfile";
+  function open(){ return new Promise(function(res, rej){ var rq = indexedDB.open(DB, 1); rq.onupgradeneeded = function(){ rq.result.createObjectStore("h"); }; rq.onsuccess = function(){ res(rq.result); }; rq.onerror = function(){ rej(rq.error); }; }); }
+  function tx(mode, fn){ return open().then(function(db){ return new Promise(function(res, rej){ var t = db.transaction("h", mode), r = fn(t.objectStore("h")); t.oncomplete = function(){ db.close(); res(r && r.result); }; t.onerror = function(){ db.close(); rej(t.error); }; }); }); }
+  return {
+    get: function(){
+      try{
+        if(!window.indexedDB) return Promise.resolve(null);
+        var chk = indexedDB.databases ? indexedDB.databases() : Promise.resolve([{ name:DB }]);
+        return chk.then(function(list){ return list.some(function(d){ return d.name === DB; }) ? tx("readonly", function(st){ return st.get("work"); }) : null; }).catch(function(){ return null; });
+      }catch(e){ return Promise.resolve(null); }
+    },
+    set: function(h){ try{ return tx("readwrite", function(st){ return st.put(h, "work"); }).catch(function(){}); }catch(e){ return Promise.resolve(); } },
+    del: function(){ try{ return tx("readwrite", function(st){ return st.delete("work"); }).catch(function(){}); }catch(e){ return Promise.resolve(); } }
+  };
+})();
+function ensurePerm(h){
+  var o = { mode:"readwrite" };
+  return (h.queryPermission ? h.queryPermission(o) : Promise.resolve("granted")).then(function(p){ return p === "granted" ? p : (h.requestPermission ? h.requestPermission(o) : "denied"); })
+    .then(function(p){ if(p !== "granted") throw new Error("ファイルへのアクセスが許可されませんでした。"); });
+}
+var BK_NOTE0 = $("bkNote").textContent;
+function wfNote(text){
+  var n = $("bkNote");
+  if(!wf.handle && !wf.auto){
+    n.className = "bknote";
+    if(text){ n.textContent = text; n.dataset.kept = "1"; }
+    else if(!n.dataset.kept) n.textContent = BK_NOTE0;
+    return;
+  }
+  n.className = "bknote" + (wf.dirty ? " dirty" : "");
+  n.innerHTML = "作業ファイル：" + esc((wf.auto && !wf.handle ? "バックアップ\\" : "") + wf.name)
+    + (wf.encrypted ? "（パスワード付き）" : "")
+    + (wf.saved ? "（最後に上書き保存 " + esc(wf.saved) + "）" : "")
+    + " ・保存は「上書き保存」（Ctrl+S）"
+    + (wf.dirty ? "　<b>● 上書き保存していない変更があります</b>" : "");
+}
+function wfWrite(){
+  var h = wf.handle;
+  if(wf.encrypted && !wf.password) return Promise.reject(new Error("パスワードが必要です。"));
+  return ensurePerm(h).then(function(){ return makeBackupText(wf.password); })
+    .then(function(text){ text = wrapWork(text, h.name); return h.createWritable().then(function(w){ return Promise.resolve(w.write(text)).then(function(){ return w.close(); }); }); })
+    .then(function(){ wf.dirty = false; wf.saved = stamp(); wfNote(); });
+}
+function wfCreate(pw){
+  var opts = { suggestedName:WF_NAME, types:WF_TYPES, id:"kenshin-work" };
+  if(wf.handle) opts.startIn = wf.handle;
+  window.showSaveFilePicker(opts).then(function(h){
+    wf.handle = h; wf.name = h.name; wf.password = pw; wf.encrypted = !!pw; wf.auto = false; wf.saved = "";
+    HS.set(h);
+    bkMsg("bkok", "保存しています…");
+    return wfWrite().then(function(){ bkClose(); $("wfBanner").style.display = "none"; toast("作業ファイル（" + h.name + "）を作りました"); });
+  }).catch(function(e){ if(e && e.name === "AbortError") return; bkMsg("bkerr", "保存できませんでした：" + (e && e.message)); });
+}
+function wfSaveNow(){
+  if(wf.encrypted && !wf.password){ bkOpen("save", "", "rewrite"); return; }
+  $("bkNote").textContent = "保存しています…";
+  wfWrite().then(function(){ toast("作業ファイルに上書き保存しました"); },
+    function(e){ wfNote(); toast("上書き保存できませんでした：" + (e && e.message) + "　「別名で保存（バックアップ）」で保存してください。", true); });
+}
+$("wfSave").addEventListener("click", function(){
+  if(!hasWork()){ toast("保存するデータがありません。先に職員名簿を読み込んでください。", true); return; }
+  if(!wf.handle && wf.auto){   // 自動で読み込んだ作業ファイル：保存先（同じファイル）を選んでもらい、以後はそのファイルに上書き
+    window.showSaveFilePicker({ suggestedName:WF_NAME, types:WF_TYPES, id:"kenshin-work" }).then(function(h){
+      wf.handle = h; wf.name = h.name; HS.set(h); wfSaveNow();
+    }).catch(function(e){ if(e && e.name === "AbortError") return; toast("上書き保存できませんでした：" + (e && e.message), true); });
+    return;
+  }
+  if(!wf.handle){ bkOpen("save", "", "file"); return; }
+  if(/\.json$/i.test(wf.handle.name)){
+    ask("次からアプリを開くだけで自動で読み込めるように、作業ファイルを「" + WF_NAME + "」として「バックアップ」フォルダに保存し直しますか？",
+        function(){ bkOpen("save", "", "file"); }, null, "保存し直す",
+        { label:"今のファイル（" + wf.handle.name + "）に上書き", fn:wfSaveNow });
+    return;
+  }
+  wfSaveNow();
+});
+document.addEventListener("keydown", function(e){
+  if((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")){
+    e.preventDefault();
+    if($("bkDlg").style.display !== "none" || $("askDlg").style.display !== "none") return;
+    if(FS) $("wfSave").click(); else $("bkSave").click();
+  }
+});
+function wfOpenHandle(h){
+  return ensurePerm(h).then(function(){ return h.getFile(); }).then(function(f){ return f.text(); }).then(function(text){
+    var obj = parseWork(text);
+    confirmReplace(obj, function(){
+      openBackupObj(obj, h.name + "（" + bkLabel(obj) + "）", function(d, pw){
+        HS.set(h);
+        applyBackup(d, obj, { mode:"handle", name:h.name, encrypted:!!obj.encrypted });
+      });
+    });
+  }).catch(function(e){ toast("作業ファイルを開けませんでした：" + (e && e.message), true); });
+}
+$("wfOpen").addEventListener("click", function(){
+  var opts = { types:WF_TYPES, multiple:false };
+  if(wf.handle) opts.startIn = wf.handle;
+  window.showOpenFilePicker(opts).then(function(hs){ return wfOpenHandle(hs[0]); })
+    .catch(function(e){ if(e && e.name === "AbortError") return; toast("作業ファイルを開けませんでした：" + (e && e.message), true); });
+});
+window.addEventListener("beforeunload", function(e){
+  if(wf.leaving) return;
+  if((wf.handle || wf.auto) && wf.dirty && hasWork()){ e.preventDefault(); e.returnValue = "作業ファイルに上書き保存していない変更があります。"; return e.returnValue; }
+});
+
+/* 作業ファイルを、以後の上書き保存の先にします */
+function wfAttach(o){
+  wf.auto = o.mode === "auto"; wf.name = o.name || WF_NAME; wf.encrypted = !!o.encrypted; wf.password = o.password || "";
+  wf.saved = o.saved || ""; wf.dirty = false;
+  $("wfBanner").style.display = "none";
+  wfNote();
+  if(FS) HS.get().then(function(h){ if(h && h.name === wf.name){ wf.handle = h; wf.auto = false; wfNote(); } });
+}
+function wfBanner(html){ var b = $("wfBanner"); b.innerHTML = html; b.style.display = "flex"; return b; }
+
+/* 起動：作業ファイルや復元の続きがあれば、アプリの準備（init）の前に済ませます */
+function wfBoot(init){
+  var start = function(after){ init(); wf.ready = true; wf.dirty = false; if(after) after(); wfNote(); };
+  var work = window.KENSHIN_WORK; try{ delete window.KENSHIN_WORK; }catch(e){ window.KENSHIN_WORK = undefined; }
+  /* 復元して読み込み直したところ */
+  var rs = null;
+  try{ rs = JSON.parse(sessionStorage.getItem(SS_RESTORED) || "null"); sessionStorage.removeItem(SS_RESTORED); }catch(e){ rs = null; }
+  if(rs){
+    start(function(){
+      if(rs.wf) wfAttach(rs.wf);
+      setTimeout(function(){ toast("バックアップを復元しました（" + rs.label + "）"); }, 350);
+    });
+    return;
+  }
+  var okWork = false;
+  try{ okWork = !!work && work["種類"] === BK_KIND && (!!work.data || !!work.encrypted); }catch(e){ okWork = false; }
+  if(!okWork){ start(wfAskLast); return; }
+
+  var local = "";
+  try{ local = (JSON.parse(localStorage.getItem(LS_DATA) || "null") || {}).savedAt || ""; }catch(e){ local = ""; }
+  var fileAt = work["データの更新日時"] || "";
+  var att = { mode:"auto", name:WF_NAME, encrypted:!!work.encrypted, saved:work["保存日時"] || "" };
+  var info = "作業ファイル（バックアップ\\" + WF_NAME + "、" + bkLabel(work) + "）";
+  if(local && fileAt && local === fileAt){ start(function(){ wfAttach(att); }); return; }   // この端末と同じ内容
+  if(local && fileAt && local > fileAt){
+    /* この端末のほうが新しい：どちらで続けるか選んでもらいます */
+    start(function(){
+      wfAttach(att);
+      var b = wfBanner("「バックアップ」フォルダの作業ファイル（" + esc(work["保存日時"] || "") + " 保存）より、このパソコンのデータ（" + esc(isoStamp(local)) + " 更新）のほうが新しくなっています。"
+        + ' <button class="btn" id="wfBLocal">このパソコンのデータで続ける</button> <button class="btn" id="wfBFile">作業ファイルを読み込む</button>');
+      $("wfBLocal").onclick = function(){ b.style.display = "none"; wf.dirty = true; wfNote(); };
+      $("wfBFile").onclick = function(){
+        openBackupObj(work, info, function(d, pw){ applyBackup(d, work, { mode:"auto", name:WF_NAME, encrypted:!!work.encrypted, saved:work["保存日時"] || "" }); });
+      };
+    });
+    return;
+  }
+  /* 作業ファイルのほうが新しい（またはこのパソコンにデータがない）：読み込んでから始めます */
+  var go = function(d, pw){
+    try{ writeBackupToStorage(d); }catch(err){ start(function(){ toast("作業ファイルを読み込めませんでした：" + err.message, true); }); return; }
+    att.password = pw;
+    start(function(){
+      wfAttach(att);
+      setTimeout(function(){ toast("作業ファイルを読み込みました（" + bkLabel(work) + "）"); }, 350);
+    });
+  };
+  openBackupObj(work, info + "を読み込みます。", go, function(){
+    /* パスワードを入れずにやめた：このパソコンのデータで始めます */
+    start(function(){ wfAttach(att); wfBanner("作業ファイルを読み込まずに、このパソコンのデータで始めました。読み込むときは「作業ファイルを開く」から選んでください。"); });
+  });
+}
+/* 自動で読み込めなかったとき：前回の作業ファイルを覚えていれば、開くか聞きます */
+function wfAskLast(){
+  if(!FS) return;
+  HS.get().then(function(h){
+    if(!h) return;
+    var b = wfBanner("前回の作業ファイル「<b>" + esc(h.name) + "</b>」を開きますか？ "
+      + '<button class="btn primary" id="wfBOpen">開く</button> <button class="btn" id="wfBNo">今回は開かない</button> <button class="btn" id="wfBForget">このファイルを使わない（記憶を消す）</button>'
+      + ' <span class="hint">（開くときに Edge が読み取り・書き込みの許可を確認します）</span>');
+    $("wfBOpen").onclick = function(){ wfOpenHandle(h); };
+    $("wfBNo").onclick = function(){ b.style.display = "none"; };
+    $("wfBForget").onclick = function(){ HS.del(); b.style.display = "none"; };
+  });
+}
+
+/* =========================================================================
    12. 初期化
    ========================================================================= */
 
-(function init(){
+function init(){
   state.layouts = defaultLayouts();
   var now = new Date();
   var fy = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
@@ -6894,7 +7359,8 @@ $("btnSample").addEventListener("click", function(){
     if(state.rawRows.length) buildEmployees();
   });
   computeTargets();
-})();
+}
+wfBoot(init);
 </script>
 </body>
 </html>
