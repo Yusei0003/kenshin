@@ -376,7 +376,9 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
 #askDlg{z-index:9500}
 .grpbox{margin-top:10px;border:1px solid var(--line);border-radius:4px;padding:6px 12px;background:#fafcfc}
 .grpbox summary{cursor:pointer;font-weight:bold;font-size:13.5px}
-#grpPrev ul{margin:4px 0 0;padding-left:20px}
+.grptbl{font-size:13px;margin-top:4px}
+.grptbl select{font-size:13px;max-width:260px}
+.grptbl tr.grpm td{background:#fff8d6}
 /* ===== 作業ファイル・バックアップ ===== */
 .hbreak{flex-basis:100%;height:0}
 .hbtns{display:flex;gap:6px;align-self:center;flex-wrap:wrap;margin-top:-6px}
@@ -995,6 +997,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
         診療所・保育所などの施設や室を、まとめ先の課のファイルに入れます。1行に「<strong>まとめる所属 → まとめ先</strong>」の形で書きます（例：広田診療所 → 保健課）。
         名簿の所属名にまとめる所属の名前が含まれていれば当てはまります（「小学校」なら「高田小学校」なども）。ファイルの中の「所属名」の列は名簿のままです。<br>
         「まとめる所属の回答様式（Excel）」を読み込むと、その内容に置き換わります（「部ごと」で○を付けた部は、部の名前のファイルに1つにまとめます）。
+        下の<strong>名簿の所属の一覧</strong>で、所属ごとにファイルを選び直すこともできます。
       </p>
       <textarea id="deptGroup" rows="8" style="width:100%;font-size:13px"></textarea>
       <div class="row">
@@ -1438,12 +1441,14 @@ function deptKeyOf(t){ return normText(t).replace(/\([^)]*\)/g, ""); }
 function deptHit(name, key){ return !!key && (name === key || name.indexOf(key) >= 0); }
 /* 名簿の所属名 → 「課ごとに出力」のファイルの名前。
    ① まとめる所属に当たればまとめ先、② まとめ先そのもの（例：「商工交流部商工観光課」→ 商工観光課）ならまとめ先、③ それ以外は名簿の所属名のまま */
-function deptGroupOf(dept){
-  var d = deptKeyOf(dept), rules = (state.deptGroup || []).slice().sort(function(a, b){ return deptKeyOf(b.from).length - deptKeyOf(a.from).length; });
-  for(var i = 0; i < rules.length; i++) if(deptHit(d, deptKeyOf(rules[i].from))) return rules[i].to;
+function deptGroupOf(dept){ return deptGroupWhy(dept).to; }
+/* どの決まりで決まったかも返します（rule：当てはまった決まり、self：まとめ先の課そのもの） */
+function deptGroupWhy(dept, rulesIn){
+  var d = deptKeyOf(dept), rules = (rulesIn || state.deptGroup || []).slice().sort(function(a, b){ return deptKeyOf(b.from).length - deptKeyOf(a.from).length; });
+  for(var i = 0; i < rules.length; i++) if(deptHit(d, deptKeyOf(rules[i].from))) return { to:rules[i].to, rule:rules[i] };
   var tos = rules.map(function(r){ return r.to; }).sort(function(a, b){ return deptKeyOf(b).length - deptKeyOf(a).length; });
-  for(var j = 0; j < tos.length; j++) if(deptHit(d, deptKeyOf(tos[j]))) return tos[j];
-  return dept;
+  for(var j = 0; j < tos.length; j++) if(deptHit(d, deptKeyOf(tos[j]))) return { to:tos[j], self:true };
+  return { to:dept };
 }
 function deptGroupText(){ return (state.deptGroup || []).map(function(r){ return r.from + " → " + r.to; }).join("\n"); }
 function parseDeptGroup(text){
@@ -4964,23 +4969,55 @@ function renderDeptGroup(){
   if(!$("deptGroup")) return;
   if(document.activeElement !== $("deptGroup")) $("deptGroup").value = deptGroupText();
   $("grpSum").textContent = "（" + (state.deptGroup || []).length + "件の決まり）";
-  /* 名簿の所属名がどのファイルに入るか（まとめるものだけ） */
-  var map = {};
-  state.employees.forEach(function(e){
-    var d = deptLabel(e), g = deptGroupOf(d);
-    (map[g] = map[g] || {})[d] = 1;
-  });
-  var byRule = function(d){ var k = deptKeyOf(d); return (state.deptGroup || []).some(function(r){ return deptHit(k, deptKeyOf(r.from)); }); };
-  var rows = Object.keys(map).filter(function(g){ var ds = Object.keys(map[g]); return ds.length > 1 || ds.some(byRule); }).sort();
-  $("grpPrev").innerHTML = !state.employees.length ? "" : !rows.length ? "名簿の所属で、まとめるものはありません。"
-    : "名簿の所属のまとめ方：<ul>" + rows.map(function(g){
-        return "<li><b>" + esc(g) + "</b>：" + Object.keys(map[g]).sort().map(esc).join("、") + "</li>"; }).join("") + "</ul>";
+  /* 名簿の所属ごとに、どのファイルに入るかを一覧にし、その場で選び直せるようにします */
+  if(!state.employees.length){ $("grpPrev").innerHTML = '<p class="hint">名簿を読み込むと、名簿の所属ごとに、どのファイルに入るかを一覧で確かめ・選び直せます。</p>'; return; }
+  var cnt = {}, code = {};
+  state.employees.forEach(function(e){ var d = deptLabel(e); cnt[d] = (cnt[d] || 0) + 1; if(!(d in code)) code[d] = e.deptCode || ""; });
+  var depts = Object.keys(cnt).sort(function(a, b){ return String(code[a]) < String(code[b]) ? -1 : String(code[a]) > String(code[b]) ? 1 : (a < b ? -1 : 1); });
+  var groups = {};
+  depts.forEach(function(d){ groups[deptGroupOf(d)] = 1; });
+  var cand = {};
+  (state.deptGroup || []).forEach(function(r){ cand[r.to] = 1; });
+  depts.forEach(function(d){ cand[deptGroupOf(d)] = 1; });
+  var candList = Object.keys(cand).sort();
+  var nMerged = depts.filter(function(d){ return deptGroupOf(d) !== d; }).length;
+  $("grpPrev").innerHTML = "<p style=\"margin:8px 0 4px\"><b>名簿の所属 " + depts.length + "件 → ファイル " + Object.keys(groups).length + "個</b>"
+    + "（まとめ先へ入る所属 " + nMerged + "件）。「ファイル」を選び直すと、その所属だけの決まりとして上の欄に加わります。</p>"
+    + '<table class="grid grptbl"><thead><tr><th>所属コード</th><th>名簿の所属名</th><th>人数</th><th>ファイル（まとめ先）</th><th>決まり</th></tr></thead><tbody>'
+    + depts.map(function(d){
+        var w = deptGroupWhy(d), own = w.rule && deptKeyOf(w.rule.from) === deptKeyOf(d);
+        var opts = '<option value="' + esc(d) + '"' + (w.to === d ? " selected" : "") + ">名簿のまま（" + esc(d) + "）</option>"
+          + candList.filter(function(c){ return c !== d; }).map(function(c){
+              return '<option value="' + esc(c) + '"' + (w.to === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("");
+        var why = own ? "この所属だけの決まり" + ' <button class="btn dbtn" data-grpundo="' + esc(d) + '">外す</button>'
+          : w.rule ? "「" + esc(w.rule.from) + " → " + esc(w.rule.to) + "」" : w.self ? "まとめ先の課" : "";
+        return "<tr" + (w.to !== d ? ' class="grpm"' : "") + "><td>" + esc(code[d]) + "</td><td>" + esc(d) + '</td><td class="num">' + cnt[d] + "</td>"
+          + '<td><select data-grpdept="' + esc(d) + '">' + opts + "</select></td><td>" + why + "</td></tr>";
+      }).join("") + "</tbody></table>";
+}
+/* 一覧で選び直した所属：その所属だけの決まり（所属名そのもの → 選んだファイル）にします。
+   ほかの決まりで同じ結果になるなら、その所属だけの決まりは作りません */
+function setDeptFor(dept, to){
+  var k = deptKeyOf(dept);
+  var rest = (state.deptGroup || []).filter(function(r){ return deptKeyOf(r.from) !== k; });
+  if(deptGroupWhy(dept, rest).to !== to) rest.push({ from:dept, to:to });
+  setDeptGroup(rest, "「" + dept + "」は「" + to + "」のファイルに入ります" + (to === dept ? "（まとめません）" : ""));
 }
 function setDeptGroup(list, msg){
   state.deptGroup = list;
   saveSettings(); renderDeptGroup(); renderListXlsxHint();
   if(msg) toast(msg);
 }
+$("grpPrev").addEventListener("change", function(e){
+  var d = e.target.dataset ? e.target.dataset.grpdept : null;
+  if(d != null) setDeptFor(d, e.target.value);
+});
+$("grpPrev").addEventListener("click", function(e){
+  var d = e.target.dataset ? e.target.dataset.grpundo : null;
+  if(d == null) return;
+  var k = deptKeyOf(d);
+  setDeptGroup((state.deptGroup || []).filter(function(r){ return deptKeyOf(r.from) !== k; }), "「" + d + "」だけの決まりを外しました");
+});
 $("deptGroup").addEventListener("change", function(){
   setDeptGroup(parseDeptGroup(this.value), "まとめ方を保存しました（" + parseDeptGroup(this.value).length + "件）");
 });

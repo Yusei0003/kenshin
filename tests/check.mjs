@@ -453,11 +453,21 @@ const lxg = await ev(async () => {
     const di = sheets[0].rows[0].indexOf('所属名'), dj = sheets[1].rows[0].indexOf('所属名');
     out[e.name] = [...new Set(sheets[0].rows.slice(1).map(r => r[di]).concat(sheets[1].rows.slice(1).map(r => r[dj])))].sort();
   }
-  return { out, prev: document.getElementById('grpPrev').textContent };
+  const sel = document.querySelector('#grpPrev select[data-grpdept="建設部建設課"]');
+  return { out, prev: sel ? sel.value : null };
 });
 ok(lxg.out['未受診・要精密検査一覧_総務部総務課.xlsx'] && lxg.out['未受診・要精密検査一覧_総務部総務課.xlsx'].join() === '建設部建設課,総務部総務課'
-   && !lxg.out['未受診・要精密検査一覧_建設部建設課.xlsx'] && /総務部総務課：建設部建設課、総務部総務課/.test(lxg.prev),
+   && !lxg.out['未受診・要精密検査一覧_建設部建設課.xlsx'] && lxg.prev === '総務部総務課',
    '  まとめ方を書き換えると、まとめ先のファイルに入る（所属名の列は名簿のまま）', lxg);
+// 名簿の所属の一覧から選び直す
+await page.selectOption('#grpPrev select[data-grpdept="市民部市民課"]', '総務部総務課'); await wait(300);
+const gs = await ev(() => ({ g: deptGroupOf('市民部市民課'), rule: state.deptGroup.some(r => r.from === '市民部市民課' && r.to === '総務部総務課'),
+  rows: document.querySelectorAll('#grpPrev tbody tr').length, depts: new Set(state.employees.map(e => e.deptName)).size,
+  txt: document.getElementById('deptGroup').value }));
+ok(gs.g === '総務部総務課' && gs.rule && gs.rows === gs.depts && /市民部市民課 → 総務部総務課/.test(gs.txt),
+   '  名簿の所属が一覧で出て、所属ごとにファイルを選び直せる（上の欄にも加わる）', gs);
+await page.click('#grpPrev button[data-grpundo="市民部市民課"]'); await wait(300);
+ok(await ev(() => deptGroupOf('市民部市民課') === '市民部市民課' && !state.deptGroup.some(r => r.from === '市民部市民課')), '  「外す」でその所属だけの決まりを外す');
 await page.click('#btnGrpReset'); await wait(200); await yes();
 ok(await ev(() => state.deptGroup.length === defaultDeptGroup().length), '  「初期値に戻す」で初期値に戻る');
 await page.setInputFiles('#grpFile', xlsx(path.join(FIX, 'matome_kaitou.xlsx'))); await wait(800);
