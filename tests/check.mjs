@@ -433,6 +433,40 @@ ok(lxd.n === '未受診・要精密検査一覧_課ごと.zip' && lxd.files.leng
    '  「課ごとに出力」で、課ごとのExcel（その課の人だけ）をZIPにまとめる', lxd);
 await ev((u) => { state.survey[u.key] = JSON.parse(u.before); delete state.cancelled.i[u.no]; saveData(); }, lxUndo);
 
+// 課ごとのまとめ方
+const gq = await ev(() => ({
+  a: deptGroupOf('福祉部広田診療所'), b: deptGroupOf('商工交流部商工観光課'), c: deptGroupOf('商工交流部交流推進課'),
+  d: deptGroupOf('高田小学校'), e: deptGroupOf('市長'), f: deptGroupOf('総務部総務課'), g: deptGroupOf('建設部住宅政策室'),
+  h: deptGroupOf('B&G海洋センター')
+}));
+ok(gq.a === '保健課' && gq.b === '商工観光課' && gq.c === '商工観光課' && gq.d === '学校教育課' && gq.e === '企画政策課'
+   && gq.f === '総務部総務課' && gq.g === '建設部住宅政策室' && gq.h === '商工観光課',
+   'まとめ方の初期値：施設や室はまとめ先の課へ（まとめ先の課そのもの・まとめない所属は名簿のまま）', gq);
+await page.click('#grpBox summary'); await wait(200);
+await page.fill('#deptGroup', '建設部建設課 → 総務部総務課'); await page.dispatchEvent('#deptGroup', 'change'); await wait(300);
+await ev(() => { window.__blob = null; });
+await page.click('#btnListDept'); await wait(800);
+const lxg = await ev(async () => {
+  const x = window.__blob, buf = await x.b.arrayBuffer(), z = zipOpen(buf), out = {};
+  for (const e of z.entries) {
+    const sheets = await readXlsxFile(new File([await zipRead(z, e)], 'a.xlsx'));
+    const di = sheets[0].rows[0].indexOf('所属名'), dj = sheets[1].rows[0].indexOf('所属名');
+    out[e.name] = [...new Set(sheets[0].rows.slice(1).map(r => r[di]).concat(sheets[1].rows.slice(1).map(r => r[dj])))].sort();
+  }
+  return { out, prev: document.getElementById('grpPrev').textContent };
+});
+ok(lxg.out['未受診・要精密検査一覧_総務部総務課.xlsx'] && lxg.out['未受診・要精密検査一覧_総務部総務課.xlsx'].join() === '建設部建設課,総務部総務課'
+   && !lxg.out['未受診・要精密検査一覧_建設部建設課.xlsx'] && /総務部総務課：建設部建設課、総務部総務課/.test(lxg.prev),
+   '  まとめ方を書き換えると、まとめ先のファイルに入る（所属名の列は名簿のまま）', lxg);
+await page.click('#btnGrpReset'); await wait(200); await yes();
+ok(await ev(() => state.deptGroup.length === defaultDeptGroup().length), '  「初期値に戻す」で初期値に戻る');
+await page.setInputFiles('#grpFile', xlsx(path.join(FIX, 'matome_kaitou.xlsx'))); await wait(800);
+const gi = await ev(() => ({ list: state.deptGroup.map(r => r.from + '>' + r.to), x: deptGroupOf('建設部建設課'), y: deptGroupOf('財政課') }));
+ok(gi.list.includes('財政課>総務課') && gi.list.includes('広田診療所>保健課') && gi.list.includes('建設部建設課>建設部') && gi.list.includes('住宅政策室>建設部')
+   && gi.list.includes('市長>企画政策課') && gi.x === '建設部' && gi.y === '総務課',
+   '  回答様式（Excel）を読み込むと、まとめ先と「部ごと」の○が反映される（市長・副市長の決まりは残る）', gi);
+await ev(() => { state.deptGroup = defaultDeptGroup(); saveSettings(); });
+
 section('生活習慣病健診');
 await ev(() => { const E = (n) => state.employees.find(e => e.empNo == n);
   E('1004').empType = '会計年度任用職員（パート・時間額）'; E('1503').empType = 'パート（日額）'; E('1101').empType = '会計年度任用職員（フルタイム・日額）'; computeTargets(); });

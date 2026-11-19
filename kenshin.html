@@ -374,6 +374,9 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
 .mfoot{display:flex;gap:10px;justify-content:flex-end;padding:12px 18px 16px;flex-wrap:wrap}
 .mfoot .btn{font-size:14px;padding:8px 16px}
 #askDlg{z-index:9500}
+.grpbox{margin-top:10px;border:1px solid var(--line);border-radius:4px;padding:6px 12px;background:#fafcfc}
+.grpbox summary{cursor:pointer;font-weight:bold;font-size:13.5px}
+#grpPrev ul{margin:4px 0 0;padding-left:20px}
 /* ===== 作業ファイル・バックアップ ===== */
 .hbreak{flex-basis:100%;height:0}
 .hbtns{display:flex;gap:6px;align-self:center;flex-wrap:wrap;margin-top:-6px}
@@ -986,6 +989,21 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
       「<strong>課ごとに出力</strong>」は、所属（課）ごとに1つずつのExcel（未受診・要精密検査一覧_課の名前.xlsx）を作り、1つのZIPファイルにまとめてダウンロードします（該当者がいない課は作りません）。
       婦人検診の未受診状況調査は乳がん・子宮頸がんで共通のため、「婦人検診」でまとめて出力します。
     </p>
+    <details id="grpBox" class="grpbox">
+      <summary>課ごとに出力するときのまとめ方 <span class="hint" id="grpSum"></span></summary>
+      <p class="hint" style="margin:6px 0">
+        診療所・保育所などの施設や室を、まとめ先の課のファイルに入れます。1行に「<strong>まとめる所属 → まとめ先</strong>」の形で書きます（例：広田診療所 → 保健課）。
+        名簿の所属名にまとめる所属の名前が含まれていれば当てはまります（「小学校」なら「高田小学校」なども）。ファイルの中の「所属名」の列は名簿のままです。<br>
+        「まとめる所属の回答様式（Excel）」を読み込むと、その内容に置き換わります（「部ごと」で○を付けた部は、部の名前のファイルに1つにまとめます）。
+      </p>
+      <textarea id="deptGroup" rows="8" style="width:100%;font-size:13px"></textarea>
+      <div class="row">
+        <button class="btn" id="btnGrpXlsx">回答様式（Excel）を読み込む…</button>
+        <input type="file" id="grpFile" accept=".xlsx,.xlsm" style="display:none">
+        <button class="btn" id="btnGrpReset">初期値に戻す</button>
+      </div>
+      <div id="grpPrev" class="hint"></div>
+    </details>
   </div>
 
   <div class="panel">
@@ -1393,6 +1411,49 @@ function mgmtKenshin(){
    （「パート（時間額）」「会計年度任用職員（パート・日額）」など、かっこや並びが違っても判定できます）。
    全角半角・空白・かっこの違いは無視します。 */
 function defaultSeikatsuExclude(){ return ["パート+時間額", "パート+日額"]; }
+
+/* 「課ごとに出力」でまとめる所属（まとめる所属 → まとめ先）。
+   初期値は、陸前高田市（市）『広報りくぜんたかた』令和8年4月号「令和８年度 組織体制」をもとに担当者が回答した内容です。 */
+function defaultDeptGroup(){
+  var g = [];
+  var add = function(to, list){ list.forEach(function(f){ g.push({ from:f, to:to }); }); };
+  add("企画政策課", ["市長", "副市長"]);
+  add("保健課", ["広田診療所", "二又診療所", "保健福祉総合センター"]);
+  add("福祉課", ["地域包括支援センター", "こころの復興支援室"]);
+  add("子ども未来課", ["こども家庭センター"]);
+  add("まちづくり推進課", ["地区コミュニティセンター", "清掃センター", "一般廃棄物最終処分場"]);
+  add("市民課", ["陸前高田斎苑"]);
+  add("農林課", ["営農拠点施設", "交流促進センター（炭の家）", "地域資源活用総合交流促進施設（川の駅）"]);
+  add("商工観光課", ["チャレンジショップ", "陸前高田高等職業訓練校", "市民の森", "黒崎温泉保養センター", "玉山休養施設",
+                    "高田松原地域振興施設（道の駅）", "交流推進課", "総合交流センター（夢アリーナたかた）", "B&G海洋センター",
+                    "スポーツドーム", "高田松原運動公園"]);
+  add("上下水道課", ["浄化センター"]);
+  add("防災課", ["消防防災センター"]);
+  add("教育総務課", ["図書館", "博物館", "市民文化会館（中央公民館）", "旧吉田家住宅主屋"]);
+  add("学校教育課", ["教育研究所", "学校給食センター", "小学校", "中学校"]);
+  return g;
+}
+/* 比べるときは、空白・中黒を除き、まとめる所属の（　）書き（「（8校）」「（道の駅）」など）も除きます */
+function deptKeyOf(t){ return normText(t).replace(/\([^)]*\)/g, ""); }
+function deptHit(name, key){ return !!key && (name === key || name.indexOf(key) >= 0); }
+/* 名簿の所属名 → 「課ごとに出力」のファイルの名前。
+   ① まとめる所属に当たればまとめ先、② まとめ先そのもの（例：「商工交流部商工観光課」→ 商工観光課）ならまとめ先、③ それ以外は名簿の所属名のまま */
+function deptGroupOf(dept){
+  var d = deptKeyOf(dept), rules = (state.deptGroup || []).slice().sort(function(a, b){ return deptKeyOf(b.from).length - deptKeyOf(a.from).length; });
+  for(var i = 0; i < rules.length; i++) if(deptHit(d, deptKeyOf(rules[i].from))) return rules[i].to;
+  var tos = rules.map(function(r){ return r.to; }).sort(function(a, b){ return deptKeyOf(b).length - deptKeyOf(a).length; });
+  for(var j = 0; j < tos.length; j++) if(deptHit(d, deptKeyOf(tos[j]))) return tos[j];
+  return dept;
+}
+function deptGroupText(){ return (state.deptGroup || []).map(function(r){ return r.from + " → " + r.to; }).join("\n"); }
+function parseDeptGroup(text){
+  var out = [];
+  String(text || "").split(/\r?\n/).forEach(function(line){
+    var m = line.split(/\s*(?:→|->|=>|＞|>|\t)\s*/);
+    if(m.length >= 2 && m[0].trim() && m[1].trim()) out.push({ from:m[0].trim(), to:m[1].trim() });
+  });
+  return out;
+}
 function exclTokens(rule){
   return String(rule || "").split(/[+＋]/).map(function(x){ return normText(x).replace(/[()（）［］\[\]【】〔〕「」]/g, ""); }).filter(Boolean);
 }
@@ -1484,6 +1545,7 @@ var state = {
   cancelled:  {},        // kenshinId -> { 職員番号: キャンセルした日(YYYY-MM-DD) }  直前キャンセル
   survey:     {},        // "取込元:職員番号" -> 未受診状況調査の記録 { st, sentAt, ansAt, reason, memo }
   seikatsuExclude: defaultSeikatsuExclude(),   // 生活習慣病健診の対象外にする雇用区分
+  deptGroup: defaultDeptGroup(),               // 「課ごとに出力」でまとめる所属
   svCarry:    {},        // 職員番号 -> 継続免除 { text, since:開始年度, checked:最後に見直した年度, name, dept }（年度をまたいで残す）
   svExempt:   {},        // 職員番号 -> 未受診状況調査の免除 { leave:産休・育休, other:その他, text:その他の内容 }
   dateEdit:   {},        // kenshinId -> { 職員番号: { date:"YYYY-MM-DD", time:受付時間, at:変更した日 } }  1人ずつの受診日の変更
@@ -3430,7 +3492,8 @@ function settingsObj(){
     rosterSig: state.rosterSig || "",
     rosterMap: state.rosterMap || null,
     nyuSig: state.nyuSig || {},
-    seikatsuExclude: state.seikatsuExclude
+    seikatsuExclude: state.seikatsuExclude,
+    deptGroup: state.deptGroup
   };
 }
 
@@ -4833,7 +4896,7 @@ function listFilter(){
 function deptLabel(e){ return e.deptName || e.deptCode || "所属なし"; }
 function listSheets(f, dept){
   f = f || listFilter();
-  var inDept = function(r){ return dept == null || deptLabel(r.emp) === dept; };
+  var inDept = function(r){ return dept == null || deptGroupOf(deptLabel(r.emp)) === dept; };
   var sv = f.sv.filter(inDept).map(function(r, i){ return { r:r, i:i }; });
   sv.sort(function(a, b){ var x = a.r.st === "todo" ? 0 : 1, y = b.r.st === "todo" ? 0 : 1; return x - y || a.i - b.i; });
   var s1 = { name:"未受診一覧", yellow:[], rows:[["年度","検診","区分","所属コード","所属名","職員番号","氏名","カナ","性別","年齢",
@@ -4856,12 +4919,13 @@ function listSheets(f, dept){
 }
 function renderListXlsxHint(){
   if(!$("listXlsxHint")) return;
+  renderDeptGroup();
   var sel = $("listKenshin"), keep = sel.value;
   sel.innerHTML = '<option value="">（すべて）</option>' + NYU_SOURCES.map(function(src){
     return '<option value="' + src.id + '">' + esc(src.name) + "</option>"; }).join("");
   sel.value = keep;
   var f = listFilter(), todo = f.sv.filter(function(r){ return r.st === "todo"; }).length, depts = {};
-  f.sv.concat(f.sm).forEach(function(r){ depts[deptLabel(r.emp)] = 1; });
+  f.sv.concat(f.sm).forEach(function(r){ depts[deptGroupOf(deptLabel(r.emp))] = 1; });
   $("listXlsxHint").textContent = "未受診一覧 " + f.sv.length + "名（うち未送付 " + todo + "名）／要精密検査一覧 " + f.sm.length + "名"
     + (Object.keys(depts).length ? "／" + Object.keys(depts).length + "課" : "");
 }
@@ -4878,7 +4942,7 @@ $("btnListXlsx").addEventListener("click", function(){
 $("btnListDept").addEventListener("click", function(){
   var f = listFilter(), order = [], seen = {};
   f.sv.concat(f.sm).slice().sort(cmpDeptKana).forEach(function(r){
-    var d = deptLabel(r.emp);
+    var d = deptGroupOf(deptLabel(r.emp));
     if(!seen[d]){ seen[d] = 1; order.push(d); }
   });
   if(!order.length){ toast("未受診・要精密検査の人がいません", true); return; }
@@ -4894,6 +4958,78 @@ $("btnListDept").addEventListener("click", function(){
   toast(zip + " を出力しました（" + files.length + "課）");
 });
 $("listKenshin").addEventListener("change", renderListXlsxHint);
+
+/* まとめ方の設定欄 */
+function renderDeptGroup(){
+  if(!$("deptGroup")) return;
+  if(document.activeElement !== $("deptGroup")) $("deptGroup").value = deptGroupText();
+  $("grpSum").textContent = "（" + (state.deptGroup || []).length + "件の決まり）";
+  /* 名簿の所属名がどのファイルに入るか（まとめるものだけ） */
+  var map = {};
+  state.employees.forEach(function(e){
+    var d = deptLabel(e), g = deptGroupOf(d);
+    (map[g] = map[g] || {})[d] = 1;
+  });
+  var byRule = function(d){ var k = deptKeyOf(d); return (state.deptGroup || []).some(function(r){ return deptHit(k, deptKeyOf(r.from)); }); };
+  var rows = Object.keys(map).filter(function(g){ var ds = Object.keys(map[g]); return ds.length > 1 || ds.some(byRule); }).sort();
+  $("grpPrev").innerHTML = !state.employees.length ? "" : !rows.length ? "名簿の所属で、まとめるものはありません。"
+    : "名簿の所属のまとめ方：<ul>" + rows.map(function(g){
+        return "<li><b>" + esc(g) + "</b>：" + Object.keys(map[g]).sort().map(esc).join("、") + "</li>"; }).join("") + "</ul>";
+}
+function setDeptGroup(list, msg){
+  state.deptGroup = list;
+  saveSettings(); renderDeptGroup(); renderListXlsxHint();
+  if(msg) toast(msg);
+}
+$("deptGroup").addEventListener("change", function(){
+  setDeptGroup(parseDeptGroup(this.value), "まとめ方を保存しました（" + parseDeptGroup(this.value).length + "件）");
+});
+$("btnGrpReset").addEventListener("click", function(){
+  ask("まとめ方を初期値（令和８年度の組織体制をもとにした内容）に戻します。よろしいですか？", function(){
+    setDeptGroup(defaultDeptGroup(), "まとめ方を初期値に戻しました");
+  }, null, "初期値に戻す");
+});
+$("btnGrpXlsx").addEventListener("click", function(){ $("grpFile").click(); });
+/* 回答様式（シート「まとめる所属」「部ごと」）を読み込みます */
+function deptGroupFromSheets(sheets){
+  var find = function(name){ return sheets.filter(function(x){ return normText(x.name) === normText(name); })[0]; };
+  var sh = find("まとめる所属") || sheets.filter(function(x){ return x.rows.some(function(r){ return r.some(function(v){ return /まとめ先/.test(String(v || "")); }); }); })[0];
+  if(!sh) throw new Error("「まとめる所属」のシートが見つかりません");
+  var hi = -1;
+  for(var i = 0; i < sh.rows.length && hi < 0; i++) if(sh.rows[i].some(function(v){ return /まとめ先/.test(String(v || "")); })) hi = i;
+  var h = sh.rows[hi].map(function(v){ return String(v || ""); });
+  var col = function(re){ for(var j = 0; j < h.length; j++) if(re.test(h[j])) return j; return -1; };
+  var cBu = col(/^部/), cOrg = col(/^所属/), cRos = col(/名簿/), cTo = col(/まとめ先/);
+  var list = [], units = [];
+  sh.rows.slice(hi + 1).forEach(function(r){
+    var get = function(c){ return c >= 0 && r[c] != null ? String(r[c]).trim() : ""; };
+    var from = get(cRos) || get(cOrg), to = get(cTo);
+    if(from) units.push({ bu:get(cBu), from:from });
+    if(from && to && deptKeyOf(from) !== deptKeyOf(to)) list.push({ from:from, to:to });
+  });
+  /* 「部ごと」で○を付けた部：その部の所属をすべて部の名前のファイルにまとめます */
+  var bs = find("部ごと"), bus = [];
+  if(bs && bs.rows.length){
+    var bh = bs.rows[0].map(function(v){ return String(v || ""); });
+    var cb = bh.findIndex(function(t){ return /^部/.test(t); }), co = bh.findIndex(function(t){ return /○/.test(t); });
+    bs.rows.slice(1).forEach(function(r){ if(co >= 0 && /[○〇◯]/.test(String(r[co] || "")) && r[cb]) bus.push(String(r[cb]).trim()); });
+  }
+  bus.forEach(function(bu){
+    list = list.filter(function(x){ return !units.some(function(u){ return u.bu === bu && u.from === x.from; }); });
+    units.forEach(function(u){ if(u.bu === bu) list.push({ from:u.from, to:bu }); });
+  });
+  return { list:list, bus:bus };
+}
+$("grpFile").addEventListener("change", function(e){
+  var f = e.target.files[0]; if(!f) return;
+  e.target.value = "";
+  readXlsxFile(f).then(function(sheets){
+    var g = deptGroupFromSheets(sheets);
+    /* 市長・副市長など、様式にない決まりは残します */
+    var keep = (state.deptGroup || []).filter(function(x){ return /^(市長|副市長)$/.test(x.from) && !g.list.some(function(y){ return y.from === x.from; }); });
+    setDeptGroup(keep.concat(g.list), "回答様式を読み込みました（まとめる所属 " + g.list.length + "件" + (g.bus.length ? "・部でまとめる：" + g.bus.join("、") : "") + "）");
+  }).catch(function(err){ toast("回答様式を読み込めませんでした：" + err.message, true); });
+});
 
 /* =========================================================================
    フォームの回答（未受診状況調査）・報告（要精密検査確認調査）の取込
@@ -7355,6 +7491,7 @@ function init(){
       /* 以前の初期値（「パート時間額」「パート日額」の完全な並び）は、新しい判定（パート＋時間額／日額）に置き換えます */
       state.seikatsuExclude = saved.seikatsuExclude.join("、") === "パート時間額、パート日額" ? defaultSeikatsuExclude() : saved.seikatsuExclude;
     }
+    if(saved && Array.isArray(saved.deptGroup)) state.deptGroup = saved.deptGroup;
     if(saved && saved.layouts){
       ticketKenshin().forEach(function(k){
         if(saved.layouts[k.id] && Array.isArray(saved.layouts[k.id].fields)) state.layouts[k.id] = saved.layouts[k.id];
