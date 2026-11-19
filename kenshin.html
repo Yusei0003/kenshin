@@ -975,12 +975,16 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
   <div class="panel">
     <h2>未受診・要精密検査一覧（Excel）</h2>
     <div class="row" style="margin-top:0">
-      <button class="btn primary" id="btnListXlsx">未受診・要精密検査一覧（Excel）を出力</button>
+      <label>検診 <select id="listKenshin"></select></label>
+      <button class="btn primary" id="btnListXlsx">Excelを出力（1つのファイル）</button>
+      <button class="btn" id="btnListDept">課ごとに出力（ZIP）</button>
       <span class="hint" id="listXlsxHint"></span>
     </div>
     <p class="hint" style="margin:6px 0 0">
-      「<strong>未受診一覧</strong>」（未受診状況調査）と「<strong>要精密検査一覧</strong>」（要精密検査確認調査）の2つのシートを1つのファイル（未受診・要精密検査一覧.xlsx）にします。
-      絞り込みに関係なく全員が入り、未受診一覧は<strong>「未送付」の人を上</strong>にして<strong>黄色のマーカー</strong>を付けます。
+      「<strong>未受診一覧</strong>」（未受診状況調査）と「<strong>要精密検査一覧</strong>」（要精密検査確認調査）の2つのシートのExcel（未受診・要精密検査一覧.xlsx）を作ります。
+      下の一覧の絞り込みに関係なく、選んだ検診の全員が入ります。未受診一覧は<strong>「未送付」の人を上</strong>にして<strong>黄色のマーカー</strong>を付けます。<br>
+      「<strong>課ごとに出力</strong>」は、所属（課）ごとに1つずつのExcel（未受診・要精密検査一覧_課の名前.xlsx）を作り、1つのZIPファイルにまとめてダウンロードします（該当者がいない課は作りません）。
+      婦人検診の未受診状況調査は乳がん・子宮頸がんで共通のため、「婦人検診」でまとめて出力します。
     </p>
   </div>
 
@@ -4815,8 +4819,22 @@ $("btnSmCsv").addEventListener("click", function(){
 });
 
 /* 未受診・要精密検査一覧（Excel・2シート）：絞り込みに関係なく全員。未受診一覧は「未送付」を上にして黄色のマーカー */
-function listSheets(){
-  var sv = surveyRows().map(function(r, i){ return { r:r, i:i }; });
+/* 検診の選択：すべて／胃がん／婦人（乳がん・子宮頸がん）／生活習慣病（未受診状況調査の取込元と同じ分け方） */
+var LIST_KID_SRC = { i:"i", nyu:"fujin", shikyu:"fujin", seikatsu:"seikatsu" };
+function listSrcName(id){ var s = NYU_SOURCES.filter(function(x){ return x.id === id; })[0]; return s ? s.name.replace(/（.*）/, "") : ""; }
+function listFilter(){
+  var src = $("listKenshin") ? $("listKenshin").value : "";
+  return {
+    src: src,
+    sv: surveyRows().filter(function(r){ return !src || r.src.id === src; }),
+    sm: seimitsuRows().filter(function(r){ return !src || LIST_KID_SRC[r.kid] === src; })
+  };
+}
+function deptLabel(e){ return e.deptName || e.deptCode || "所属なし"; }
+function listSheets(f, dept){
+  f = f || listFilter();
+  var inDept = function(r){ return dept == null || deptLabel(r.emp) === dept; };
+  var sv = f.sv.filter(inDept).map(function(r, i){ return { r:r, i:i }; });
   sv.sort(function(a, b){ var x = a.r.st === "todo" ? 0 : 1, y = b.r.st === "todo" ? 0 : 1; return x - y || a.i - b.i; });
   var s1 = { name:"未受診一覧", yellow:[], rows:[["年度","検診","区分","所属コード","所属名","職員番号","氏名","カナ","性別","年齢",
               "予約状況の入力欄","キャンセル日","状況","送付日","回答日","調査免除の理由","回答内容"]] };
@@ -4828,7 +4846,7 @@ function listSheets(){
                   r.rec.sentAt || "", r.rec.ansAt || "", svExemptLabel(r.ex), answersText(r.rec.answers)]);
   });
   var s2 = { name:"要精密検査一覧", rows:[["年度","検診","所属コード","所属名","職員番号","氏名","カナ","性別","年齢","受診日","判定","状況","送付日","報告日","報告内容"]] };
-  seimitsuRows().forEach(function(r){
+  f.sm.filter(inDept).forEach(function(r){
     var e = r.emp;
     s2.rows.push([state.fiscalYear || "", kenshinName(r.kid), e.deptCode, e.deptName, e.empNo, e.name, e.kana,
                   sexLabel(e.sex), e.age, assignDateLabel(r.t.assign), JUDGE[state.judge[r.kid][e.empNo]] || "", SM_ST[r.st],
@@ -4838,16 +4856,44 @@ function listSheets(){
 }
 function renderListXlsxHint(){
   if(!$("listXlsxHint")) return;
-  var sv = surveyRows(), todo = sv.filter(function(r){ return r.st === "todo"; }).length, sm = seimitsuRows().length;
-  $("listXlsxHint").textContent = "未受診一覧 " + sv.length + "名（うち未送付 " + todo + "名）／要精密検査一覧 " + sm + "名";
+  var sel = $("listKenshin"), keep = sel.value;
+  sel.innerHTML = '<option value="">（すべて）</option>' + NYU_SOURCES.map(function(src){
+    return '<option value="' + src.id + '">' + esc(src.name) + "</option>"; }).join("");
+  sel.value = keep;
+  var f = listFilter(), todo = f.sv.filter(function(r){ return r.st === "todo"; }).length, depts = {};
+  f.sv.concat(f.sm).forEach(function(r){ depts[deptLabel(r.emp)] = 1; });
+  $("listXlsxHint").textContent = "未受診一覧 " + f.sv.length + "名（うち未送付 " + todo + "名）／要精密検査一覧 " + f.sm.length + "名"
+    + (Object.keys(depts).length ? "／" + Object.keys(depts).length + "課" : "");
 }
+function listBaseName(src){ return "未受診・要精密検査一覧" + (src ? "_" + listSrcName(src) : ""); }
+function safeFileName(t){ return String(t).replace(/[\\\/:*?"<>|\u0000-\u001F]/g, "_").trim() || "所属なし"; }
 $("btnListXlsx").addEventListener("click", function(){
-  var sh = listSheets();
+  var f = listFilter(), sh = listSheets(f);
   if(sh[0].rows.length <= 1 && sh[1].rows.length <= 1){ toast("未受診・要精密検査の人がいません", true); return; }
-  var name = "未受診・要精密検査一覧.xlsx";
+  var name = listBaseName(f.src) + ".xlsx";
   downloadBlob(makeXlsx(sh), name);
   toast(name + " を出力しました（未受診一覧 " + (sh[0].rows.length - 1) + "名・要精密検査一覧 " + (sh[1].rows.length - 1) + "名）");
 });
+/* 課ごとに1つずつのExcelを作り、ZIPにまとめます（多数のファイルを1つずつダウンロードさせないため） */
+$("btnListDept").addEventListener("click", function(){
+  var f = listFilter(), order = [], seen = {};
+  f.sv.concat(f.sm).slice().sort(cmpDeptKana).forEach(function(r){
+    var d = deptLabel(r.emp);
+    if(!seen[d]){ seen[d] = 1; order.push(d); }
+  });
+  if(!order.length){ toast("未受診・要精密検査の人がいません", true); return; }
+  var base = listBaseName(f.src), used = {};
+  var files = order.map(function(d){
+    var nm = base + "_" + safeFileName(d), k = nm, i = 2;
+    while(used[k]) k = nm + "_" + (i++);
+    used[k] = 1;
+    return { name:k + ".xlsx", data:xlsxBytes(listSheets(f, d)) };
+  });
+  var zip = base + "_課ごと.zip";
+  downloadBlob(zipStore(files, "application/zip"), zip);
+  toast(zip + " を出力しました（" + files.length + "課）");
+});
+$("listKenshin").addEventListener("change", renderListXlsxHint);
 
 /* =========================================================================
    フォームの回答（未受診状況調査）・報告（要精密検査確認調査）の取込
@@ -5188,12 +5234,16 @@ function crc32(bytes){
   for(var i = 0; i < bytes.length; i++) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
   return (crc ^ 0xFFFFFFFF) >>> 0;
 }
-function zipStore(files){
+function zipStore(files, type){
+  return new Blob(zipParts(files), { type: type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+/* ZIP（無圧縮）の中身。f.text（文字）か f.data（Uint8Array）を入れます */
+function zipParts(files){
   var enc = new TextEncoder(), parts = [], central = [], offset = 0;
   var u16 = function(v){ return [v & 255, (v >>> 8) & 255]; };
   var u32 = function(v){ return [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]; };
   files.forEach(function(f){
-    var name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data);
+    var name = enc.encode(f.name), data = f.data || enc.encode(f.text), crc = crc32(data);
     var head = [].concat(u32(0x04034b50), u16(20), u16(0x0800), u16(0), u16(0), u16(0x21),
                          u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0));
     parts.push(new Uint8Array(head), name, data);
@@ -5206,14 +5256,22 @@ function zipStore(files){
   central.forEach(function(c){ parts.push(new Uint8Array(c[0]), c[1]); cdSize += c[0].length + c[1].length; });
   parts.push(new Uint8Array([].concat(u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
                                       u32(cdSize), u32(offset), u16(0))));
-  return new Blob(parts, { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  return parts;
+}
+function concatBytes(parts){
+  var n = 0; parts.forEach(function(p){ n += p.length; });
+  var out = new Uint8Array(n), o = 0;
+  parts.forEach(function(p){ out.set(p, o); o += p.length; });
+  return out;
 }
 function xmlEsc(v){
   return String(v == null ? "" : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 function colName(i){ var s = ""; i++; while(i > 0){ var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
-function makeXlsx(sheets){
+function makeXlsx(sheets){ return zipStore(xlsxFiles(sheets)); }
+function xlsxBytes(sheets){ return concatBytes(zipParts(xlsxFiles(sheets))); }
+function xlsxFiles(sheets){
   var files = [];
   var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
@@ -5272,7 +5330,7 @@ function makeXlsx(sheets){
     + '<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/></cellXfs>'
     + '<cellStyles count="1"><cellStyle name="標準" xfId="0" builtinId="0"/></cellStyles>'
     + "</styleSheet>";
-  return zipStore([
+  return [
     { name:"[Content_Types].xml", text:ct },
     { name:"_rels/.rels", text:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
@@ -5280,7 +5338,7 @@ function makeXlsx(sheets){
     { name:"xl/workbook.xml", text:wb },
     { name:"xl/_rels/workbook.xml.rels", text:rels },
     { name:"xl/styles.xml", text:styles }
-  ].concat(files));
+  ].concat(files);
 }
 
 /* =========================================================================

@@ -401,6 +401,36 @@ ok(lx && lx.states.length === lx.svN && lx.states.includes('未送付') && first
    '  未受診一覧は全員が入り、「未送付」の人が上に来る', lx && lx.states);
 ok(lx && lx.yel.every((y, i) => y === (lx.states[i] === '未送付')), '  「未送付」の行だけ黄色のマーカー', lx && lx.yel);
 ok(lx && lx.sm === lx.smN && lx.sm > 0, '  要精密検査一覧に要精密検査確認調査の全員', lx && [lx.sm, lx.smN]);
+// 検診ごと：胃がん検診だけ
+await page.selectOption('#listKenshin', 'i'); await wait(200);
+await ev(() => { window.__blob = null; });
+await page.click('#btnListXlsx'); await wait(500);
+const lxi = await ev(async () => {
+  const x = window.__blob; const sheets = await readXlsxFile(new File([await x.b.arrayBuffer()], 'a.xlsx'));
+  return { n: x.n, k1: [...new Set(sheets[0].rows.slice(1).map(r => r[1]))], k2: [...new Set(sheets[1].rows.slice(1).map(r => r[1]))],
+           n1: sheets[0].rows.length - 1, e1: surveyRows().filter(r => r.src.id === 'i').length };
+});
+ok(lxi.n === '未受診・要精密検査一覧_胃がん検診.xlsx' && lxi.n1 === lxi.e1 && lxi.k1.every(k => /胃がん/.test(k)) && lxi.k2.every(k => k === '胃がん検診'),
+   '  検診を選ぶと、その検診だけを出力（ファイル名に検診名）', lxi);
+// 課ごと：ZIPの中に課ごとのExcel
+await page.selectOption('#listKenshin', ''); await wait(200);
+await ev(() => { window.__blob = null; });
+await page.click('#btnListDept'); await wait(800);
+const lxd = await ev(async () => {
+  const x = window.__blob, buf = await x.b.arrayBuffer(), z = zipOpen(buf), out = [];
+  for (const e of z.entries) {
+    const bytes = await zipRead(z, e);
+    const sheets = await readXlsxFile(new File([bytes], 'a.xlsx'));
+    const di = sheets[0].rows[0].indexOf('所属名'), dj = sheets[1].rows[0].indexOf('所属名');
+    out.push({ name: e.name, depts: [...new Set(sheets[0].rows.slice(1).map(r => r[di]).concat(sheets[1].rows.slice(1).map(r => r[dj])))],
+               n: sheets[0].rows.length - 1 + sheets[1].rows.length - 1 });
+  }
+  const want = {}; surveyRows().concat(seimitsuRows()).forEach(r => { want[r.emp.deptName] = (want[r.emp.deptName] || 0) + 1; });
+  return { n: x.n, files: out, want };
+});
+ok(lxd.n === '未受診・要精密検査一覧_課ごと.zip' && lxd.files.length === Object.keys(lxd.want).length
+   && lxd.files.every(f => f.depts.length === 1 && f.name === '未受診・要精密検査一覧_' + f.depts[0] + '.xlsx' && f.n === lxd.want[f.depts[0]]),
+   '  「課ごとに出力」で、課ごとのExcel（その課の人だけ）をZIPにまとめる', lxd);
 await ev((u) => { state.survey[u.key] = JSON.parse(u.before); delete state.cancelled.i[u.no]; saveData(); }, lxUndo);
 
 section('生活習慣病健診');
