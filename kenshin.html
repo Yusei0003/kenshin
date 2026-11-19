@@ -373,6 +373,8 @@ table.grid tbody tr:nth-child(even){background:#f8fbfb}
 .mq{font-size:18px;font-weight:bold;margin:0 0 8px}
 .mfoot{display:flex;gap:10px;justify-content:flex-end;padding:12px 18px 16px;flex-wrap:wrap}
 .mfoot .btn{font-size:14px;padding:8px 16px}
+#askDlg{z-index:9500}
+#askBody{white-space:pre-wrap;padding-bottom:12px}
 .mlist{margin:10px 0 4px;padding:10px 14px;background:var(--warn-bg);
   border:1px solid #e6c3ad;border-radius:4px}
 .mlist ul{margin:6px 0 0;padding-left:0;list-style:none}
@@ -1273,6 +1275,13 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <div class="mhead" id="dateDlgHead"></div>
     <div class="mbody" id="dateDlgBody"></div>
     <div class="mfoot" id="dateDlgFoot"></div>
+  </div>
+</div>
+<div class="mbg" id="askDlg" style="display:none">
+  <div class="mbox" style="max-width:520px">
+    <div class="mhead">確認</div>
+    <div class="mbody" id="askBody"></div>
+    <div class="mfoot"><button class="btn" id="askNo">やめる</button><button class="btn primary" id="askYes">OK</button></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -3826,6 +3835,22 @@ function openDlg(head, body, foot){
 }
 function closeDlg(){ $("dateDlg").style.display = "none"; }
 
+/* 確認画面（ブラウザの confirm の代わり）。
+   ブラウザで「このページで追加のダイアログを作成しない」にチェックすると confirm が何も出さずに
+   「キャンセル」を返し、操作が黙って止まってしまうため、アプリの中に確認画面を出します。 */
+function ask(msg, onYes, onNo, yesLabel){
+  $("askBody").textContent = msg;
+  $("askYes").textContent = yesLabel || "OK";
+  $("askDlg").style.display = "";
+  function done(fn){ $("askDlg").style.display = "none"; $("askYes").onclick = $("askNo").onclick = null; if(fn) fn(); }
+  $("askYes").onclick = function(){ done(onYes); };
+  $("askNo").onclick = function(){ done(onNo); };
+  setTimeout(function(){ $("askYes").focus(); }, 0);
+}
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" && $("askDlg").style.display !== "none") $("askNo").click();
+});
+
 /* ① 1人ずつ受診日を変える */
 function openDateEdit(kid, no){
   var t = (state.targets[kid] || []).filter(function(x){ return String(x.emp.empNo) === String(no); })[0];
@@ -3876,10 +3901,11 @@ function openDateMove(kid){
   $("dmSave").onclick = function(){
     var f = $("dmFrom").value, to = $("dmTo").value;
     if(!to){ toast("新しい受診日を選んでください", true); return; }
-    if(!confirm(origDateLabel(kid, f) + " の " + days[f] + "名の受診日を " + fmtDateWithDow(to) + " に変更します。よろしいですか？")) return;
-    (state.dateMove[kid] = state.dateMove[kid] || {})[f] = to;
-    closeDlg(); computeTargets(); renderTargets(); saveData();
-    toast(origDateLabel(kid, f) + " の受診日を " + fmtDateWithDow(to) + " に変更しました（" + days[f] + "名）");
+    ask(origDateLabel(kid, f) + " の " + days[f] + "名の受診日を " + fmtDateWithDow(to) + " に変更します。よろしいですか？", function(){
+      (state.dateMove[kid] = state.dateMove[kid] || {})[f] = to;
+      closeDlg(); computeTargets(); renderTargets(); saveData();
+      toast(origDateLabel(kid, f) + " の受診日を " + fmtDateWithDow(to) + " に変更しました（" + days[f] + "名）");
+    }, null, "変更する");
   };
   Array.prototype.forEach.call(document.querySelectorAll("#dateDlgBody [data-dmundo]"), function(b){
     b.onclick = function(){
@@ -3896,9 +3922,11 @@ $("targetTable").addEventListener("click", function(e){
   if(t.dataset && t.dataset.dateedit){ openDateEdit(kid, t.dataset.dateedit); return; }
   if(t.dataset && t.dataset.dateundo){
     var no = t.dataset.dateundo, emp = empByNo(no);
-    if(!confirm((emp ? emp.name : no) + " さんの受診日の変更を取り消して、予約状況の受診日に戻します。よろしいですか？")) return;
-    delete state.dateEdit[kid][no];
-    computeTargets(); renderTargets(); saveData();
+    ask((emp ? emp.name : no) + " さんの受診日の変更を取り消して、予約状況の受診日に戻します。よろしいですか？", function(){
+      delete state.dateEdit[kid][no];
+      computeTargets(); renderTargets(); saveData();
+      toast((emp ? emp.name : no) + " さんの受診日を予約状況の受診日に戻しました");
+    }, null, "元に戻す");
   }
 });
 
@@ -4464,9 +4492,10 @@ $("carryTable").addEventListener("click", function(e){
   }
   if((no = t.dataset.carryoff)){
     var c = state.svCarry[no];
-    if(!confirm((c.name || no) + " さんの継続免除をやめます。来年度からは調査の対象に戻ります（今年度の免除はそのまま残ります）。よろしいですか？")) return;
-    setCarry(no, false);
-    renderSurvey();
+    ask((c.name || no) + " さんの継続免除をやめます。来年度からは調査の対象に戻ります（今年度の免除はそのまま残ります）。よろしいですか？", function(){
+      setCarry(no, false);
+      renderSurvey();
+    }, null, "継続をやめる");
   }
 });
 
@@ -4507,20 +4536,25 @@ $("svTable").addEventListener("change", function(e){
       if(state.svCarry[no]){ state.svCarry[no].text = x.text; saveCarry(); renderCarry(); }
       saveData(); return;
     }
-    if(t.dataset.svx === "other" && !t.checked && state.svCarry[no]){
-      if(!confirm((state.svCarry[no].name || no) + " さんは来年度以降も免除（継続）になっています。「その他」を外すと継続免除も解除します。よろしいですか？")){
-        t.checked = true; return;
+    var apply = function(){
+      x[t.dataset.svx] = t.checked;
+      if(t.dataset.svx === "other" && t.checked && !x.text && state.svCarry[no]) x.text = state.svCarry[no].text;
+      if(!x.leave && !x.other) delete state.svExempt[no];
+      saveData(); renderSurvey();
+      if(t.dataset.svx === "other" && t.checked){
+        var inp = document.querySelector('#svTable input[data-svx="text"][data-no="' + no + '"]');
+        if(inp) inp.focus();
       }
-      delete state.svCarry[no]; saveCarry();
+    };
+    if(t.dataset.svx === "other" && !t.checked && state.svCarry[no]){
+      t.checked = true;   // 確認が済むまでチェックは残しておきます
+      ask((state.svCarry[no].name || no) + " さんは来年度以降も免除（継続）になっています。「その他」を外すと継続免除も解除します。よろしいですか？", function(){
+        delete state.svCarry[no]; saveCarry();
+        t.checked = false; apply();
+      }, null, "外す");
+      return;
     }
-    x[t.dataset.svx] = t.checked;
-    if(t.dataset.svx === "other" && t.checked && !x.text && state.svCarry[no]) x.text = state.svCarry[no].text;
-    if(!x.leave && !x.other) delete state.svExempt[no];
-    saveData(); renderSurvey();
-    if(t.dataset.svx === "other" && t.checked){
-      var inp = document.querySelector('#svTable input[data-svx="text"][data-no="' + no + '"]');
-      if(inp) inp.focus();
-    }
+    apply();
   }
 });
 $("svTable").addEventListener("click", function(e){
@@ -4528,21 +4562,23 @@ $("svTable").addEventListener("click", function(e){
   if(!key) return;
   var r = surveyRows().filter(function(x){ return x.key === key; })[0];
   if(!r) return;
-  if(!confirm(r.cat === "absent"
+  ask(r.cat === "absent"
       ? r.emp.name + " さんの " + r.kname + " の未受診の記録を取り消します。よろしいですか？"
-      : r.emp.name + " さんの " + r.kname + " のキャンセルを取り消します。受検票の印刷対象に戻ります。よろしいですか？")) return;
-  r.cancelKids.forEach(function(kid){ delete state.cancelled[kid][r.emp.empNo]; });
-  saveData(); renderSurvey();
-  toast(r.emp.name + " さんのキャンセルを取り消しました");
+      : r.emp.name + " さんの " + r.kname + " のキャンセルを取り消します。受検票の印刷対象に戻ります。よろしいですか？", function(){
+    r.cancelKids.forEach(function(kid){ delete state.cancelled[kid][r.emp.empNo]; });
+    saveData(); renderSurvey();
+    toast(r.emp.name + " さんの" + (r.cat === "absent" ? "未受診の記録" : "キャンセル") + "を取り消しました");
+  }, null, "取り消す");
 });
 ["svSrc","svState","svDept"].forEach(function(id){ $(id).addEventListener("change", renderSurvey); });
 $("btnSvSent").addEventListener("click", function(){
   var rows = surveyVisible().filter(function(r){ return r.st === "todo"; });
   if(!rows.length){ toast("表示中に「未送付」の人はいません", true); return; }
-  if(!confirm("表示中の「未送付」" + rows.length + "名を、今日の日付で「送付済み」にします。よろしいですか？")) return;
-  rows.forEach(function(r){ setSurveyState(r.key, "sent"); });
-  saveData(); renderSurvey();
-  toast(rows.length + "名を送付済みにしました");
+  ask("表示中の「未送付」" + rows.length + "名を、今日の日付で「送付済み」にします。よろしいですか？", function(){
+    rows.forEach(function(r){ setSurveyState(r.key, "sent"); });
+    saveData(); renderSurvey();
+    toast(rows.length + "名を送付済みにしました");
+  }, null, "送付済みにする");
 });
 $("btnSvCsv").addEventListener("click", function(){
   var rows = surveyVisible();
@@ -4669,10 +4705,11 @@ $("smTable").addEventListener("change", function(e){
 $("btnSmSent").addEventListener("click", function(){
   var rows = seimitsuVisible().filter(function(r){ return r.st === "todo"; });
   if(!rows.length){ toast("表示中に「未送付」の人はいません", true); return; }
-  if(!confirm("表示中の「未送付」" + rows.length + "名を、今日の日付で「送付済み」にします。よろしいですか？")) return;
-  rows.forEach(function(r){ setSeimitsuState(r.key, "sent"); });
-  saveData(); renderSeimitsu();
-  toast(rows.length + "名を送付済みにしました");
+  ask("表示中の「未送付」" + rows.length + "名を、今日の日付で「送付済み」にします。よろしいですか？", function(){
+    rows.forEach(function(r){ setSeimitsuState(r.key, "sent"); });
+    saveData(); renderSeimitsu();
+    toast(rows.length + "名を送付済みにしました");
+  }, null, "送付済みにする");
 });
 $("btnSmCsv").addEventListener("click", function(){
   var rows = seimitsuVisible();
@@ -5735,10 +5772,12 @@ function bindEditor(){
   });
   if($("lpDel")) $("lpDel").addEventListener("click", function(){
     var L = state.layouts[ly.kid];
-    if(!confirm("「" + L.fields[ly.sel].label + "」を削除します。よろしいですか？")) return;
-    L.fields.splice(ly.sel, 1);
-    ly.sel = -1;
-    renderLayoutEditor();
+    var sel = ly.sel;
+    ask("「" + L.fields[sel].label + "」を削除します。よろしいですか？", function(){
+      L.fields.splice(sel, 1);
+      ly.sel = -1;
+      renderLayoutEditor();
+    }, null, "削除する");
   });
 
   Array.prototype.forEach.call(document.querySelectorAll("#lyProps .lp"), function(inp){
@@ -6538,11 +6577,13 @@ function bindLayoutTab(){
   });
 
   $("btnResetLayout").addEventListener("click", function(){
-    if(!confirm(kenshinName(ly.kid) + "のレイアウトを初期値（現行の印刷物から実測した座標）に戻します。よろしいですか？")) return;
-    state.layouts[ly.kid] = defaultLayouts()[ly.kid];
-    ly.sel = -1;
-    renderLayoutEditor();
-    toast("初期値に戻しました");
+    var kid = ly.kid;
+    ask(kenshinName(kid) + "のレイアウトを初期値（現行の印刷物から実測した座標）に戻します。よろしいですか？", function(){
+      state.layouts[kid] = defaultLayouts()[kid];
+      ly.sel = -1;
+      renderLayoutEditor();
+      toast("初期値に戻しました");
+    }, null, "初期値に戻す");
   });
 
   $("btnExportLayout").addEventListener("click", function(){
@@ -6803,12 +6844,14 @@ $("btnSample").addEventListener("click", function(){
 
   $("btnClearData").addEventListener("click", function(){
     var nsv = surveyRows().length, nsm = seimitsuRows().length;
-    if(!confirm("この端末に保存されている職員名簿・予約状況・キャンセル・判定・未受診状況調査・要精密検査確認調査の記録をすべて消去します。よろしいですか？\n（様式レイアウトなどの設定は残ります）"
+    ask("この端末に保存されている職員名簿・予約状況・キャンセル・判定・未受診状況調査・要精密検査確認調査の記録をすべて消去します。よろしいですか？\n（様式レイアウトなどの設定は残ります）"
       + (nsv ? "\n\n未受診状況調査の記録（" + nsv + "名分）も消えます。必要なら先に「６. 未受診状況調査」から CSV を出力してください。" : "")
       + (nsm ? "\n\n要精密検査確認調査の記録（" + nsm + "名分）も消えます。必要なら先に「７. 要精密検査確認調査」から CSV を出力してください。" : "")
-      + (Object.keys(state.svCarry).length ? "\n\n来年度以降も免除（継続）の " + Object.keys(state.svCarry).length + "名は消さずに残します（外すときは「６. 未受診状況調査」の継続免除の一覧で）。" : ""))) return;
-    clearData();
-    toast("保存データを消去しました");
+      + (Object.keys(state.svCarry).length ? "\n\n来年度以降も免除（継続）の " + Object.keys(state.svCarry).length + "名は消さずに残します（外すときは「６. 未受診状況調査」の継続免除の一覧で）。" : ""),
+      function(){
+        clearData();
+        toast("保存データを消去しました");
+      }, null, "消去する");
   });
 
   function syncNotes(){

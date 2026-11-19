@@ -40,7 +40,8 @@ const page = await ctx.newPage();
 const errs = [], external = [];
 page.on('pageerror', e => errs.push(e.message));
 page.on('request', r => { if (!/^(file|data|blob):/.test(r.url())) external.push(r.url()); });
-page.on('dialog', d => d.accept());
+let nativeDialogs = 0;
+page.on('dialog', d => { nativeDialogs++; d.accept(); });
 // ダウンロードしたファイル名を記録します（ヘッドレスでは保存名が取れないため）
 await page.addInitScript(() => {
   window.__dl = [];
@@ -53,6 +54,8 @@ page.on('download', async d => { const p = await d.path(); pdfs.push(p); });
 const wait = (ms) => page.waitForTimeout(ms);
 const tab = async (id) => { await page.click(`nav button[data-page="${id}"]`); await wait(300); };
 const ev = (fn, arg) => page.evaluate(fn, arg);
+// アプリの中の確認画面（ブラウザの confirm の代わり）で「OK」側を押します
+const yes = async () => { await page.click('#askYes'); await wait(350); };
 const shown = (id) => ev((id) => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; }, id);
 const paste = (sel, data) => ev(([sel, data]) => {
   const el = document.querySelector(sel); const dt = new DataTransfer();
@@ -223,14 +226,14 @@ await page.uncheck(`#svTable input[data-svx="elsewhere"][data-svk="${elKey}"]`);
 ok(await ev((k) => surveyRows().find(x => x.key === k).st, elKey) === 'todo', '  チェックを外すと元に戻る');
 const k1203 = 'i:1203';
 await page.selectOption(`select[data-svst="${k1203}"]`, 'answered'); await wait(300);
-await page.click('#btnSvSent'); await wait(400);
+await page.click('#btnSvSent'); await wait(300); await yes();
 const cnt = await ev(() => surveyCount(surveyRows()));
 ok(cnt.todo === 0 && cnt.answered === 1 && cnt.exempt === 2 && cnt.sent === cnt.all - 3, '「まとめて送付済み」は調査免除の人を除いて記録', cnt);
 await page.reload(); await wait(900);
 const kept = await ev(() => ({ c: !!state.cancelled.i['1203'], r: state.survey['i:1203'], x: state.svExempt['1502'] }));
 ok(kept.c && kept.r.st === 'answered' && kept.x.text === '長期療養中', '開き直してもキャンセル・調査・免除の記録が残る', kept);
 await tab('p9');
-await page.click(`button[data-uncancel="${k1203}"]`); await wait(400);
+await page.click(`button[data-uncancel="${k1203}"]`); await wait(300); await yes();
 ok(await ev(() => activeTargets('i').length) === nI, '６のタブからキャンセルを取り消すと印刷対象に戻る');
 
 section('判定と要精密検査確認調査');
@@ -253,7 +256,7 @@ await tab('p10');
 const smr = await ev(() => seimitsuRows().map(r => r.key));
 ok(smr.join() === 'i:' + jIds[0], '要精密検査の人だけが「７. 要精密検査確認調査」に載る（要検査の人は載らない）', smr);
 ok(/^未送付 1$/.test(await ev(() => document.querySelector('nav .tab[data-page="p10"] .tabmark').textContent)), 'タブに「未送付 1」が出る');
-await page.click('#btnSmSent'); await wait(300);
+await page.click('#btnSmSent'); await wait(300); await yes();
 await page.selectOption(`select[data-smst="i:${jIds[0]}"]`, 'reported'); await wait(300);
 const smc = await ev((n) => ({ c: seimitsuCount(seimitsuRows()), r: state.seimitsu['i:' + n] }), jIds[0]);
 ok(smc.c.reported === 1 && smc.r.sentAt && smc.r.repAt, '送付済み→報告ありを日付つきで記録', smc);
@@ -278,13 +281,19 @@ ok(await ev(() => document.querySelectorAll('#targetTable tbody tr').length) ===
 
 section('受診日の変更（1人ずつ・まとめて）');
 await tab('p4');
+// ブラウザで「このページで追加のダイアログを作成しない」にチェックした状態（confirm が黙ってキャンセルを返す）でも変更できること
+await ev(() => { window.confirm = () => false; window.alert = () => { }; });
 await ev(() => { tgKid = 'i'; document.getElementById('filterState').value = ''; renderTargets(); });
 await page.click('#targetTable button[data-dateedit="1203"]'); await wait(300);
 await page.fill('#ddDate', '2026-10-14'); await page.fill('#ddTime', '8:00〜8:15'); await page.click('#ddSave'); await wait(400);
 const de = await ev(() => { const a = state.targets.i.find(t => t.emp.empNo == '1203').assign; return { lab: assignDateLabel(a), time: a.time, from: a.changed && a.changed.from }; });
 ok(de.lab === '10月14日（水）' && de.time === '8:00〜8:15' && /^7日（水）/.test(de.from), '① 1人ずつ受診日・受付時間を変えられ、元の受診日を表示', de);
 await page.click('#tgDateRow button[data-datemove]'); await wait(300);
-await page.selectOption('#dmFrom', '8日（木）'); await page.fill('#dmTo', '2026-10-15'); await page.click('#dmSave'); await wait(400);
+await page.selectOption('#dmFrom', '8日（木）'); await page.fill('#dmTo', '2026-10-15'); await page.click('#dmSave'); await wait(300);
+await page.click('#askNo'); await wait(300);
+ok(await ev(() => !state.targets.i.some(t => t.assign && t.assign.moved) && getComputedStyle(document.getElementById('dateDlg')).display !== 'none'),
+   '  確認画面で「やめる」を押すと変更しない（入力画面は開いたまま）');
+await page.selectOption('#dmFrom', '8日（木）'); await page.fill('#dmTo', '2026-10-15'); await page.click('#dmSave'); await wait(300); await yes();
 const dm = await ev(() => { const r = state.targets.i.filter(t => t.assign && t.assign.moved); return { n: r.length, labs: [...new Set(r.map(t => assignDateLabel(t.assign)))].join() }; });
 ok(dm.n > 0 && dm.labs === '10月15日（木）', '② ある日（8日）をまとめて別の日（10/15）に移せる', dm);
 await page.selectOption('#filterState', 'changed'); await wait(300);
@@ -295,7 +304,7 @@ await page.reload(); await wait(1000);
 ok(await ev(() => { const a = state.targets.i.find(t => t.emp.empNo == '1203').assign; return assignDateLabel(a) === '10月14日（水）' && state.targets.i.some(t => t.assign && t.assign.moved); }), '  開き直しても受診日の変更が残る');
 await tab('p4');
 await ev(() => { tgKid = 'i'; renderTargets(); });
-await page.click('#targetTable button[data-dateundo="1203"]'); await wait(300);
+await page.click('#targetTable button[data-dateundo="1203"]'); await wait(300); await yes();
 await page.click('#tgDateRow button[data-datemove]'); await wait(300);
 await page.click('#dateDlgBody [data-dmundo="8日（木）"]'); await wait(300);
 await page.click('#dmCancel'); await wait(200);
@@ -417,7 +426,7 @@ await ev(() => { document.getElementById('fyGuard').style.display = 'none'; });
 section('様式レイアウトの誤操作防止');
 await fresh(new Date(2026, 9, 7, 10, 0));
 await tab('p8'); await wait(600);
-const close = () => ev(() => { const g = document.getElementById('lyGuard'); if (g) g.style.display = 'none'; });
+const close = () => ev(() => { const g = document.getElementById('lyGuard'); if (g) g.style.display = 'none'; document.getElementById('askDlg').style.display = 'none'; });
 for (const [name, sel] of [['用紙', '#lyPaper'], ['ずれ補正', '#lyOffX'], ['項目の追加', '#lyAddText'], ['初期値に戻す', '#btnResetLayout']]) {
   await close(); await page.click(sel, { force: true }); await wait(250);
   ok(await shown('lyGuard'), `「${name}」を触ると確認画面が出る`);
@@ -468,7 +477,7 @@ await page.check('#svTable input[data-svx="carry"][data-no="1502"]'); await wait
 await page.check('#svTable input[data-svx="other"][data-no="1003"]'); await wait(300);
 const c1 = await ev(() => ({ ...state.svCarry['1502'], other: !!state.svCarry['1003'] }));
 ok(c1 && c1.since === 2026 && c1.text === '長期療養中（架空）' && !c1.other, '「来年度以降も免除（継続）」にチェックした人だけを継続免除に記録', c1);
-await tab('p1'); await page.click('#btnClearData'); await wait(500);
+await tab('p1'); await page.click('#btnClearData'); await wait(300); await yes(); await wait(200);
 ok(await ev(() => !!state.svCarry['1502'] && state.employees.length === 0), '「保存データを消去」しても継続免除は残る');
 await loadRoster(path.join(SAMPLE, '職員名簿_サンプル.xlsx'));
 await page.clock.setFixedTime(new Date(2027, 3, 15, 10, 0));
@@ -485,11 +494,12 @@ ok(/1名が今年度まだ見直されていません/.test(await page.textConte
 await page.click('#carryTable button[data-carryok="1502"]'); await wait(300);
 ok(await ev(() => state.svCarry['1502'].checked === 2027), '  「今年度も継続」で見直し済みになる');
 ok(await ev(() => yearSheets()[0].rows.find(r => String(r[2]) === '1502')[yearSheets()[0].rows[0].indexOf('継続免除')]) === '2026年度から継続', '  年度のまとめに「継続免除」の列');
-await page.click('#carryTable button[data-carryoff="1502"]'); await wait(300);
+await page.click('#carryTable button[data-carryoff="1502"]'); await wait(300); await yes();
 ok(await ev(() => !state.svCarry['1502'] && surveyRows().find(r => r.emp.empNo == '1502').st === 'exempt'), '  「継続をやめる」と一覧から外れ、今年度の免除は残る');
 
 section('全体');
 ok(external.length === 0, '外部への通信なし', external.slice(0, 3));
+ok(nativeDialogs === 0, 'ブラウザの確認ダイアログ（confirm）を使わない（アプリ内の確認画面だけ）', nativeDialogs);
 ok(errs.length === 0, 'JavaScript のエラーなし', errs.slice(0, 3));
 
 await browser.close();
