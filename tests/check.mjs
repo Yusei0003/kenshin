@@ -414,7 +414,25 @@ ok(lxi.n === '未受診・要精密検査一覧_胃がん検診.xlsx' && lxi.n1 
    '  検診を選ぶと、その検診だけを出力（ファイル名に検診名）', lxi);
 // 課ごと：ZIPの中に課ごとのExcel
 await page.selectOption('#listKenshin', ''); await wait(200);
-await ev(() => { window.__blob = null; });
+// フォルダを選べるブラウザ：選んだフォルダの中に「…_課ごと」フォルダを作って保存（同じ名前があれば _2）
+const lxf = await ev(async () => {
+  const mk = name => { const kids = {}; return { name, kind: 'directory', kids,
+    getDirectoryHandle: async (n, o) => { if (!kids[n]) { if (!(o && o.create)) throw new DOMException('x', 'NotFoundError'); kids[n] = mk(n); } return kids[n]; },
+    getFileHandle: async (n) => ({ createWritable: async () => ({ write: async d => { kids[n] = d.length; }, close: async () => {} }) }) }; };
+  const root = mk('保存先'); window.__savedPicker = window.showDirectoryPicker;
+  window.showDirectoryPicker = async () => root; window.__blob = null;
+  document.getElementById('btnListDept').click(); await new Promise(r => setTimeout(r, 800));
+  document.getElementById('btnListDept').click(); await new Promise(r => setTimeout(r, 800));
+  const want = {}; surveyRows().concat(seimitsuRows()).forEach(r => { want[r.emp.deptName] = 1; });
+  return { dirs: Object.keys(root.kids), files: Object.keys(root.kids['未受診・要精密検査一覧_課ごと'].kids).sort(),
+           want: Object.keys(want).map(d => '未受診・要精密検査一覧_' + d + '.xlsx').sort(), blob: !!window.__blob,
+           label: document.getElementById('btnListDept').textContent };
+});
+ok(lxf.dirs.join() === '未受診・要精密検査一覧_課ごと,未受診・要精密検査一覧_課ごと_2' && lxf.files.join() === lxf.want.join() && !lxf.blob
+   && /フォルダ/.test(lxf.label),
+   '  「課ごとに出力」：選んだフォルダに課ごとのExcelを直接保存（ZIPにしない・2回目は別フォルダ）', lxf);
+// フォルダを選べないブラウザ：ZIPにまとめる
+await ev(() => { window.showDirectoryPicker = undefined; window.__blob = null; });
 await page.click('#btnListDept'); await wait(800);
 const lxd = await ev(async () => {
   const x = window.__blob, buf = await x.b.arrayBuffer(), z = zipOpen(buf), out = [];
@@ -430,7 +448,7 @@ const lxd = await ev(async () => {
 });
 ok(lxd.n === '未受診・要精密検査一覧_課ごと.zip' && lxd.files.length === Object.keys(lxd.want).length
    && lxd.files.every(f => f.depts.length === 1 && f.name === '未受診・要精密検査一覧_' + f.depts[0] + '.xlsx' && f.n === lxd.want[f.depts[0]]),
-   '  「課ごとに出力」で、課ごとのExcel（その課の人だけ）をZIPにまとめる', lxd);
+   '  フォルダを選べないブラウザでは、課ごとのExcel（その課の人だけ）をZIPにまとめる', lxd);
 await ev((u) => { state.survey[u.key] = JSON.parse(u.before); delete state.cancelled.i[u.no]; saveData(); }, lxUndo);
 
 // 課ごとのまとめ方

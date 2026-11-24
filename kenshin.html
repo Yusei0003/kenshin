@@ -982,13 +982,13 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     <div class="row" style="margin-top:0">
       <label>検診 <select id="listKenshin"></select></label>
       <button class="btn primary" id="btnListXlsx">Excelを出力（1つのファイル）</button>
-      <button class="btn" id="btnListDept">課ごとに出力（ZIP）</button>
+      <button class="btn" id="btnListDept">課ごとに出力</button>
       <span class="hint" id="listXlsxHint"></span>
     </div>
     <p class="hint" style="margin:6px 0 0">
       「<strong>未受診一覧</strong>」（未受診状況調査）と「<strong>要精密検査一覧</strong>」（要精密検査確認調査）の2つのシートのExcel（未受診・要精密検査一覧.xlsx）を作ります。
       下の一覧の絞り込みに関係なく、選んだ検診の全員が入ります。未受診一覧は<strong>「未送付」の人を上</strong>にして<strong>黄色のマーカー</strong>を付けます。<br>
-      「<strong>課ごとに出力</strong>」は、所属（課）ごとに1つずつのExcel（未受診・要精密検査一覧_課の名前.xlsx）を作り、1つのZIPファイルにまとめてダウンロードします（該当者がいない課は作りません）。
+      「<strong>課ごとに出力</strong>」は、所属（課）ごとに1つずつのExcel（未受診・要精密検査一覧_課の名前.xlsx）を作ります（該当者がいない課は作りません）。保存先のフォルダを選ぶと、その中に「未受診・要精密検査一覧_課ごと」フォルダを作って保存します。フォルダを選べないブラウザではZIPにまとめてダウンロードするので、<strong>ZIPは右クリック→「すべて展開」をしてから</strong>開いてください（ZIPの中のExcelを直接開くと、Windowsのセキュリティの警告で開けません）。
       婦人検診の未受診状況調査は乳がん・子宮頸がんで共通のため、「婦人検診」でまとめて出力します。
     </p>
     <details id="grpBox" class="grpbox">
@@ -4943,25 +4943,63 @@ $("btnListXlsx").addEventListener("click", function(){
   downloadBlob(makeXlsx(sh), name);
   toast(name + " を出力しました（未受診一覧 " + (sh[0].rows.length - 1) + "名・要精密検査一覧 " + (sh[1].rows.length - 1) + "名）");
 });
-/* 課ごとに1つずつのExcelを作り、ZIPにまとめます（多数のファイルを1つずつダウンロードさせないため） */
-$("btnListDept").addEventListener("click", function(){
+/* 課ごとに1つずつのExcelを作ります。
+   Windowsでは、ダウンロードしたZIPの中のExcelを展開せずに開くと「Windowsセキュリティの警告」で止められるため、
+   フォルダを選べるブラウザ（Edge・Chrome）では、選んだフォルダの中に新しいフォルダを作って、Excelを直接保存します。
+   フォルダを選べないブラウザのときだけ、ZIPにまとめてダウンロードします。 */
+function listDeptFiles(){
   var f = listFilter(), order = [], seen = {};
   f.sv.concat(f.sm).slice().sort(cmpDeptKana).forEach(function(r){
     var d = deptGroupOf(deptLabel(r.emp));
     if(!seen[d]){ seen[d] = 1; order.push(d); }
   });
-  if(!order.length){ toast("未受診・要精密検査の人がいません", true); return; }
   var base = listBaseName(f.src), used = {};
-  var files = order.map(function(d){
+  return { base:base, files:order.map(function(d){
     var nm = base + "_" + safeFileName(d), k = nm, i = 2;
     while(used[k]) k = nm + "_" + (i++);
     used[k] = 1;
     return { name:k + ".xlsx", data:xlsxBytes(listSheets(f, d)) };
+  }) };
+}
+function listDeptZip(r){
+  var zip = r.base + "_課ごと.zip";
+  downloadBlob(zipStore(r.files, "application/zip"), zip);
+  toast(zip + " を出力しました（" + r.files.length + "課）。ZIPは右クリック→「すべて展開」をしてから開いてください", false);
+}
+function listDeptToDir(dir, r){
+  var sub = r.base + "_課ごと", folder;
+  function pick(n){ /* 同じ名前のフォルダがあれば「_2」「_3」…を付けて、前のファイルを上書きしないようにします */
+    var nm = n > 1 ? sub + "_" + n : sub;
+    return dir.getDirectoryHandle(nm).then(function(){ return pick(n + 1); }, function(){ folder = nm; return dir.getDirectoryHandle(nm, { create:true }); });
+  }
+  return pick(1).then(function(d){
+    var p = Promise.resolve();
+    r.files.forEach(function(fl){
+      p = p.then(function(){ return d.getFileHandle(fl.name, { create:true }); })
+        .then(function(h){ return h.createWritable(); })
+        .then(function(w){ return w.write(fl.data).then(function(){ return w.close(); }); });
+    });
+    return p;
+  }).then(function(){
+    toast("「" + dir.name + "」の中の「" + folder + "」フォルダに、" + r.files.length + "課のExcelを保存しました");
   });
-  var zip = base + "_課ごと.zip";
-  downloadBlob(zipStore(files, "application/zip"), zip);
-  toast(zip + " を出力しました（" + files.length + "課）");
+}
+$("btnListDept").addEventListener("click", function(){
+  var r = listDeptFiles();
+  if(!r.files.length){ toast("未受診・要精密検査の人がいません", true); return; }
+  if(!window.showDirectoryPicker){ listDeptZip(r); return; }
+  window.showDirectoryPicker({ id:"kenshin-dept", mode:"readwrite" }).then(function(dir){
+    return listDeptToDir(dir, r).catch(function(e){
+      toast("フォルダに保存できませんでした（" + (e && e.message || e) + "）。代わりにZIPで出力します", true);
+      listDeptZip(r);
+    });
+  }, function(e){
+    if(e && e.name === "AbortError") return; /* 「キャンセル」を押したとき */
+    listDeptZip(r);
+  });
 });
+function renderListDeptBtn(){ $("btnListDept").textContent = window.showDirectoryPicker ? "課ごとに出力（フォルダへ保存）" : "課ごとに出力（ZIP）"; }
+renderListDeptBtn();
 $("listKenshin").addEventListener("change", renderListXlsxHint);
 
 /* まとめ方の設定欄 */
