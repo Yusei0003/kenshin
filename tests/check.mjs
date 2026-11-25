@@ -436,8 +436,10 @@ await ev(() => { window.showDirectoryPicker = undefined; window.__blob = null; }
 await page.click('#btnListDept'); await wait(800);
 const lxd = await ev(async () => {
   const x = window.__blob, buf = await x.b.arrayBuffer(), z = zipOpen(buf), out = [];
+  let yellow = 0;
   for (const e of z.entries) {
     const bytes = await zipRead(z, e);
+    { const zz = zipOpen(bytes.slice().buffer); for (const ee of zz.entries) if (/worksheets\/sheet\d*\.xml$/.test(ee.name) && /s="2"/.test(new TextDecoder().decode(await zipRead(zz, ee)))) yellow++; }
     const sheets = await readXlsxFile(new File([bytes], 'a.xlsx')), depts = new Set();
     let n = 0;
     sheets.forEach(sh => { const di = sh.rows[0].indexOf('所属名'); sh.rows.slice(1).forEach(r => depts.add(r[di])); n += sh.rows.length - 1; });
@@ -447,12 +449,13 @@ const lxd = await ev(async () => {
   surveyRows().filter(r => r.st !== 'exempt').forEach(r => { want[r.emp.deptName] = (want[r.emp.deptName] || 0) + 1; sv[r.emp.deptName] = 1; });
   seimitsuRows().forEach(r => { want[r.emp.deptName] = (want[r.emp.deptName] || 0) + 1; sm[r.emp.deptName] = 1; });
   const sheetsOk = out.every(f => f.sheets === [sv[f.depts[0]] && '未受診一覧', sm[f.depts[0]] && '要精密検査一覧'].filter(Boolean).join());
-  return { n: x.n, files: out, want, exempt: surveyRows().filter(r => r.st === 'exempt').length, sheetsOk,
+  return { n: x.n, files: out, want, yellow, todo: surveyRows().filter(r => r.st === 'todo').length, exempt: surveyRows().filter(r => r.st === 'exempt').length, sheetsOk,
            noSv: out.filter(f => !sv[f.depts[0]]).length, noSm: out.filter(f => !sm[f.depts[0]]).length, withSm: out.filter(f => sm[f.depts[0]]).length };
 });
 ok(lxd.n === '未受診・要精密検査一覧_課ごと.zip' && lxd.files.length === Object.keys(lxd.want).length
    && lxd.files.every(f => f.depts.length === 1 && f.name === '未受診・要精密検査一覧_' + f.depts[0] + '.xlsx' && f.n === lxd.want[f.depts[0]]),
    '  フォルダを選べないブラウザでは、課ごとのExcel（その課の人だけ）をZIPにまとめる', lxd);
+ok(lxd.todo > 0 && lxd.yellow > 0, '  課ごとのExcelでも「未送付」に黄色のマーカー', { todo: lxd.todo, yellow: lxd.yellow });
 ok(lxd.exempt > 0, '  課ごとのExcelには調査免除の人を入れない（全体のExcelには入る）', lxd.exempt);
 ok(lxd.sheetsOk && lxd.noSm > 0 && lxd.withSm > 0, '  要精密検査の人がいない課のExcelには「要精密検査一覧」シートを入れない', lxd);
 const lxn = await ev(() => {
