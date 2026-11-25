@@ -987,7 +987,7 @@ nav button .tabmark.warn{background:var(--warn);color:#fff}
     </div>
     <p class="hint" style="margin:6px 0 0">
       「<strong>未受診一覧</strong>」（未受診状況調査）と「<strong>要精密検査一覧</strong>」（要精密検査確認調査）の2つのシートのExcel（未受診・要精密検査一覧.xlsx）を作ります。
-      下の一覧の絞り込みに関係なく、選んだ検診の全員が入ります。未受診一覧は<strong>「未送付」の人を上</strong>にして<strong>黄色のマーカー</strong>を付けます（課ごとのファイルには付けません）。<br>
+      下の一覧の絞り込みに関係なく、選んだ検診の全員が入ります。未受診一覧は<strong>「未送付」の人を上</strong>にして<strong>黄色のマーカー</strong>を付けます。<br>
       「<strong>課ごとに出力</strong>」は、所属（課）ごとに1つずつのExcel（未受診・要精密検査一覧_課の名前.xlsx）を作ります。所属長に未受診者を知らせるためのものなので、<strong>調査免除の人は入れません</strong>（該当者がいない課は作りません。要精密検査の人がいない課は「要精密検査一覧」シートを、調査免除を除いて未受診者がいない課は「未受診一覧」シートを入れません）。保存先のフォルダを選ぶと、その中に「未受診・要精密検査一覧_課ごと」フォルダを作って保存します。フォルダを選べないブラウザではZIPにまとめてダウンロードするので、<strong>ZIPは右クリック→「すべて展開」をしてから</strong>開いてください（ZIPの中のExcelを直接開くと、Windowsのセキュリティの警告で開けません）。
       婦人検診の未受診状況調査は乳がん・子宮頸がんで共通のため、「婦人検診」でまとめて出力します。
     </p>
@@ -4909,7 +4909,7 @@ function listSheets(f, dept){
               "予約状況の入力欄","キャンセル日","状況","送付日","回答日","調査免除の理由","回答内容"]] };
   sv.forEach(function(x){
     var r = x.r, e = r.emp;
-    if(dept == null) s1.yellow[s1.rows.length] = r.st === "todo"; /* 課ごとのファイル（所属長への連絡用）には黄色のマーカーを付けません */
+    s1.yellow[s1.rows.length] = r.st === "todo";
     s1.rows.push([state.fiscalYear || "", r.kname, SV_CAT[r.cat], e.deptCode, e.deptName, e.empNo, e.name, e.kana,
                   sexLabel(e.sex), e.age, r.nyu && r.nyu.raw ? r.nyu.raw : "", r.cancelAt || "", SV_ST[r.st],
                   r.rec.sentAt || "", r.rec.ansAt || "", svExemptLabel(r.ex), answersText(r.rec.answers)]);
