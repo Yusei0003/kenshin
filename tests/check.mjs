@@ -423,7 +423,7 @@ const lxf = await ev(async () => {
   window.showDirectoryPicker = async () => root; window.__blob = null;
   document.getElementById('btnListDept').click(); await new Promise(r => setTimeout(r, 800));
   document.getElementById('btnListDept').click(); await new Promise(r => setTimeout(r, 800));
-  const want = {}; surveyRows().concat(seimitsuRows()).forEach(r => { want[r.emp.deptName] = 1; });
+  const want = {}; surveyRows().filter(r => r.st !== 'exempt').concat(seimitsuRows()).forEach(r => { want[r.emp.deptName] = 1; });
   return { dirs: Object.keys(root.kids), files: Object.keys(root.kids['未受診・要精密検査一覧_課ごと'].kids).sort(),
            want: Object.keys(want).map(d => '未受診・要精密検査一覧_' + d + '.xlsx').sort(), blob: !!window.__blob,
            label: document.getElementById('btnListDept').textContent };
@@ -438,18 +438,31 @@ const lxd = await ev(async () => {
   const x = window.__blob, buf = await x.b.arrayBuffer(), z = zipOpen(buf), out = [];
   for (const e of z.entries) {
     const bytes = await zipRead(z, e);
-    const sheets = await readXlsxFile(new File([bytes], 'a.xlsx'));
-    const di = sheets[0].rows[0].indexOf('所属名'), dj = sheets[1].rows[0].indexOf('所属名');
-    out.push({ name: e.name, depts: [...new Set(sheets[0].rows.slice(1).map(r => r[di]).concat(sheets[1].rows.slice(1).map(r => r[dj])))],
-               n: sheets[0].rows.length - 1 + sheets[1].rows.length - 1 });
+    const sheets = await readXlsxFile(new File([bytes], 'a.xlsx')), depts = new Set();
+    let n = 0;
+    sheets.forEach(sh => { const di = sh.rows[0].indexOf('所属名'); sh.rows.slice(1).forEach(r => depts.add(r[di])); n += sh.rows.length - 1; });
+    out.push({ name: e.name, depts: [...depts], n, sheets: sheets.map(sh => sh.name).join() });
   }
-  const want = {}; surveyRows().concat(seimitsuRows()).forEach(r => { want[r.emp.deptName] = (want[r.emp.deptName] || 0) + 1; });
-  return { n: x.n, files: out, want };
+  const want = {}, sm = {}, sv = {};
+  surveyRows().filter(r => r.st !== 'exempt').forEach(r => { want[r.emp.deptName] = (want[r.emp.deptName] || 0) + 1; sv[r.emp.deptName] = 1; });
+  seimitsuRows().forEach(r => { want[r.emp.deptName] = (want[r.emp.deptName] || 0) + 1; sm[r.emp.deptName] = 1; });
+  const sheetsOk = out.every(f => f.sheets === [sv[f.depts[0]] && '未受診一覧', sm[f.depts[0]] && '要精密検査一覧'].filter(Boolean).join());
+  return { n: x.n, files: out, want, exempt: surveyRows().filter(r => r.st === 'exempt').length, sheetsOk,
+           noSv: out.filter(f => !sv[f.depts[0]]).length, noSm: out.filter(f => !sm[f.depts[0]]).length, withSm: out.filter(f => sm[f.depts[0]]).length };
 });
 ok(lxd.n === '未受診・要精密検査一覧_課ごと.zip' && lxd.files.length === Object.keys(lxd.want).length
    && lxd.files.every(f => f.depts.length === 1 && f.name === '未受診・要精密検査一覧_' + f.depts[0] + '.xlsx' && f.n === lxd.want[f.depts[0]]),
    '  フォルダを選べないブラウザでは、課ごとのExcel（その課の人だけ）をZIPにまとめる', lxd);
-await ev((u) => { state.survey[u.key] = JSON.parse(u.before); delete state.cancelled.i[u.no]; saveData(); }, lxUndo);
+ok(lxd.exempt > 0, '  課ごとのExcelには調査免除の人を入れない（全体のExcelには入る）', lxd.exempt);
+ok(lxd.sheetsOk && lxd.noSm > 0 && lxd.withSm > 0, '  要精密検査の人がいない課のExcelには「要精密検査一覧」シートを入れない', lxd);
+const lxn = await ev(() => {
+  // 要精密検査の人と、同じ課の調査免除の人だけがいる課
+  const m = seimitsuRows()[0], x = surveyRows().find(r => r.st === 'exempt');
+  const d = deptGroupOf(deptLabel(m.emp)), f = { src: '', sv: [Object.assign({}, x, { emp: m.emp })], sm: [m] };
+  return { dept: listSheets(f, d).map(sh => sh.name).join(), all: listSheets(f).map(sh => sh.name + sh.rows.length).join() };
+});
+ok(lxd.sheetsOk && lxn.dept === '要精密検査一覧' && lxn.all === '未受診一覧2,要精密検査一覧2',
+   '  未受診者（調査免除を除く）がいない課のExcelには「未受診一覧」シートを入れない（全体のExcelは2シートのまま）', lxn);
 
 // 課ごとのまとめ方
 const gq = await ev(() => ({
@@ -461,22 +474,25 @@ ok(gq.a === '保健課' && gq.b === '商工観光課' && gq.c === '商工観光�
    && gq.f === '総務部総務課' && gq.g === '建設部住宅政策室' && gq.h === '商工観光課',
    'まとめ方の初期値：施設や室はまとめ先の課へ（まとめ先の課そのもの・まとめない所属は名簿のまま）', gq);
 await page.click('#grpBox summary'); await wait(200);
-await page.fill('#deptGroup', '建設部建設課 → 総務部総務課'); await page.dispatchEvent('#deptGroup', 'change'); await wait(300);
+// 調査免除でない該当者がいる課を、まとめる所属に使う
+const gsrc = await ev(() => { const d = surveyRows().filter(r => r.st !== 'exempt').concat(seimitsuRows()).map(r => r.emp.deptName).filter(n => n && deptGroupOf(n) !== '総務部総務課'); return d.find(n => n !== '市民部市民課') || d[0]; });
+await page.fill('#deptGroup', gsrc + ' → 総務部総務課'); await page.dispatchEvent('#deptGroup', 'change'); await wait(300);
 await ev(() => { window.__blob = null; });
 await page.click('#btnListDept'); await wait(800);
-const lxg = await ev(async () => {
+const lxg = await ev(async (g) => {
   const x = window.__blob, buf = await x.b.arrayBuffer(), z = zipOpen(buf), out = {};
   for (const e of z.entries) {
-    const sheets = await readXlsxFile(new File([await zipRead(z, e)], 'a.xlsx'));
-    const di = sheets[0].rows[0].indexOf('所属名'), dj = sheets[1].rows[0].indexOf('所属名');
-    out[e.name] = [...new Set(sheets[0].rows.slice(1).map(r => r[di]).concat(sheets[1].rows.slice(1).map(r => r[dj])))].sort();
+    const sheets = await readXlsxFile(new File([await zipRead(z, e)], 'a.xlsx')), d = new Set();
+    sheets.forEach(sh => { const di = sh.rows[0].indexOf('所属名'); sh.rows.slice(1).forEach(r => d.add(r[di])); });
+    out[e.name] = [...d].sort();
   }
-  const sel = document.querySelector('#grpPrev select[data-grpdept="建設部建設課"]');
+  const sel = document.querySelector('#grpPrev select[data-grpdept="' + CSS.escape(g) + '"]');
   return { out, prev: sel ? sel.value : null };
-});
-ok(lxg.out['未受診・要精密検査一覧_総務部総務課.xlsx'] && lxg.out['未受診・要精密検査一覧_総務部総務課.xlsx'].join() === '建設部建設課,総務部総務課'
-   && !lxg.out['未受診・要精密検査一覧_建設部建設課.xlsx'] && lxg.prev === '総務部総務課',
+}, gsrc);
+ok(lxg.out['未受診・要精密検査一覧_総務部総務課.xlsx'] && lxg.out['未受診・要精密検査一覧_総務部総務課.xlsx'].join() === [gsrc, '総務部総務課'].sort().join()
+   && !lxg.out['未受診・要精密検査一覧_' + gsrc + '.xlsx'] && lxg.prev === '総務部総務課',
    '  まとめ方を書き換えると、まとめ先のファイルに入る（所属名の列は名簿のまま）', lxg);
+await ev((u) => { state.survey[u.key] = JSON.parse(u.before); delete state.cancelled.i[u.no]; saveData(); }, lxUndo);
 // 名簿の所属の一覧から選び直す
 await page.selectOption('#grpPrev select[data-grpdept="市民部市民課"]', '総務部総務課'); await wait(300);
 const gs = await ev(() => ({ g: deptGroupOf('市民部市民課'), rule: state.deptGroup.some(r => r.from === '市民部市民課' && r.to === '総務部総務課'),
